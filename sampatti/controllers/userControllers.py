@@ -117,7 +117,7 @@ def create_message_log(request : schemas.Message_log_Schema, db  :Session):
     if not existing_message:
 
         unique_id = generate_unique_id()
-        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date}", lastMessage=request.lastMessage, workerNumber= request.workerNumber)
+        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date}", lastMessage=request.lastMessage, workerNumber= request.workerNumber, workerName = request.workerName)
         db.add(new_message)
         db.commit()
         db.refresh(new_message)
@@ -242,7 +242,7 @@ def copy_employer_message(db : Session):
 
         if entity.lastMessage == "COMPLETED":
             continue
-        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = "None", worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
+        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = entity.workerName, worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
         db.add(new_user)
         db.commit()
         db.refresh(new_user)

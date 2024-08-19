@@ -50,5 +50,6 @@ class MessageLogSystem(Base):
     id = Column(String, primary_key=True)   
     employerNumber = Column(Integer)
     workerNumber = Column(Integer, default=0)
+    workerName = Column(String)
     lastMessage = Column(String)
     date = Column(String)

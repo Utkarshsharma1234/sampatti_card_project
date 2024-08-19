@@ -29,6 +29,7 @@ class Message_log_Schema(BaseModel):
     employerNumber : int
     workerNumber : int
     lastMessage : str
+    workerName : str
 
 class talkToAgent(BaseModel):
     employerNumber : int
