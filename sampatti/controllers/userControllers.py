@@ -256,4 +256,3 @@ def copy_employer_message(db : Session):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        return new_user
