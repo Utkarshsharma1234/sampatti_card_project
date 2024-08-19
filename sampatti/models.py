@@ -35,7 +35,7 @@ class Employer(Base):
 
 class TalkToAgentEmployer(Base):
     __tablename__ = "Talk_To_Agent"
-    employer_id = Column(String, primary_key=True)   
+    id = Column(String, primary_key=True)   
     date = Column(String)
     employerNumber = Column(Integer)
     workerNumber = Column(Integer, default=0)
@@ -52,4 +52,3 @@ class MessageLogSystem(Base):
     workerNumber = Column(Integer, default=0)
     lastMessage = Column(String)
     date = Column(String)
-    timestamp = Column(String)

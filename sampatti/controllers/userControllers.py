@@ -111,14 +111,13 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
 def create_message_log(request : schemas.Message_log_Schema, db  :Session):
 
     current_date = datetime.now().date()
-    current_time = datetime.now().timestamp()
 
     existing_message = db.query(models.MessageLogSystem).where(models.MessageLogSystem.employerNumber==request.employerNumber).where(models.MessageLogSystem.workerNumber==request.workerNumber).first()
 
     if not existing_message:
 
         unique_id = generate_unique_id()
-        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date}", timestamp=f"{current_time}", lastMessage=request.lastMessage, workerNumber= request.workerNumber)
+        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date}", lastMessage=request.lastMessage, workerNumber= request.workerNumber)
         db.add(new_message)
         db.commit()
         db.refresh(new_message)
@@ -156,8 +155,7 @@ def insert_salary(request : schemas.Salary, db : Session):
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db:Session):
 
     current_date = datetime.now().date()
-    employer_id = db.query(models.Employer).where(models.Employer.employerNumber == request.employerNumber).first().id
-    new_user = models.TalkToAgentEmployer(employer_id = employer_id, date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
+    new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -235,13 +233,17 @@ def extract_salary(salary_amount : str):
     return {"extracted_salary" : "INVALID"}
 
 
-def explain_worker(db : Session, workerNumber : int, employerNumber : int):
+def copy_employer_message(db : Session):
 
     current_date = datetime.now().date()
-    new_worker = models.ExplainDomesticWorker(id = generate_unique_id(), date = current_date, employerNumber = employerNumber, workerNumber = workerNumber)
+    messages = db.query(models.MessageLogSystem).all()
 
-    db.add(new_worker)
-    db.commit()
-    db.refresh(new_worker)
+    for entity in messages:
 
-    return {"message" : "Successful"}
+        if entity.lastMessage == "COMPLETED":
+            continue
+        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = "None", worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user

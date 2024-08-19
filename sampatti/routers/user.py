@@ -122,3 +122,7 @@ def generate(workerNumber: int, employerNumber: int, db : Session = Depends(get_
 @router.get('/generate_talk_to_agent_sheet')
 def generate_sheet():
     return talk_to_agent_excel_file.upload_data_to_google_sheets()
+
+@router.get('/copy_employer_message')
+def copy_employer_message(db : Session = Depends(get_db)):
+    return userControllers.copy_employer_message(db)
