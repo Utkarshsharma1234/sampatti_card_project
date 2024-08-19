@@ -1,0 +1,9 @@
+__pycache__
+sampattiCard
+.DS_Store
+sampatti.db
+salary_slips
+contracts
+.env
+credentials.json
+logos
