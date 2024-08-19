@@ -153,13 +153,11 @@ def insert_salary(request : schemas.Salary, db : Session):
     return {"salary credited successfully."}
 
 
-
-def create_talk_to_agent_employer(employerNumber : int, category : str, workerNumber : int, db:Session):
+def create_talk_to_agent_employer(request : schemas.talkToAgent, db:Session):
 
     current_date = datetime.now().date()
-
-    unique_id = generate_unique_id()
-    new_user = models.TalkToAgentEmployer(id = unique_id, employerNumber = employerNumber, date=f"{current_date}", category = category, workerNumber=workerNumber)
+    employer_id = db.query(models.Employer).where(models.Employer.employerNumber == request.employerNumber).first().id
+    new_user = models.TalkToAgentEmployer(id = employer_id, date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

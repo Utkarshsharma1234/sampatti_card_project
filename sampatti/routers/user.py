@@ -51,8 +51,8 @@ def extract_salary(salary_amount : str):
 
 
 @router.post('/talk_to_agent/create')
-def create_talk_to_agent_employer(employerNumber : int, category : str, workerNumber : int, db : Session = Depends(get_db)):
-    return userControllers.create_talk_to_agent_employer(employerNumber, category, workerNumber, db)
+def create_talk_to_agent_employer(request : schemas.talkToAgent, db : Session = Depends(get_db)):
+    return userControllers.create_talk_to_agent_employer(request, db)
 
 @router.post('/explain_worker/create')
 def explain_worker(employerNumber : int, workerNumber : int , db : Session = Depends(get_db)):

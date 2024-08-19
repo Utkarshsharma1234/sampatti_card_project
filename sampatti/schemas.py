@@ -30,6 +30,14 @@ class Message_log_Schema(BaseModel):
     workerNumber : int
     lastMessage : str
 
+class talkToAgent(BaseModel):
+    employerNumber : int
+    workerNumber : int
+    worker_bank_name : str
+    worker_pan_name : str
+    vpa : str
+    issue : str
+
 class Dummy_worker(BaseModel):
     name: str
     email : str

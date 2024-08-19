@@ -35,11 +35,15 @@ class Employer(Base):
 
 class TalkToAgentEmployer(Base):
     __tablename__ = "Talk_To_Agent"
-    id = Column(String, primary_key=True)   
+    employer_id = Column(String, primary_key=True)   
     date = Column(String)
     employerNumber = Column(Integer)
-    category = Column(String)
     workerNumber = Column(Integer, default=0)
+    worker_bank_name = Column(String)
+    worker_pan_name = Column(String)
+    vpa = Column(String)
+    issue = Column(String)
+
 
 class MessageLogSystem(Base):
     __tablename__ = "Message_Log_System"
