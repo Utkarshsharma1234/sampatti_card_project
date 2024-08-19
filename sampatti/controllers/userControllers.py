@@ -155,11 +155,21 @@ def insert_salary(request : schemas.Salary, db : Session):
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db:Session):
 
     current_date = datetime.now().date()
-    new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+
+    existing_entity = db.query(models.TalkToAgentEmployer).where(models.TalkToAgentEmployer.employerNumber== request.employerNumber).where(models.TalkToAgentEmployer.workerNumber == request.workerNumber).first()
+
+    if not existing_entity:
+        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    
+    else:
+        update_statement = update(models.TalkToAgentEmployer).where(models.TalkToAgentEmployer.workerNumber == request.workerNumber).where(models.TalkToAgentEmployer.employerNumber==request.employerNumber).values(issue=request.issue)
+
+        db.execute(update_statement)
+        db.commit()
 
     
 def check_existence(employerNumber : int, workerNumber : int, db : Session):
