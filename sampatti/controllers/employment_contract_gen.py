@@ -14,7 +14,7 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     current_time = datetime.now()
     field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == request.workerNumber , models.worker_employer.c.employer_number == request.employerNumber).first()
     
-    print(field.worker_number)
+    # print(field.worker_number)
     static_dir = os.path.join(os.getcwd(), 'contracts')
     pdf_path = os.path.join(static_dir, f"{field.id}_ER.pdf")
 
@@ -47,6 +47,12 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     c.setFont("Helvetica-Bold", 14)
     c.drawString(x, y, "Whatsapp Chat:")
 
+    if(request.upi == "None"):
+        request.upi = "N/A"
+
+    else :
+        request.accountNumber = "N/A"
+        request.ifsc = "N/A"
     # Chat Transcript
     chat_text = f"""Employer: I'm interested in onboarding my domestic worker for salary slip
 issuance.
@@ -63,7 +69,7 @@ press "Yes' if the following details are correct:
 
 Name of domestic worker: {request.name}
 
-VPA: {request.upi}
+Bank Details: VPA : {request.upi},  Account Number : {request.accountNumber},  IFSC : {request.ifsc}
 
 Employer: Yes
 

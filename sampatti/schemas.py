@@ -73,6 +73,8 @@ class Contract(BaseModel):
     employerNumber: int
     workerNumber : int
     upi : str
+    accountNumber : str
+    ifsc : str
     name : str
     salary : int
 
