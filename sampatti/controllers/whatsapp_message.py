@@ -13,7 +13,7 @@ def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, se
     data = {
         "template": {
             "namespace": namespace,
-            "name": "salary_payment_link_for_employer",
+            "name": "monthly_salary_link_template",
             "components": [
                 {
                     "type": "body",
@@ -45,7 +45,7 @@ def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, se
                 }
             ],
             "language": {
-                "code": "en",
+                "code": "en_US",
                 "policy": "deterministic"
             }
         },
