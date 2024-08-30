@@ -103,6 +103,14 @@ def generate_salary_slip_endpoint(workerNumber : int, db: Session = Depends(get_
     
     return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{previous_month}_{current_year}.pdf")
 
+@router.get('/get_salary_slip', response_class=FileResponse, name="Get Salary Slip")
+def get_salary_slip(workerNumber : int, month : str, year : str, db: Session = Depends(get_db)):
+
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+    static_pdf_path = os.path.join(os.getcwd(), 'static', f"{worker.id}_SS_{month}_{year}.pdf")
+    
+    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
+
 
 @router.post("/contract")
 def contract_generation(request : schemas.Contract, db : Session = Depends(get_db)):
