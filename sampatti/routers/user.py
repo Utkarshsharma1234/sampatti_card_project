@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..controllers import userControllers, salary_slip_generation
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
-from ..controllers import whatsapp_message, talk_to_agent_excel_file
+from ..controllers import whatsapp_message, talk_to_agent_excel_file, employer_invoice_gen
 
 
 router = APIRouter(
@@ -134,3 +134,15 @@ def generate_sheet():
 @router.get('/copy_employer_message')
 def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
+
+@router.post('/generate_employer_invoice')
+def employer_invoice_generation(employerNumber : int, db : Session = Depends(get_db)):
+    return employer_invoice_gen.employer_invoice_generation(employerNumber, db)
+
+@router.get('/get_employer_invoice', response_class=FileResponse, name="Get Employer Invoice")
+def get_employer_invoice(employerNumber : int, month : str, year : str, db: Session = Depends(get_db)):
+
+    employer = db.query(models.Employer).filter(models.Employer.employerNumber == employerNumber).first()
+    static_pdf_path = os.path.join(os.getcwd(), 'invoices', f"{employer.id}_INV_{month}_{year}.pdf")
+    
+    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{employerNumber}_INVOICE_{month}_{year}.pdf")
