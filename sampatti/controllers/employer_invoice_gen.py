@@ -61,6 +61,12 @@ def employer_invoice_generation(employerNumber, db:Session) :
 
     c.setFont("Times-Roman", 10)
 
+    y -= 50
+    c.drawString(x, y, f"Employer Id : EMP-{employer.id}")
+
+    y -= 20
+    c.drawString(x, y, f"Employer Phone Number : {employer.employerNumber}")
+
     receipt_data = []
     receipt_data.append(["Sr. No.", "Worker Name", "Worker Number", "Reference", "Salary"])
 
