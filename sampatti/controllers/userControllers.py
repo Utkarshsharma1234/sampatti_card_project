@@ -188,7 +188,8 @@ def check_worker(workerNumber : int, db : Session):
             return {
                 "VPA" : field.upi_id,
                 "PAN" : field.panNumber,
-                "NAME" : field.name
+                "NAME" : field.name,
+                "VENDORID" : field.vendorId
             }
 
         else:
@@ -196,7 +197,8 @@ def check_worker(workerNumber : int, db : Session):
                 "NAME" : field.name,
                 "ACCOUNT_NUMBER" : field.accountNumber,
                 "IFSC" : field.ifsc,
-                "PAN" : field.panNumber
+                "PAN" : field.panNumber,
+                "VENDORID" : field.vendorId
             } 
 
 def check_names(pan_name : str,vpa_name : str):
