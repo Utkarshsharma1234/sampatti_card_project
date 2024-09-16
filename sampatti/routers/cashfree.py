@@ -33,7 +33,7 @@ def check_order_status(orderId : str):
 @router.get('/vendor_status')
 async def check_vendor_status(vendorId : str):
 
-    await asyncio.sleep(60)
+    await asyncio.sleep(10)
     return cashfree_api.check_vendor_status(vendorId)
 
 @router.post("/add_a_vendor")
