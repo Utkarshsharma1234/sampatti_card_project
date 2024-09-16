@@ -1,3 +1,4 @@
+import asyncio
 import os
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
@@ -30,7 +31,9 @@ def check_order_status(orderId : str):
     return cashfree_api.check_order_status(orderId)
 
 @router.get('/vendor_status')
-def check_vendor_status(vendorId : str):
+async def check_vendor_status(vendorId : str):
+
+    await asyncio.sleep(120)
     return cashfree_api.check_vendor_status(vendorId)
 
 @router.post("/add_a_vendor")
