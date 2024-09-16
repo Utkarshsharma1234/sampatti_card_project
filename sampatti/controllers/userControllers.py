@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException
-from sqlalchemy import update
+from sqlalchemy import insert, update
 import uuid, random, string, hashlib, difflib, json, re
 from .. import models
 from ..import schemas
@@ -93,9 +93,15 @@ def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
 def create_relation(request : schemas.Worker_Employer, db: Session):
 
     unique_id = generate_unique_id()
-    worker_employer_relation = models.worker_employer(id=unique_id, worker_number=request.workerNumber, employer_number=request.employerNumber, vendor_id = request.vendorId, salary_amount=request.salary)
-    db.add(worker_employer_relation)
-    db.commit()
+    worker_employer_relation = insert(models.worker_employer).values(
+        id=unique_id,
+        worker_number=request.workerNumber,
+        employer_number=request.employerNumber,
+        vendor_id=request.vendorId,
+        salary_amount=request.salary
+    )
+
+    db.execute(worker_employer_relation)
     db.refresh(worker_employer_relation)
     return {
         "MESSAGE" : "SUCCESSFUL"

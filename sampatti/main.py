@@ -23,6 +23,5 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 models.Base.metadata.create_all(engine)
 
-
 app.include_router(user.router)
 app.include_router(cashfree.router)

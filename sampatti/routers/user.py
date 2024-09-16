@@ -29,7 +29,7 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session = Depe
 def create_worker_account_number(request : schemas.Domestic_Worker, db: Session = Depends(get_db)):
     return userControllers.create_worker_account_number(request,db)
 
-@router.post('assign_vendor_id')
+@router.post('/assign_vendor_id')
 def assign_vendor_id(workerNumber : int, vendorId : str, db : Session = Depends(get_db)):
     return userControllers.assign_vendor_id(workerNumber, vendorId, db)
 
