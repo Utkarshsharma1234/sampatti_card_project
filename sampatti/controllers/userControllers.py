@@ -101,8 +101,8 @@ def create_relation(request : schemas.Worker_Employer, db: Session):
         salary_amount=request.salary
     )
 
-    db.execute(worker_employer_relation)
-    db.refresh(worker_employer_relation)
+    with db.begin():
+        db.execute(worker_employer_relation)
     return {
         "MESSAGE" : "SUCCESSFUL"
     }
