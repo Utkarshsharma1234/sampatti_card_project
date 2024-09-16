@@ -1,5 +1,4 @@
 from datetime import datetime
-from queue import Full
 import random
 import string
 from fastapi import HTTPException
@@ -157,40 +156,42 @@ def add_a_vendor(request : schemas.Vendor, db: Session):
         "x-api-version" : "2023-08-01"
     }
 
-    existing_worker_list = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == request.workerNumber).all()
+    url = "https://api.cashfree.com/pg/easy-split/vendors"
 
-    existing_vendor_id = None
-    for existing_worker in existing_worker_list:
-        if existing_worker.vendor_id:
-            existing_vendor_id = existing_worker.vendor_id
-            break
+    response = requests.post(url, json=payload, headers=headers)
 
-    if not existing_vendor_id :
-        url = "https://api.cashfree.com/pg/easy-split/vendors"
+    response_data = json.loads(response.text)
+    vendorId = response_data.get('vendor_id')
+    return {
+        "VENDOR_ID" : vendorId
+    }
 
-        response = requests.post(url, json=payload, headers=headers)
 
-        response_data = json.loads(response.text)
-        vendor_id = response_data.get('vendor_id')
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == request.workerNumber).where(models.worker_employer.c.employer_number == request.employerNumber).values(vendor_id= vendor_id)
+#checking the activation of the vendor
 
-        db.execute(update_statement)
-        db.commit()
-        print(response.text)
-        print(f"The vendor has been added successfully. Vendor Id : {vendor_id}")
-        
-        return uuid_value
-    
-    else:
-        vendor_id = existing_vendor_id
-        print(vendor_id)
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == request.workerNumber).where(models.worker_employer.c.employer_number == request.employerNumber).values(vendor_id= vendor_id)
-        print(f"This vendor already exists.")
-        db.execute(update_statement)
-        db.commit()
+def check_vendor_status(vendorId):
+
+    url = f"https://api.cashfree.com/pg/easy-split/vendors/{vendorId}"
+
+    payload = {}
+    headers = {
+        'x-client-id': pg_id,
+        'x-client-secret': pg_secret,
+        'x-api-version': '2022-09-01',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.get(url, headers=headers, json=payload)
+    response_data = json.loads(response.text)
+    status = response_data.get('status')
+    print(response_data)
+    return {
+        "STATUS" : status,
+        "VENDOR_ID" : vendorId
+    }
+
 
 # checking the order status
-
 def check_order_status(order_id):
 
     url = f"https://api.cashfree.com/pg/orders/{order_id}"

@@ -18,6 +18,12 @@ class Employer(BaseModel):
     class Config:
         from_attributes = True
 
+class Worker_Employer(BaseModel):
+    workerNumber : int
+    employerNumber : int
+    salary : int
+    vendorId : str
+
 class Salary(BaseModel):
     workerNumber : int
     employerNumber : int

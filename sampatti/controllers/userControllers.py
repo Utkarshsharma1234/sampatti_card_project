@@ -48,38 +48,11 @@ def create_employer(request : schemas.Employer, db: Session):
 # creating a domestic worker
 def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
 
-    employer = db.query(models.Employer).filter(models.Employer.employerNumber == request.employerNumber).first()
-
-    if not employer:
-        raise HTTPException(status_code=400, detail="The employer is not registered. You must register the employer first.")
-
-    existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
-    
-    if not existing_worker:
-        unique_id = generate_unique_id()
-        new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = None, ifsc = None)
-        new_worker.employers.append(employer)
-        db.add(new_worker)
-        db.commit()
-        db.refresh(new_worker)
-
-        unique_id2 = generate_unique_id()
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == request.workerNumber).where(models.worker_employer.c.employer_number == employer.employerNumber).values(id=unique_id2)
-        db.execute(update_statement)
-        db.commit()
-        return new_worker
-    
-    else:
-        existing_worker.employers.append(employer)
-        db.commit()
-        db.refresh(existing_worker)
-
-        unique_id2 = generate_unique_id()
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == request.workerNumber).where(models.worker_employer.c.employer_number == employer.employerNumber).values(id=unique_id2)
-        db.execute(update_statement)
-        db.commit()
-        return existing_worker
-
+    unique_id = generate_unique_id()
+    new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = None, ifsc = None, vendorId = None)
+    db.add(new_worker)
+    db.commit()
+    db.refresh(new_worker)
 
 # creating the worker from account number and customer care number
 
@@ -97,7 +70,7 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
     if not existing_worker:
 
         unique_id = generate_unique_id()
-        new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id =request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc)
+        new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id =request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc, vendor_id = None)
 
         db.add(new_worker)
         db.commit()
@@ -107,6 +80,27 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
     else:
         return {"message" : "WORKER_ALREADY_ONBOARDED"}
     
+
+# assigning the vendor id to the worker in the domestic worker table.
+def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
+
+    update_statement = update(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == workerNumber).values(vendorId = vendorId)
+    db.execute(update_statement)
+    db.commit()
+
+
+# creating a relation between employer and worker.
+def create_relation(request : schemas.Worker_Employer, db: Session):
+
+    unique_id = generate_unique_id()
+    worker_employer_relation = models.worker_employer(id=unique_id, worker_number=request.workerNumber, employer_number=request.employerNumber, vendor_id = request.vendorId, salary_amount=request.salary)
+    db.add(worker_employer_relation)
+    db.commit()
+    db.refresh(worker_employer_relation)
+    return {
+        "MESSAGE" : "SUCCESSFUL"
+    }
+
 
 def create_message_log(request : schemas.Message_log_Schema, db  :Session):
 

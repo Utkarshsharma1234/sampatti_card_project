@@ -29,6 +29,14 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session = Depe
 def create_worker_account_number(request : schemas.Domestic_Worker, db: Session = Depends(get_db)):
     return userControllers.create_worker_account_number(request,db)
 
+@router.post('assign_vendor_id')
+def assign_vendor_id(workerNumber : int, vendorId : str, db : Session = Depends(get_db)):
+    return userControllers.assign_vendor_id(workerNumber, vendorId, db)
+
+@router.post('/create_relation')
+def create_relation(request : schemas.Worker_Employer, db : Session = Depends(get_db)):
+    return userControllers.create_relation(request, db)
+
 @router.get("/check_existence")
 def check_existence(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.check_existence(employerNumber, workerNumber,db)
@@ -48,7 +56,6 @@ def number_regex(numberString : str):
 @router.get("/extract_salary")
 def extract_salary(salary_amount : str):
     return userControllers.extract_salary(salary_amount)
-
 
 @router.post('/talk_to_agent/create')
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db : Session = Depends(get_db)):

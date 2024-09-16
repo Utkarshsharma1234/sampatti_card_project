@@ -29,6 +29,10 @@ def payment_link_generation(db : Session = Depends(get_db)):
 def check_order_status(orderId : str):
     return cashfree_api.check_order_status(orderId)
 
+@router.get('/vendor_status')
+def check_vendor_status(vendorId : str):
+    return cashfree_api.check_vendor_status(vendorId)
+
 @router.post("/add_a_vendor")
 def add_a_vendor(request : schemas.Vendor, db : Session = Depends(get_db)):
     return cashfree_api.add_a_vendor(request, db)

@@ -24,6 +24,7 @@ class Domestic_Worker(Base):
     upi_id = Column(String, nullable=True)
     accountNumber = Column(String, nullable=True)
     ifsc = Column(String, nullable=True)
+    vendorId = Column(String, nullable=True)
     employers = relationship("Employer", secondary="worker_employer", back_populates='workers') 
 
 
