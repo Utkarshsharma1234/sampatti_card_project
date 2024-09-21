@@ -37,6 +37,10 @@ def assign_vendor_id(workerNumber : int, vendorId : str, db : Session = Depends(
 def create_relation(request : schemas.Worker_Employer, db : Session = Depends(get_db)):
     return userControllers.create_relation(request, db)
 
+@router.delete('/delete_relation')
+def delete_relation(workerNumber : int, employerNumber : int, db : Session = Depends(get_db)):
+    return userControllers.delete_relation(workerNumber, employerNumber,db)
+
 @router.get("/check_existence")
 def check_existence(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.check_existence(employerNumber, workerNumber,db)
@@ -128,7 +132,24 @@ def contract_generation(request : schemas.Contract, db : Session = Depends(get_d
     static_pdf_path = os.path.join(os.getcwd(), 'contracts', f"{field.id}_ER.pdf")
 
     return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{request.workerNumber}_ER_{request.employerNumber}.pdf")
-    
+
+
+@router.delete("/delete_demo_contract")
+def delete_demo_contract(workerNumber : int, employerNumber : int, db: Session = Depends(get_db)):
+
+    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
+
+    static_pdf_path = os.path.join(os.getcwd(), 'contracts', f"{field.id}_ER.pdf")
+    if(static_pdf_path):
+        os.remove(static_pdf_path)
+        return {
+            "MESSAGE" : "File deleted Successfully."
+        }
+
+    else:
+        return {
+            "MESSAGE" : "No such file exist."
+        }
     
 @router.post("/generate_contract")
 def generate(workerNumber: int, employerNumber: int, db : Session = Depends(get_db)):

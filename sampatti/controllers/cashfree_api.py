@@ -208,7 +208,7 @@ def check_order_status(order_id):
     print(response.text)
     response_data = json.loads(response.text)
     order_status = response_data.get('order_status')
-    return order_status
+    return response_data
     
 # pan verification
 

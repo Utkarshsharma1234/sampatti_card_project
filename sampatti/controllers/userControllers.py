@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException
-from sqlalchemy import insert, update
+from sqlalchemy import delete, insert, update
 import uuid, random, string, hashlib, difflib, json, re
 from .. import models
 from ..import schemas
@@ -107,6 +107,18 @@ def create_relation(request : schemas.Worker_Employer, db: Session):
         "MESSAGE" : "SUCCESSFUL"
     }
 
+#deleting the relation
+def delete_relation(workerNumber: int, employerNumber: int, db: Session):
+
+    field = delete(models.worker_employer).where(
+        models.worker_employer.c.worker_number == workerNumber,
+        models.worker_employer.c.employer_number == employerNumber
+    )
+
+    with db.begin():
+        result = db.execute(field)
+
+    return {"MESSAGE": "Record deleted successfully."}
 
 def create_message_log(request : schemas.Message_log_Schema, db  :Session):
 
