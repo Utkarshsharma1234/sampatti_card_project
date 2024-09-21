@@ -191,6 +191,29 @@ def check_vendor_status(vendorId):
     }
 
 
+# fetching the UTR No.
+
+def fetch_utr(order_id):
+
+    url = f"https://api.cashfree.com/pg/orders/{order_id}/settlements"
+
+    headers = {
+        "accept": "application/json",
+        "x-api-version": "2023-08-01",
+        "x-client-id": pg_id,
+        "x-client-secret": pg_secret
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        print(response.text)
+        response_data = json.loads(response.text)
+        utr_no = response_data.get('transfer_utr')
+        return utr_no
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+
 # checking the order status
 def check_order_status(order_id):
 
@@ -208,7 +231,7 @@ def check_order_status(order_id):
     print(response.text)
     response_data = json.loads(response.text)
     order_status = response_data.get('order_status')
-    return response_data
+    return order_status
     
 # pan verification
 

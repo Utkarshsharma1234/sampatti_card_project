@@ -8,7 +8,7 @@ from textwrap import wrap
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
-from .cashfree_api import check_order_status
+from .cashfree_api import check_order_status, fetch_utr
 from ..controllers import amount_to_words
 
 
@@ -112,13 +112,14 @@ def generate_salary_slip(workerNumber, db:Session) :
         status = check_order_status(order_id=order_id)
         if status == "PAID":
 
+            utr_no = fetch_utr(order_id=order_id)
             employer_id = ""
             for employer in total_employers:
                 if(employer.employerNumber == transaction.employer_number):
                     employer_id = employer.id
                     break
 
-            single_row = [ct, f"EMP-{employer_id}", "UPI", transaction.order_id, transaction.salary_amount, 0]
+            single_row = [ct, f"EMP-{employer_id}", "UPI", utr_no, transaction.salary_amount, 0]
             receipt_data.append(single_row)
             rows += 1
             ct += 1

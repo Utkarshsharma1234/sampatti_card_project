@@ -114,6 +114,8 @@ def generate_salary_slip_endpoint(workerNumber : int, db: Session = Depends(get_
     
     return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{previous_month}_{current_year}.pdf")
 
+
+
 @router.get('/get_salary_slip', response_class=FileResponse, name="Get Salary Slip")
 def get_salary_slip(workerNumber : int, month : str, year : str, db: Session = Depends(get_db)):
 
@@ -150,6 +152,7 @@ def delete_demo_contract(workerNumber : int, employerNumber : int, db: Session =
         return {
             "MESSAGE" : "No such file exist."
         }
+    
     
 @router.post("/generate_contract")
 def generate(workerNumber: int, employerNumber: int, db : Session = Depends(get_db)):

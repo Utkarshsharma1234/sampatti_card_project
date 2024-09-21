@@ -7,7 +7,7 @@ from reportlab.platypus import Table, TableStyle
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
-from .cashfree_api import check_order_status
+from .cashfree_api import check_order_status, fetch_utr
 from ..controllers import amount_to_words
 
 
@@ -83,13 +83,14 @@ def employer_invoice_generation(employerNumber, db:Session) :
         status = check_order_status(order_id=order_id)
         if status == "PAID":
 
+            utr_no = fetch_utr(order_id=order_id)
             workerDetails = {}
             for worker in total_workers:
                 if(worker.workerNumber == transaction.worker_number):
                     workerDetails = worker
                     break
 
-            single_row = [ct, f"{workerDetails.name}", f"{workerDetails.workerNumber}",transaction.order_id, transaction.salary_amount]
+            single_row = [ct, f"{workerDetails.name}", f"{workerDetails.workerNumber}", utr_no, transaction.salary_amount]
             receipt_data.append(single_row)
             rows += 1
             ct += 1
