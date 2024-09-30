@@ -208,6 +208,7 @@ def check_worker(workerNumber : int, db : Session):
     else:
         if field.accountNumber is None:
             return {
+                "id" : field.id,
                 "VPA" : field.upi_id,
                 "PAN" : field.panNumber,
                 "NAME" : field.name,
@@ -216,6 +217,7 @@ def check_worker(workerNumber : int, db : Session):
 
         else:
             return {
+                "id" : field.id,
                 "NAME" : field.name,
                 "ACCOUNT_NUMBER" : field.accountNumber,
                 "IFSC" : field.ifsc,
