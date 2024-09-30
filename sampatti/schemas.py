@@ -23,6 +23,9 @@ class Worker_Employer(BaseModel):
     employerNumber : int
     salary : int
     vendorId : str
+    worker_name : str
+    employer_id : str
+    worker_id : str
 
 class Salary(BaseModel):
     workerNumber : int

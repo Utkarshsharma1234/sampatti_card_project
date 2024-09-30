@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 import requests
+from sqlalchemy import update
 from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
@@ -9,12 +10,20 @@ from ..controllers import userControllers, salary_slip_generation
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, employer_invoice_gen
+from ..controllers import cashfree_api
 
 
 router = APIRouter(
     prefix="/user",
     tags=['users']
 )
+
+
+current_date = datetime.now().date()
+first_day_of_current_month = datetime.now().replace(day=1)
+last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+previous_month = last_day_of_previous_month.strftime("%B")
+current_year = datetime.now().year
 
 
 @router.post("/employer/create")
@@ -102,18 +111,11 @@ def salary_slips(db: Session = Depends(get_db)):
 
 @router.get("/generate_salary_slip/{workerNumber}", response_class=FileResponse, name="Generate Salary Slip")
 def generate_salary_slip_endpoint(workerNumber : int, db: Session = Depends(get_db)):
-   
-    salary_slip_generation.generate_salary_slip(workerNumber, db)
-    first_day_of_current_month = datetime.now().replace(day=1)
-    last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
-    previous_month = last_day_of_previous_month.strftime("%B")
-    current_year = datetime.now().year
 
     worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
     static_pdf_path = os.path.join(os.getcwd(), 'static', f"{worker.id}_SS_{previous_month}_{current_year}.pdf")
     
     return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{previous_month}_{current_year}.pdf")
-
 
 
 @router.get('/get_salary_slip', response_class=FileResponse, name="Get Salary Slip")
@@ -155,8 +157,44 @@ def delete_demo_contract(workerNumber : int, employerNumber : int, db: Session =
     
     
 @router.post("/generate_contract")
-def generate(workerNumber: int, employerNumber: int, db : Session = Depends(get_db)):
-    return whatsapp_message.generate(workerNumber, employerNumber, db)
+def generate_mediaId(workerNumber: int, employerNumber: int, db : Session = Depends(get_db)):
+
+    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
+
+    path = f"{field.id}_ER.pdf"
+    folder = 'contracts'
+    return whatsapp_message.generate_mediaId(path, folder)
+
+
+@router.get("/send_employer_invoices")
+def send_employer_invoice(db : Session = Depends(get_db)):
+
+    transactions = db.query(models.worker_employer).all()
+    for item in transactions:
+
+        if item.status == "SENT":
+            continue
+        
+        elif item.order_id is None:
+            continue
+
+        order_status = cashfree_api.check_order_status(order_id=item.order_id)
+        if(order_status == "PAID"):
+
+            employer_invoice_gen.employer_invoice_generation(item.employer_number, item.worker_number, db)
+            path = f"{item.employer_id}_INV_{item.worker_id}_{previous_month}_{current_year}.pdf"
+            folder = 'invoices'
+            filename = f"{item.employer_number}_INV_{item.worker_number}_{previous_month}_{current_year}"
+            response = whatsapp_message.generate_mediaId(path,folder)
+            mediaId = response.get('id')
+            print(mediaId)
+            whatsapp_message.send_pdf(item.employer_number, mediaId, filename)
+            update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(status="SENT")
+
+            db.execute(update_statement)
+            db.commit()
+        else:
+            continue
 
 @router.get('/generate_talk_to_agent_sheet')
 def generate_sheet():
@@ -166,9 +204,6 @@ def generate_sheet():
 def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
 
-@router.post('/generate_employer_invoice')
-def employer_invoice_generation(employerNumber : int, db : Session = Depends(get_db)):
-    return employer_invoice_gen.employer_invoice_generation(employerNumber, db)
 
 @router.get('/get_employer_invoice', response_class=FileResponse, name="Get Employer Invoice")
 def get_employer_invoice(employerNumber : int, month : str, year : str, db: Session = Depends(get_db)):

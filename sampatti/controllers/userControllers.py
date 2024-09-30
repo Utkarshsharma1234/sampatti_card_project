@@ -42,7 +42,7 @@ def create_employer(request : schemas.Employer, db: Session):
         return new_user
     
     else:
-        {"message" : "EMPLOYER_EXISTS"}
+        return employer
 
 
 # creating a domestic worker
@@ -53,6 +53,7 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
     db.add(new_worker)
     db.commit()
     db.refresh(new_worker)
+    return new_worker
 
 # creating the worker from account number and customer care number
 
@@ -98,7 +99,10 @@ def create_relation(request : schemas.Worker_Employer, db: Session):
         worker_number=request.workerNumber,
         employer_number=request.employerNumber,
         vendor_id=request.vendorId,
-        salary_amount=request.salary
+        salary_amount=request.salary,
+        worker_name=request.worker_name,
+        employer_id=request.employer_id,
+        worker_id = request.worker_id
     )
 
     with db.begin():

@@ -9,7 +9,10 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('salary_amount', Integer, default=0),
     Column('order_id', String, default=''),
     Column('status', String, default=''),
-    Column('vendor_id', String, default='')
+    Column('vendor_id', String, default=''),
+    Column('worker_name', String, default=''),
+    Column('employer_id', String, default=''),
+    Column('worker_id', String, default = '')
 )   
 
 

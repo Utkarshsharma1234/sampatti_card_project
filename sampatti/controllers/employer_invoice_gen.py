@@ -1,5 +1,5 @@
 import os
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -7,13 +7,13 @@ from reportlab.platypus import Table, TableStyle
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
-from .cashfree_api import check_order_status, fetch_utr
-from ..controllers import amount_to_words
+from .cashfree_api import fetch_utr
 
 
-def employer_invoice_generation(employerNumber, db:Session) :
+def employer_invoice_generation(employerNumber, workerNumber, db:Session) :
 
     employer = db.query(models.Employer).filter(models.Employer.employerNumber == employerNumber).first()
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
     
     current_date = datetime.now().date()
     first_day_of_current_month = datetime.now().replace(day=1)
@@ -24,7 +24,7 @@ def employer_invoice_generation(employerNumber, db:Session) :
         raise HTTPException(status_code=404, detail="The employer is not registered. You must register the employer first.")
     
     static_dir = os.path.join(os.getcwd(), 'invoices')
-    pdf_path = os.path.join(static_dir, f"{employer.id}_INV_{previous_month}_{current_year}.pdf")
+    pdf_path = os.path.join(static_dir, f"{employer.id}_INV_{worker.id}_{previous_month}_{current_year}.pdf")
 
     if not os.path.exists('invoices'):
         os.makedirs('invoices')
@@ -72,31 +72,17 @@ def employer_invoice_generation(employerNumber, db:Session) :
 
     rows = 0
 
-    total_transactions = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber).all()
-    total_workers = db.query(models.Domestic_Worker).all()
+    transaction = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber).filter(models.worker_employer.c.worker_number == workerNumber).first()
     
     ct = 1
-    for transaction in total_transactions:
-        order_id = transaction.order_id
-        if order_id is None:
-            continue
-        status = check_order_status(order_id=order_id)
-        if status == "PAID":
+    order_id = transaction.order_id
+    utr_no = fetch_utr(order_id=order_id)
+    workerName = transaction.worker_name
 
-            utr_no = fetch_utr(order_id=order_id)
-            workerDetails = {}
-            for worker in total_workers:
-                if(worker.workerNumber == transaction.worker_number):
-                    workerDetails = worker
-                    break
-
-            single_row = [ct, f"{workerDetails.name}", f"{workerDetails.workerNumber}", utr_no, transaction.salary_amount]
-            receipt_data.append(single_row)
-            rows += 1
-            ct += 1
-
-        else:
-            continue
+    single_row = [ct, f"{workerName}", f"{workerNumber}", utr_no, transaction.salary_amount]
+    receipt_data.append(single_row)
+    rows += 1
+    ct += 1
 
     receipt_style = TableStyle([
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.Color(0.078, 0.33, 0.45)),
@@ -155,3 +141,5 @@ employer for the worker for whom salary record is generated."""
 
     c.showPage()
     c.save()
+
+    print("invoice generated")
