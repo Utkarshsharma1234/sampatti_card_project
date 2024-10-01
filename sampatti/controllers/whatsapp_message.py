@@ -72,6 +72,7 @@ def generate_mediaId(path : str, folder : str):
     url = "https://waba-v2.360dialog.io/media"
 
     static_pdf_path = os.path.join(os.getcwd(), folder, path)
+    print(static_pdf_path)
 
     if os.path.exists(static_pdf_path):
         headers = {
@@ -103,6 +104,7 @@ def send_pdf(receiverNumber : int, mediaId : str, filename : str):
 
     orai_api_key = os.environ.get('ORAI_API_KEY')
 
+    print("entered sending pdf")
     payload = json.dumps({
             "messaging_product": "whatsapp",
             "recipient_type": "individual",

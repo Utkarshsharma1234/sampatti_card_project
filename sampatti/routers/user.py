@@ -183,16 +183,16 @@ def send_employer_invoice(db : Session = Depends(get_db)):
 
             employer_invoice_gen.employer_invoice_generation(item.employer_number, item.worker_number, db)
             path = f"{item.employer_id}_INV_{item.worker_id}_{previous_month}_{current_year}.pdf"
-            folder = 'invoices'
+            folder = "invoices"
             filename = f"{item.employer_number}_INV_{item.worker_number}_{previous_month}_{current_year}"
             response = whatsapp_message.generate_mediaId(path,folder)
             mediaId = response.get('id')
-            print(mediaId)
+            print("exited media id - the media id is : ", mediaId)
             whatsapp_message.send_pdf(item.employer_number, mediaId, filename)
             update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(status="SENT")
-
             db.execute(update_statement)
             db.commit()
+            print(item.status)
         else:
             continue
 
