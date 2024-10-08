@@ -72,7 +72,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     ct = 1
     order_id = transaction.order_id
     bank_ref_no = fetch_bank_ref(order_id=order_id)
-    print("the utr no is : " + bank_ref_no)
+    print(f"the utr no is :  {bank_ref_no}")
     workerName = transaction.worker_name
 
     single_row = [ct, f"{workerName}", f"{workerNumber}", bank_ref_no, transaction.salary_amount]

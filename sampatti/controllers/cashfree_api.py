@@ -207,9 +207,9 @@ def fetch_bank_ref(order_id):
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
-        print(response.text)
         response_data = json.loads(response.text)
-        bank_ref_no = response_data.get('bank_reference')
+        bank_ref_no = response_data[0].get('bank_reference')
+        print(bank_ref_no)
         return bank_ref_no
     else:
         print(f"Error: {response.status_code}, {response.text}")
