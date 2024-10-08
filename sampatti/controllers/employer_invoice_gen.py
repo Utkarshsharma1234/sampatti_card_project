@@ -7,24 +7,19 @@ from reportlab.platypus import Table, TableStyle
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
-from .cashfree_api import fetch_utr
+from .cashfree_api import fetch_bank_ref
 
 
-def employer_invoice_generation(employerNumber, workerNumber, db:Session) :
+def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, db:Session) :
 
-    employer = db.query(models.Employer).filter(models.Employer.employerNumber == employerNumber).first()
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-    
     current_date = datetime.now().date()
     first_day_of_current_month = datetime.now().replace(day=1)
     last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
     previous_month = last_day_of_previous_month.strftime("%B")
     current_year = datetime.now().year
-    if not employer :
-        raise HTTPException(status_code=404, detail="The employer is not registered. You must register the employer first.")
-    
+
     static_dir = os.path.join(os.getcwd(), 'invoices')
-    pdf_path = os.path.join(static_dir, f"{employer.id}_INV_{worker.id}_{previous_month}_{current_year}.pdf")
+    pdf_path = os.path.join(static_dir, f"{employerId}_INV_{workerId}_{previous_month}_{current_year}.pdf")
 
     if not os.path.exists('invoices'):
         os.makedirs('invoices')
@@ -62,10 +57,10 @@ def employer_invoice_generation(employerNumber, workerNumber, db:Session) :
     c.setFont("Times-Roman", 10)
 
     y -= 50
-    c.drawString(x, y, f"Employer Id : EMP-{employer.id}")
+    c.drawString(x, y, f"Employer Id : EMP-{employerId}")
 
     y -= 20
-    c.drawString(x, y, f"Employer Phone Number : {employer.employerNumber}")
+    c.drawString(x, y, f"Employer Phone Number : {employerNumber}")
 
     receipt_data = []
     receipt_data.append(["Sr. No.", "Worker Name", "Worker Number", "Reference", "Salary"])
@@ -76,10 +71,11 @@ def employer_invoice_generation(employerNumber, workerNumber, db:Session) :
     
     ct = 1
     order_id = transaction.order_id
-    utr_no = fetch_utr(order_id=order_id)
+    bank_ref_no = fetch_bank_ref(order_id=order_id)
+    print("the utr no is : " + bank_ref_no)
     workerName = transaction.worker_name
 
-    single_row = [ct, f"{workerName}", f"{workerNumber}", utr_no, transaction.salary_amount]
+    single_row = [ct, f"{workerName}", f"{workerNumber}", bank_ref_no, transaction.salary_amount]
     receipt_data.append(single_row)
     rows += 1
     ct += 1

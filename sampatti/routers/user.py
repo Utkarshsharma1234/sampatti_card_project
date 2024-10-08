@@ -166,10 +166,11 @@ def generate_mediaId(workerNumber: int, employerNumber: int, db : Session = Depe
     return whatsapp_message.generate_mediaId(path, folder)
 
 
-@router.get("/send_employer_invoices")
-def send_employer_invoice(db : Session = Depends(get_db)):
+@router.get("/send_employer_invoices/{employerNumber}")
+def send_employer_invoice(employerNumber : int, db : Session = Depends(get_db)):
 
-    transactions = db.query(models.worker_employer).all()
+    transactions = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber).all()
+    
     for item in transactions:
 
         if item.status == "SENT":
@@ -181,7 +182,7 @@ def send_employer_invoice(db : Session = Depends(get_db)):
         order_status = cashfree_api.check_order_status(order_id=item.order_id)
         if(order_status == "PAID"):
 
-            employer_invoice_gen.employer_invoice_generation(item.employer_number, item.worker_number, db)
+            employer_invoice_gen.employer_invoice_generation(item.employer_number, item.worker_number, item.employer_id, item.worker_id, db)
             path = f"{item.employer_id}_INV_{item.worker_id}_{previous_month}_{current_year}.pdf"
             folder = "invoices"
             filename = f"{item.employer_number}_INV_{item.worker_number}_{previous_month}_{current_year}"
@@ -212,3 +213,23 @@ def get_employer_invoice(employerNumber : int, month : str, year : str, db: Sess
     static_pdf_path = os.path.join(os.getcwd(), 'invoices', f"{employer.id}_INV_{month}_{year}.pdf")
     
     return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{employerNumber}_INVOICE_{month}_{year}.pdf")
+
+@router.get('/employer_invoices')
+def salary_confirmation_invoices(db : Session = Depends(get_db)):
+
+    transactions = db.query(models.worker_employer).all()
+
+    for item in transactions:
+
+        if item.status == "SENT":
+            continue
+        
+        elif item.order_id is None:
+            continue
+
+        order_status = cashfree_api.check_order_status(order_id=item.order_id)
+        if(order_status == "PAID"):
+            whatsapp_message.send_employer_invoice_message(item.employer_number)
+
+        else:
+            continue

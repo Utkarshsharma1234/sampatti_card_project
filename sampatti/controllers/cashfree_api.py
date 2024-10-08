@@ -193,9 +193,9 @@ def check_vendor_status(vendorId):
 
 # fetching the UTR No.
 
-def fetch_utr(order_id):
+def fetch_bank_ref(order_id):
 
-    url = f"https://api.cashfree.com/pg/orders/{order_id}/settlements"
+    url = f"https://api.cashfree.com/pg/orders/{order_id}/payments"
 
     headers = {
         "accept": "application/json",
@@ -209,8 +209,8 @@ def fetch_utr(order_id):
     if response.status_code == 200:
         print(response.text)
         response_data = json.loads(response.text)
-        utr_no = response_data.get('transfer_utr')
-        return utr_no
+        bank_ref_no = response_data.get('bank_reference')
+        return bank_ref_no
     else:
         print(f"Error: {response.status_code}, {response.text}")
 

@@ -4,6 +4,9 @@ import requests, os
 from .. import models
 from sqlalchemy.orm import Session
 
+orai_api_key = os.environ.get('ORAI_API_KEY')
+orai_namespace = os.environ.get('ORAI_NAMESPACE')
+
 def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, session_id, receiver_number):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
     headers = {
@@ -63,11 +66,43 @@ def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, se
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 
 
+def send_employer_invoice_message(receiverNumber : int):
+
+    
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": "employer_invoice_template_demo",
+            "components": [],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": receiverNumber,
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Invoice sent to the employer : " + {receiverNumber})
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
+
+
 def generate_mediaId(path : str, folder : str):
     
 
     print("the code entered media id")
-    orai_api_key = os.environ.get('ORAI_API_KEY')
 
     url = "https://waba-v2.360dialog.io/media"
 
