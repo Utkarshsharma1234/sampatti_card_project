@@ -1,7 +1,5 @@
 import asyncio
-import os
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
 from .. import schemas
 from ..database import get_db
 from sqlalchemy.orm import Session

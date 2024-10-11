@@ -1,11 +1,11 @@
-from datetime import datetime
-from fastapi import HTTPException
+from datetime import datetime, timedelta
 from sqlalchemy import delete, insert, update
-import uuid, random, string, hashlib, difflib, json, re
+import uuid, random, string,  difflib, re
 from .. import models
 from ..import schemas
+from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces
 from sqlalchemy.orm import Session
-
+import os
 
 # utility functions
 
@@ -276,3 +276,33 @@ def copy_employer_message(db : Session):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+
+
+def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
+
+    transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
+
+    first_day_of_current_month = datetime.now().replace(day=1)
+    last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+    previous_month = last_day_of_previous_month.strftime("%B")
+    current_year = datetime.now().year
+
+    if transaction.status == "SENT":
+        return
+    
+    elif transaction.order_id is None:
+        return
+
+    order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
+    if(order_status == "PAID"):
+
+        employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
+
+        static_dir = os.path.join(os.getcwd(), 'invoices')
+        filename = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
+
+        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
+
+        print(f"the pdf path is : {filePath}")
+        return uploading_files_to_spaces.upload_file_to_spaces(filePath, filename)
+       
