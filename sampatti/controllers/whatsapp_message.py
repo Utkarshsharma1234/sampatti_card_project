@@ -77,7 +77,7 @@ def employer_invoice_message(employerNumber, workerName, salary, filename):
     data = {
         "template": {
             "namespace": orai_namespace,
-            "name": "monthly_salary_link_template",
+            "name": "employer_invoice_template",
             "components": [
                 {
                     "type": "body",
