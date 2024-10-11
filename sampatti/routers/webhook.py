@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
@@ -10,7 +10,7 @@ router = APIRouter(
 
 # Define the webhook route
 @router.post("/cashfree")
-async def cashfree_webhook(request: Request, db = Session(get_db)):
+async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
     try:
         # Receive and parse the JSON body
         payload = await request.json()
