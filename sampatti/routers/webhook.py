@@ -1,5 +1,7 @@
-from fastapi import APIRouter, FastAPI, Request, HTTPException
-import json
+from fastapi import APIRouter, Request, HTTPException
+from ..database import get_db
+from sqlalchemy.orm import Session
+from ..controllers import userControllers
 
 router = APIRouter(
     prefix="/webhook",
@@ -8,7 +10,7 @@ router = APIRouter(
 
 # Define the webhook route
 @router.post("/cashfree")
-async def cashfree_webhook(request: Request):
+async def cashfree_webhook(request: Request, db = Session(get_db)):
     try:
         # Receive and parse the JSON body
         payload = await request.json()
@@ -22,16 +24,17 @@ async def cashfree_webhook(request: Request):
         bank_reference = payload['data']['payment'].get('bank_reference')
         payment_status = payload['data']['payment'].get('payment_status')
 
-        # Print the extracted details for debugging
+        if payment_status != "SUCCESS":
+            return {"status" : f"{payment_status}"}
+        
         print(f"Customer ID: {customer_id}")
         print(f"Customer Phone: {customer_phone}")
         print(f"Order ID: {order_id}")
         print(f"Bank Reference: {bank_reference}")
         print(f"Payment Status: {payment_status}")
 
-        if payment_status == "SUCCESS":
-            print(f"Payment successful for order: {order_id}")
-            
+        customer_phone = f"91{customer_phone}"
+        userControllers.send_employer_invoice(employerNumber=customer_phone, orderId=order_id, db=db)
         return {"status": "success"}
     
     except Exception as e:

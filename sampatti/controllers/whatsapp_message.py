@@ -7,16 +7,16 @@ from sqlalchemy.orm import Session
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
 
-def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, session_id, receiver_number):
+def send_whatsapp_message(cust_name, dw_name, month_year, session_id, receiver_number):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
     headers = {
-        "API-KEY": api_key,
+        "API-KEY": orai_api_key,
         "Content-Type": "application/json"
     }
 
     data = {
         "template": {
-            "namespace": namespace,
+            "namespace": orai_namespace,
             "name": "monthly_salary_link_template",
             "components": [
                 {
@@ -66,9 +66,8 @@ def send_whatsapp_message(api_key, namespace, cust_name, dw_name, month_year, se
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 
 
-def send_employer_invoice_message(receiverNumber : int):
 
-
+def employer_invoice_message(employerNumber, workerName, salary, filename):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
     headers = {
         "API-KEY": orai_api_key,
@@ -78,22 +77,51 @@ def send_employer_invoice_message(receiverNumber : int):
     data = {
         "template": {
             "namespace": orai_namespace,
-            "name": "employer_invoice_template_demo",
-            "components": [],
+            "name": "monthly_salary_link_template",
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": employerNumber
+                        },
+                        {
+                            "type": "text",
+                            "text": workerName
+                        },
+                        {
+                            "type": "text",
+                            "text": salary
+                        }
+                    ]
+                },
+                {
+                    "index": 0,
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": filename
+                        }
+                    ],
+                    "sub_type": "url",
+                    "type": "button"
+                }
+            ],
             "language": {
                 "code": "en_US",
                 "policy": "deterministic"
             }
         },
         "messaging_product": "whatsapp",
-        "to": receiverNumber,
+        "to": employerNumber,
         "type": "template"
     }
 
     response = requests.post(url, headers=headers, json=data)
 
     if response.status_code == 200:
-        print(f"Message sent successfully, Invoice sent to the employer : f{receiverNumber}")
+        print(f"Message sent successfully, Worker name : {workerName}, Employer Number : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 

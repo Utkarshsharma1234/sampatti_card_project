@@ -3,7 +3,7 @@ from sqlalchemy import delete, insert, update
 import uuid, random, string,  difflib, re
 from .. import models
 from ..import schemas
-from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces
+from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message
 from sqlalchemy.orm import Session
 import os
 
@@ -299,10 +299,17 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
         employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
 
         static_dir = os.path.join(os.getcwd(), 'invoices')
-        filename = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
+        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
 
+        object_name = f"employerInvoices/{employer_invoice_name}"
         filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
 
         print(f"the pdf path is : {filePath}")
-        return uploading_files_to_spaces.upload_file_to_spaces(filePath, filename)
+        uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
+        whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, employer_invoice_name)
+
+        update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).values(status="SENT")
+
+        db.execute(update_statement)
+        db.commit()
        
