@@ -283,7 +283,7 @@ def copy_employer_message(db : Session):
         db.refresh(new_user)
 
 
-def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
+def send_employer_invoice(db : Session):
 
     # transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
@@ -312,7 +312,7 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
             uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
             # whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, employer_invoice_name)
 
-            update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).values(status="SENT")
+            update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == transaction.employer_number, models.worker_employer.c.order_id == transaction.order_id).values(status="SENT")
 
             db.execute(update_statement)
             db.commit()
