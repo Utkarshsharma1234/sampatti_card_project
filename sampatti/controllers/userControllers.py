@@ -3,11 +3,16 @@ from sqlalchemy import delete, insert, update
 import uuid, random, string,  difflib, re
 from .. import models
 from ..import schemas
-from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message
+from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 import os
 
 # utility functions
+
+first_day_of_current_month = datetime.now().replace(day=1)
+last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+previous_month = last_day_of_previous_month.strftime("%B")
+current_year = datetime.now().year
 
 def generate_unique_id(length=8):
 
@@ -282,11 +287,6 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
     transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
-    first_day_of_current_month = datetime.now().replace(day=1)
-    last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
-    previous_month = last_day_of_previous_month.strftime("%B")
-    current_year = datetime.now().year
-
     if transaction.status == "SENT":
         return
     
@@ -298,18 +298,37 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
         employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
 
-        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
-        object_name = f"employerInvoices/{employer_invoice_name}"
+        filename = f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf"
+        object_name = f"employerInvoices/{filename}"
         
         static_dir = os.path.join(os.getcwd(), 'invoices')
-        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
+        filePath = os.path.join(static_dir, filename)
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
-        whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, employer_invoice_name)
+
+        # whatsapp_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
+        # whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, whatsapp_name)
 
         update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).values(status="SENT")
 
         db.execute(update_statement)
         db.commit()
        
+
+def send_worker_salary_slips(db : Session):
+
+    total_workers = db.query(models.Domestic_Worker).all()
+
+    for worker in total_workers:
+
+        salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
+        worker_slip_name = f"{worker.name}_SS_{previous_month}_{current_year}.pdf"
+        object_name = f"salarySlips/{worker_slip_name}"
+        
+        static_dir = os.path.join(os.getcwd(), 'static')
+        filePath = os.path.join(static_dir, f"{worker.id}_SS_{previous_month}_{current_year}.pdf")
+
+        print(f"the pdf path is : {filePath}")
+        uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
+        whatsapp_message.worker_salary_slip_message()

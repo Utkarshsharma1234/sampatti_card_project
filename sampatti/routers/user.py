@@ -88,42 +88,9 @@ def update_worker(oldNumber : int, newNumber: int, db : Session = Depends(get_db
 def insert_salary(request : schemas.Salary, db : Session = Depends(get_db)):
     return userControllers.insert_salary(request, db)
 
-@router.get("/salary_slips")
-def salary_slips(db: Session = Depends(get_db)):
-
-    total_workers = db.query(models.Domestic_Worker).all()
-
-    for singleworker in total_workers:
-        url = f"https://conv.sampatticards.com/user/generate_salary_slip/{singleworker.workerNumber}" 
-        response = requests.get(url)
-        if response.status_code == 200:
-
-            content_type = response.headers.get('Content-Type')
-            if content_type == 'application/pdf':
-                print("Request successful:", singleworker.workerNumber)
-        else:
-            print("Request failed:", response.status_code)
-
-    return {"message" : "SALARY SLIPS GENERATED"}
-
-
-@router.get("/generate_salary_slip/{workerNumber}", response_class=FileResponse, name="Generate Salary Slip")
-def generate_salary_slip_endpoint(workerNumber : int, db: Session = Depends(get_db)):
-
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-    static_pdf_path = os.path.join(os.getcwd(), 'static', f"{worker.id}_SS_{previous_month}_{current_year}.pdf")
-    
-    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{previous_month}_{current_year}.pdf")
-
-
-@router.get('/get_salary_slip', response_class=FileResponse, name="Get Salary Slip")
-def get_salary_slip(workerNumber : int, month : str, year : str, db: Session = Depends(get_db)):
-
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-    static_pdf_path = os.path.join(os.getcwd(), 'static', f"{worker.id}_SS_{month}_{year}.pdf")
-    
-    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
-
+@router.post("/send_worker_salary_slips")
+def send_worker_salary_slips(db : Session = Depends(get_db)):
+    return userControllers.send_worker_salary_slips(db)
 
 @router.post("/contract")
 def contract_generation(request : schemas.Contract, db : Session = Depends(get_db)):

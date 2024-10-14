@@ -127,6 +127,67 @@ def employer_invoice_message(employerNumber, workerName, salary, filename):
 
 
 
+def worker_salary_slip_message(employerNumber, workerName, salary, filename):
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": "employer_invoice_message",
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": "employerNumber"
+                        },
+                        {
+                            "type": "text",
+                            "text": "workerName"
+                        },
+                        {
+                            "type": "text",
+                            "text": "salary"
+                        }
+                    ]
+                },
+                {
+                    "index": 0,
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": "filename"
+                        }
+                    ],
+                    "sub_type": "url",
+                    "type": "button"
+                }
+            ],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": "employerNumber",
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Worker name : {workerName}, Employer Number : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
+
+
+
 def generate_mediaId(path : str, folder : str):
     
 

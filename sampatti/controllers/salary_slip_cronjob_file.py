@@ -2,7 +2,7 @@ import requests
 
 def main():
 
-    url = "https://conv.sampatticards.com/user/salary_slips" 
+    url = "https://conv.sampatticards.com/user/send_worker_salary_slips" 
     response = requests.get(url)
     if response.status_code == 200:
         print("Request successful:", response.json())
