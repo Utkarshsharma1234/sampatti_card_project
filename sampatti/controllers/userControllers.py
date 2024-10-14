@@ -285,38 +285,40 @@ def copy_employer_message(db : Session):
 
 def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
-    transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
+    # transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
-    if transaction.status == "SENT":
-        return
-    
-    elif transaction.order_id is None:
-        return
+    transactions = db.query(models.worker_employer).all()
 
-    order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
-    if(order_status == "PAID"):
+    for transaction in transactions:
 
-        employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
-
-        filename = f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf"
-        object_name = f"employerInvoices/{filename}"
+        if transaction.status == "SENT":
+            return
         
-        static_dir = os.path.join(os.getcwd(), 'invoices')
-        filePath = os.path.join(static_dir, filename)
+        elif transaction.order_id is None:
+            return
 
-        print(f"the pdf path is : {filePath}")
-        uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
+        order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
+        if(order_status == "PAID"):
 
-        # whatsapp_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
-        # whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, whatsapp_name)
+            employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
 
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).values(status="SENT")
+            employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
+            object_name = f"employerInvoices/{employer_invoice_name}"
+            
+            static_dir = os.path.join(os.getcwd(), 'invoices')
+            filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
 
-        db.execute(update_statement)
-        db.commit()
-       
+            print(f"the pdf path is : {filePath}")
+            uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
+            # whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, employer_invoice_name)
 
-def send_worker_salary_slips(db : Session):
+            update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).values(status="SENT")
+
+            db.execute(update_statement)
+            db.commit()
+        
+
+def send_worker_salary_slips(db : Session) :
 
     total_workers = db.query(models.Domestic_Worker).all()
 
@@ -332,3 +334,4 @@ def send_worker_salary_slips(db : Session):
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
         whatsapp_message.worker_salary_slip_message()
+        
