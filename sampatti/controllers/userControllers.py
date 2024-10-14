@@ -283,7 +283,7 @@ def copy_employer_message(db : Session):
         db.refresh(new_user)
 
 
-def send_employer_invoice(db : Session):
+def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
     # transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
