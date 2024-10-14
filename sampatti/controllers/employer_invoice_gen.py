@@ -51,8 +51,8 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
 
     y -= 40
     c.setFont("Helvetica-Bold", 14)
-    size = len("Employer Invoice")
-    c.drawString(w/2-size*5, y, "Employer Invoice") 
+    size = len("Salary Payment Receipt")
+    c.drawString(w/2-size*5, y, "Salary Payment Receipt") 
 
     c.setFont("Times-Roman", 10)
 
@@ -98,14 +98,14 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     receipt_table.drawOn(c, x, y)
 
     c.setFont("Times-Roman", 10)
-    issued = f"Payment Invoice issued on : {current_date} for the month of {previous_month} {current_year}"
+    issued = f"Salary Payment Receipt issued on : {current_date} for the month of {previous_month} {current_year}"
     y -= 25
     c.drawString(x, y, text=issued)
 
     c.setFont("Helvetica-Bold", 10)
     y -= 30
           
-    note = """NOTE : This is a digitally issued payment invoice and does not require attestation.
+    note = """NOTE : This is a digitally issued salary payment receipt and does not require attestation.
 The money has been debited in the corresponding bank account."""
     lines = note.split('\n')
     c.setFont("Helvetica", 8)
@@ -120,8 +120,8 @@ The money has been debited in the corresponding bank account."""
     c.drawImage(circular_logo, 15, y-20 , 30, 30)
 
     declaration = """Declaration : The transaction trail is verified with an employment agreement between the employer and the 
-employee basis which the payment invoice is issued. Propublica Finance and Investment Services Pvt. Ltd. is not the 
-employer for the worker for whom salary record is generated."""
+employee basis which the salary payment receipt is issued. Propublica Finance and Investment Services Pvt. Ltd. is not the 
+employer for the worker for whom salary payment receipt is generated."""
 
     lines = declaration.split('\n')
     for line in lines:
