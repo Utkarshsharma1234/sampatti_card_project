@@ -298,10 +298,10 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
         employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
 
-        static_dir = os.path.join(os.getcwd(), 'invoices')
         employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
-
         object_name = f"employerInvoices/{employer_invoice_name}"
+        
+        static_dir = os.path.join(os.getcwd(), 'invoices')
         filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
 
         print(f"the pdf path is : {filePath}")
