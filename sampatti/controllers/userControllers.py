@@ -322,13 +322,13 @@ def send_worker_salary_slips(db : Session) :
     for worker in total_workers:
 
         salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
-        worker_slip_name = f"{worker.name}_SS_{previous_month}_{current_year}.pdf"
-        object_name = f"salarySlips/{worker_slip_name}"
+        worker_salary_slip_name = f"{worker.workerNumber}_SS_{previous_month}_{current_year}.pdf"
+        object_name = f"salarySlips/{worker_salary_slip_name}"
         
         static_dir = os.path.join(os.getcwd(), 'static')
         filePath = os.path.join(static_dir, f"{worker.id}_SS_{previous_month}_{current_year}.pdf")
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
-        whatsapp_message.worker_salary_slip_message()
+        # whatsapp_message.worker_salary_slip_message()
         
