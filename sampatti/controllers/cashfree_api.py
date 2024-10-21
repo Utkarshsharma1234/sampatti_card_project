@@ -1,6 +1,4 @@
 from datetime import datetime
-import random
-import string
 from fastapi import HTTPException
 import json, uuid, requests, os
 from cashfree_pg.api_client import Cashfree
@@ -12,6 +10,7 @@ from cashfree_pg.api_client import Cashfree
 from cashfree_pg.models.customer_details import CustomerDetails
 from .. import models
 from .whatsapp_message import send_whatsapp_message
+from .utility_functions import generate_unique_id
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 from dotenv import load_dotenv
@@ -28,16 +27,6 @@ pg_secret = os.environ.get('CASHFREE_PG_SECRET')
 
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
-
-
-
-def generate_unique_id(length=8):
-
-    unique_id = uuid.uuid4().hex
-    letters_only = ''.join([char for char in unique_id if char.isalpha()])[:length]
-    if len(letters_only) < length:
-        letters_only += ''.join(random.choices(string.ascii_letters, k=length - len(letters_only)))
-    return letters_only
 
 
 def fetch_vpa(workerNumber : int):
@@ -337,3 +326,4 @@ def unsettled_balance(db : Session):
 
         else:
             continue
+

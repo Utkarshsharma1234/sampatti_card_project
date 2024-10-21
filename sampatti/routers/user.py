@@ -143,3 +143,8 @@ def generate_sheet():
 @router.get('/copy_employer_message')
 def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
+
+
+@router.post('/create_salary_records')
+def create_salary_records(db : Session = Depends(get_db)):
+    return userControllers.create_salary_records(db)

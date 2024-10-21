@@ -1,35 +1,13 @@
 from datetime import datetime, timedelta
-from sqlalchemy import delete, insert, update
-import uuid, random, string,  difflib, re
-from .. import models
-from ..import schemas
+from sqlalchemy import delete, insert, select, update
+import re
+from .. import models, schemas
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, previous_month, current_date, current_year
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 import os
 
-# utility functions
 
-first_day_of_current_month = datetime.now().replace(day=1)
-last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
-previous_month = last_day_of_previous_month.strftime("%B")
-current_year = datetime.now().year
-
-def generate_unique_id(length=8):
-
-    unique_id = uuid.uuid4().hex
-    letters_only = ''.join([char for char in unique_id if char.isalpha()])[:length]
-    if len(letters_only) < length:
-        letters_only += ''.join(random.choices(string.ascii_letters, k=length - len(letters_only)))
-    return letters_only
-
-def fuzzy_match_score(str1, str2):
-    return difflib.SequenceMatcher(None, str1, str2).ratio()
-
-
-def exact_match_case_insensitive(str1, str2):
-    words1 = set(re.findall(r'\b\w+\b', str1.lower()))
-    words2 = set(re.findall(r'\b\w+\b', str2.lower()))
-    return not words1.isdisjoint(words2)
 
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
@@ -131,14 +109,12 @@ def delete_relation(workerNumber: int, employerNumber: int, db: Session):
 
 def create_message_log(request : schemas.Message_log_Schema, db  :Session):
 
-    current_date = datetime.now().date()
-
     existing_message = db.query(models.MessageLogSystem).where(models.MessageLogSystem.employerNumber==request.employerNumber).where(models.MessageLogSystem.workerNumber==request.workerNumber).first()
 
     if not existing_message:
 
         unique_id = generate_unique_id()
-        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date}", lastMessage=request.lastMessage, workerNumber= request.workerNumber, workerName = request.workerName)
+        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date()}", lastMessage=request.lastMessage, workerNumber= request.workerNumber, workerName = request.workerName)
         db.add(new_message)
         db.commit()
         db.refresh(new_message)
@@ -175,12 +151,10 @@ def insert_salary(request : schemas.Salary, db : Session):
 
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db:Session):
 
-    current_date = datetime.now().date()
-
     existing_entity = db.query(models.TalkToAgentEmployer).where(models.TalkToAgentEmployer.employerNumber== request.employerNumber).where(models.TalkToAgentEmployer.workerNumber == request.workerNumber).first()
 
     if not existing_entity:
-        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
+        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date(), employerNumber = request.employerNumber, workerNumber = request.workerNumber, worker_bank_name = request.worker_bank_name, worker_pan_name = request.worker_pan_name, vpa = request.vpa, issue = request.issue)
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
@@ -270,14 +244,13 @@ def extract_salary(salary_amount : str):
 
 def copy_employer_message(db : Session):
 
-    current_date = datetime.now().date()
     messages = db.query(models.MessageLogSystem).all()
 
     for entity in messages:
 
         if entity.lastMessage == "COMPLETED":
             continue
-        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date, employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = entity.workerName, worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
+        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date(), employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = entity.workerName, worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
@@ -299,11 +272,11 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
         employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
 
-        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month}_{current_year}.pdf"
+        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month()}_{current_year()}.pdf"
         object_name = f"employerInvoices/{employer_invoice_name}"
         
         static_dir = os.path.join(os.getcwd(), 'invoices')
-        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month}_{current_year}.pdf")
+        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month()}_{current_year()}.pdf")
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
@@ -322,11 +295,11 @@ def send_worker_salary_slips(db : Session) :
     for worker in total_workers:
 
         salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
-        worker_salary_slip_name = f"{worker.workerNumber}_SS_{previous_month}_{current_year}.pdf"
+        worker_salary_slip_name = f"{worker.workerNumber}_SS_{previous_month()}_{current_year()}.pdf"
         object_name = f"salarySlips/{worker_salary_slip_name}"
         
         static_dir = os.path.join(os.getcwd(), 'static')
-        filePath = os.path.join(static_dir, f"{worker.id}_SS_{previous_month}_{current_year}.pdf")
+        filePath = os.path.join(static_dir, f"{worker.id}_SS_{previous_month()}_{current_year()}.pdf")
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)

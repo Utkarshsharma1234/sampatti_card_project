@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
 from .cashfree_api import check_order_status, fetch_bank_ref
-from ..controllers import amount_to_words
+from . import utility_functions
 
 
 def generate_salary_slip(workerNumber, db:Session) :
@@ -146,7 +146,7 @@ def generate_salary_slip(workerNumber, db:Session) :
 
     c.setFont("Helvetica-Bold", 10)
     y -= 30
-    salary_in_words = amount_to_words.amount_to_words(total_salary)
+    salary_in_words = utility_functions.amount_to_words(total_salary)
     c.drawString(x, y, f"Total Salary Credited INR {total_salary}/- Only")
     c.drawString(x, y-20, f"Amount in Words : {salary_in_words} Only")
           

@@ -12,10 +12,8 @@ router = APIRouter(
 @router.post("/cashfree")
 async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
     try:
-        # Receive and parse the JSON body
         payload = await request.json()
         
-        # Log the received payload (for debugging)
         print("Webhook payload received:", payload)
         
         customer_id = payload['data']['customer_details'].get('customer_id')
