@@ -210,6 +210,7 @@ def generate_mediaId(path : str, folder : str):
             "file": (path, open(static_pdf_path, "rb"), "application/pdf")
         }
 
+        
         try:
             response = requests.post(url, headers=headers, data=data, files=files)
             response.raise_for_status()

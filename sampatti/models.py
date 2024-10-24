@@ -57,3 +57,12 @@ class MessageLogSystem(Base):
     workerName = Column(String)
     lastMessage = Column(String)
     date = Column(String)
+
+class SalaryDetails(Base):
+    __tablename__ = "SalaryDetails"
+    id = Column(String, primary_key=True)   
+    employerNumber = Column(Integer)
+    worker_id = Column(Integer, default=0)
+    employer_id = Column(String)
+    salary = Column(Integer)
+    order_id=Column(String)

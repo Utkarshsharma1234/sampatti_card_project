@@ -1,13 +1,21 @@
-from datetime import datetime, timedelta
+import json
+import tempfile
+from fastapi import File, UploadFile, BackgroundTasks
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert, select, update
 import re
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, previous_month, current_date, current_year
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, previous_month, current_date, current_year, send_audio, extracted_info_from_llm
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 import os
+import whisper
+from gtts import gTTS
+from langchain_groq import ChatGroq
+from langchain import LLMChain, PromptTemplate
 
 
+model = whisper.load_model("base")
 
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
@@ -305,3 +313,65 @@ def send_worker_salary_slips(db : Session) :
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
         # whatsapp_message.worker_salary_slip_message()
         
+
+def create_salary_records(workerNumber : int, db : Session):
+
+    total = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number==workerNumber).all()
+
+    for item in total:
+
+        new_entry = models.SalaryDetails(id=generate_unique_id(), employerNumber=item.employer_number, worker_id=item.worker_id, employer_id=item.employer_id, salary=item.salary_amount, order_id=item.order_id)
+
+        db.add(new_entry)
+        db.commit()
+        db.refresh(new_entry)
+
+
+async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    if not file:
+        raise HTTPException(status_code=400, detail="File is not uploaded.")
+
+    results = []
+
+    static_dir = 'audio_files'
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+
+    user_input = ""
+    try:
+        # Use NamedTemporaryFile with delete=False
+        with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
+            # Read the file content
+            audio_bytes = await file.read()
+            temp.write(audio_bytes)
+            temp_path = temp.name  # Store the temporary file path
+
+        # Transcribe the audio using Whisper
+        result = whisper.transcribe(audio=temp_path, model=model, fp16=True)
+
+        user_input = result["text"]
+        print(result)
+
+        # Append the transcription result
+        results.append({
+            "filename": file.filename,
+            "transcript": user_input
+        })
+
+    except PermissionError as e:
+        return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        # Clean up by deleting the temporary file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    print(results)
+    extracted_info = extracted_info_from_llm(user_input)
+    cash_advance = extracted_info.get("Cash_Advance")
+    bonus = extracted_info.get("Bonus")
+    repayment = extracted_info.get("Repayment_Monthly")
+    sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
+
+    return send_audio(static_dir, file.filename, sample_output, background_tasks)

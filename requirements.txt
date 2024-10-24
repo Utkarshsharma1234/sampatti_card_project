@@ -19,3 +19,7 @@ pandas
 gspread 
 oauth2client
 boto3
+openai-whisper
+langchain_groq
+langchain
+gTTS

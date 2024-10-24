@@ -78,7 +78,7 @@ def fetch_multiple_vpa(workerNumber : int):
     name_at_bank = response_data.get('name_at_bank')
     if name_at_bank is None:
         name_at_bank = "INVALID"
-    if len(additional_vpas) == 0:
+    if additional_vpas is None:
         additional_vpas = []
     additional_vpas.append(vpa)
 

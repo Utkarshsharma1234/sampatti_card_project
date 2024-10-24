@@ -1,6 +1,7 @@
 import os
-from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+import tempfile
+from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
+from fastapi.responses import FileResponse, JSONResponse
 import requests
 from .. import schemas, models
 from ..database import get_db
@@ -9,6 +10,7 @@ from ..controllers import userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file
+import whisper
 
 
 router = APIRouter(
@@ -17,6 +19,7 @@ router = APIRouter(
 )
 
 
+model = whisper.load_model("base")
 current_date = datetime.now().date()
 first_day_of_current_month = datetime.now().replace(day=1)
 last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
@@ -146,5 +149,9 @@ def copy_employer_message(db : Session = Depends(get_db)):
 
 
 @router.post('/create_salary_records')
-def create_salary_records(db : Session = Depends(get_db)):
-    return userControllers.create_salary_records(db)
+def create_salary_records(workerNumber : int, db : Session = Depends(get_db)):
+    return userControllers.create_salary_records(workerNumber,db)
+
+@router.post('/process_audio')
+async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    return await userControllers.process_audio(background_tasks, file)
