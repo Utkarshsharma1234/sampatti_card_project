@@ -24,6 +24,10 @@ def fetch_multiple_vpa(workerNumber : int):
 def payment_link_generation(db : Session = Depends(get_db)):
     return cashfree_api.payment_link_generation(db)
 
+@router.get("dynamic_payment_link")
+def dynamic_payment_link(employerNumber : int, workerNumber : int, bonus : int, db : Session = Depends(get_db)):
+    return cashfree_api.dynamic_payment_link(employerNumber, workerNumber, bonus, db)
+
 @router.get("/order_status")
 def check_order_status(orderId : str):
     return cashfree_api.check_order_status(orderId)

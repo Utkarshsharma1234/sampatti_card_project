@@ -10,7 +10,7 @@ from .. import models
 from .cashfree_api import fetch_bank_ref
 
 
-def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, db:Session) :
+def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, bonus, db:Session) :
 
     current_date = datetime.now().date()
     first_day_of_current_month = datetime.now().replace(day=1)
@@ -75,7 +75,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     print(f"the utr no is :  {bank_ref_no}")
     workerName = transaction.worker_name
 
-    single_row = [ct, f"{workerName}", f"{workerNumber}", bank_ref_no, transaction.salary_amount]
+    single_row = [ct, f"{workerName}", f"{workerNumber}", bank_ref_no, transaction.salary_amount+bonus]
     receipt_data.append(single_row)
     rows += 1
     ct += 1

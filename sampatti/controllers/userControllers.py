@@ -267,17 +267,23 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
     transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
-
     if transaction.status == "SENT":
         return
     
     elif transaction.order_id is None:
         return
 
+    bonus = 0
+    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==employerNumber, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+
+    if existing_bonus_entry is not None:
+        bonus += existing_bonus_entry.bonus
+
     order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
     if(order_status == "PAID"):
-
-        employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, db)
+        
+        total_salary = transaction.salary_amount + bonus
+        employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, bonus, db)
 
         employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month()}_{current_year()}.pdf"
         object_name = f"employerInvoices/{employer_invoice_name}"
@@ -287,13 +293,33 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
-        whatsapp_message.employer_invoice_message(employerNumber, transaction.worker_name, transaction.salary_amount, employer_invoice_name)
+
+        whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=transaction.worker_name, param3=total_salary, link_param=employer_invoice_name, template_name="employer_invoice_message")
 
         update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == transaction.employer_number, models.worker_employer.c.order_id == transaction.order_id).values(status="SENT")
 
         db.execute(update_statement)
         db.commit()
     
+
+# making the entry in the salary details table from which employer what amount has been paid and what was the bonus amount in it and what was the main salary amount.
+
+def update_salary_details(employerNumber : int, orderId : str, db : Session):
+
+    transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
+
+    bonus = 0
+    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==employerNumber, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+
+    if existing_bonus_entry is not None:
+        bonus += existing_bonus_entry.bonus
+
+    new_entry = models.SalaryDetails(id = generate_unique_id(), employerNumber=employerNumber, worker_id=transaction.worker_id, employer_id= transaction.employer_id, salary=transaction.salary_amount, bonus=bonus, order_id=orderId)
+
+    db.add(new_entry)
+    db.commit()
+    db.refresh(new_entry)
+
 
 def send_worker_salary_slips(db : Session) :
 

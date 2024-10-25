@@ -65,4 +65,13 @@ class SalaryDetails(Base):
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
     salary = Column(Integer)
+    bonus = Column(Integer)
     order_id=Column(String)
+
+class CashAdvanceManagement(Base):
+    __tablename__ = "CashAdvanceManagement"
+    id = Column(String, primary_key=True)   
+    employerNumber = Column(Integer)
+    worker_id = Column(Integer, default=0)
+    employer_id = Column(String)
+    bonus = Column(Integer)    

@@ -256,9 +256,11 @@ def payment_link_generation(db : Session):
 
     payment_ids = []
     total_workers = db.query(models.worker_employer).all()
-    total_domestic = db.query(models.Domestic_Worker).all()
     
     for item in total_workers:
+
+        if item.employer_number != 916378639230:
+            continue
         dummy_number = item.employer_number
         actual_number = int(str(dummy_number)[2:])
         
@@ -273,15 +275,9 @@ def payment_link_generation(db : Session):
         response = dict(api_response.data)
         payment_session_id = response["payment_session_id"]
 
-        worker_name = ""
-        for worker in total_domestic:
-            if worker.workerNumber == item.worker_number:
-                worker_name = worker.name
-                break
+        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{current_month}_{current_year}", link_param=payment_session_id, template_name="monthly_payment_link_template")
 
-        send_whatsapp_message(cust_name=item.employer_number,dw_name=worker_name, month_year= f"{current_month} {current_year}",session_id=payment_session_id,receiver_number=f"{dummy_number}")
-
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number).where(models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
+        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
 
         db.execute(update_statement)
         db.commit()
@@ -289,7 +285,58 @@ def payment_link_generation(db : Session):
 
     return payment_ids
 
-# unsettled balance
+
+# creating dynamic payment links
+
+def dynamic_payment_link(employerNumber : int, workerNumber : int, bonus : int, db : Session):
+
+    Cashfree.XClientId = pg_id
+    Cashfree.XClientSecret = pg_secret
+    Cashfree.XEnvironment = Cashfree.XProduction
+    x_api_version = "2023-08-01"
+
+    current_month = datetime.now().strftime("%B")
+    current_year = datetime.now().year
+
+    entry = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
+
+    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == entry.worker_id).first()
+   
+    if existing_bonus_entry is None:
+
+        new_entry = models.CashAdvanceManagement(id=generate_unique_id(), employerNumber= employerNumber, worker_id = entry.worker_id, employer_id = entry.employer_id, bonus = bonus)
+        db.add(new_entry)
+        db.commit()
+        db.refresh(new_entry)
+
+    else:
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == entry.worker_id).values(bonus=bonus)
+
+        db.execute(update_statement)
+        db.commit()
+
+    actual_number = int(str(employerNumber)[2:])
+    total_salary = entry.salary_amount + bonus
+    customerDetails = CustomerDetails(customer_id= f"{workerNumber}", customer_phone= f"{actual_number}")
+    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails)
+    try:
+        api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
+        # print(api_response.data)
+    except Exception as e:
+        print(e)
+
+    response = dict(api_response.data)
+    payment_session_id = response["payment_session_id"]
+
+    send_whatsapp_message(employerNumber=employerNumber, worker_name=entry.worker_name, param3=f"{current_month} {current_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
+
+    db.execute(update_statement)
+    db.commit()
+
+
+# settle the unsettled balance on cashfree to the worker's account.
 
 def unsettled_balance(db : Session):
 
@@ -301,18 +348,25 @@ def unsettled_balance(db : Session):
     }
 
     total_workers = db.query(models.worker_employer).all()
-    for worker in total_workers:
+    for transaction in total_workers:
         
-        status = check_order_status(order_id=worker.order_id)
+        status = check_order_status(order_id=transaction.order_id)
+        bonus = 0
+        existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==transaction.employer_number, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+
+        if existing_bonus_entry is not None:
+            bonus += existing_bonus_entry.bonus
+        
+        total_salary = transaction.salary_amount + bonus
         if(status == "PAID"):
 
-            url = f'https://api.cashfree.com/api/v2/easy-split/orders/{worker.order_id}/split'
+            url = f'https://api.cashfree.com/api/v2/easy-split/orders/{transaction.order_id}/split'
 
             data = {
                 "split": [
                     {
-                        "vendorId": worker.vendor_id,
-                        "amount" : worker.salary_amount,
+                        "vendorId": transaction.vendor_id,
+                        "amount" : total_salary,
                         "percentage" : None
                     }
                 ],
