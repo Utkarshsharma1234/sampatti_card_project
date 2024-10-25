@@ -90,7 +90,7 @@ def previous_month():
     return ps_month
 
 def current_month():
-    return datetime.now().month
+    return datetime.now().strftime("%B")
 
 def current_year():
 
