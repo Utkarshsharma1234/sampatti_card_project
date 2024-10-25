@@ -275,7 +275,7 @@ def payment_link_generation(db : Session):
         response = dict(api_response.data)
         payment_session_id = response["payment_session_id"]
 
-        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{current_month}_{current_year}", link_param=payment_session_id, template_name="monthly_payment_link_template")
+        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{current_month} {current_year}", link_param=payment_session_id, template_name="monthly_payment_link_template")
 
         update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
 

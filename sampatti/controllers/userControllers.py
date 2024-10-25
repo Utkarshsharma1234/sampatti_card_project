@@ -1,18 +1,11 @@
-import json
-import tempfile
+import tempfile, whisper, os, re
 from fastapi import File, UploadFile, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy import delete, insert, select, update
-import re
+from fastapi.responses import JSONResponse
+from sqlalchemy import delete, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, previous_month, current_date, current_year, send_audio, extracted_info_from_llm
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
-import os
-import whisper
-from gtts import gTTS
-from langchain_groq import ChatGroq
-from langchain import LLMChain, PromptTemplate
 
 
 model = whisper.load_model("base")
@@ -267,6 +260,24 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
 
     transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
+    ps_month = previous_month()
+    month  = ""
+    year = ""
+
+    day_only = current_date().day
+    if(abs(31-day_only) >= abs(1-day_only)):
+        month = ps_month
+        if month == "December":
+            year = current_year() - 1
+
+        else:
+            year = current_year()
+
+    else:
+        month = current_month()
+        year = current_year()
+
+
     if transaction.status == "SENT":
         return
     
@@ -285,11 +296,11 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
         total_salary = transaction.salary_amount + bonus
         employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, bonus, db)
 
-        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{previous_month()}_{current_year()}.pdf"
+        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{month}_{year}.pdf"
         object_name = f"employerInvoices/{employer_invoice_name}"
         
         static_dir = os.path.join(os.getcwd(), 'invoices')
-        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{previous_month()}_{current_year()}.pdf")
+        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{month}_{year}.pdf")
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
@@ -325,14 +336,22 @@ def send_worker_salary_slips(db : Session) :
 
     total_workers = db.query(models.Domestic_Worker).all()
 
+    year = current_year()
+    month = current_month()
+
+    if month == "January":
+        month = "December"
+        year -= 1
+
+    
     for worker in total_workers:
 
         salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
-        worker_salary_slip_name = f"{worker.workerNumber}_SS_{previous_month()}_{current_year()}.pdf"
+        worker_salary_slip_name = f"{worker.workerNumber}_SS_{month}_{year}.pdf"
         object_name = f"salarySlips/{worker_salary_slip_name}"
         
         static_dir = os.path.join(os.getcwd(), 'static')
-        filePath = os.path.join(static_dir, f"{worker.id}_SS_{previous_month()}_{current_year()}.pdf")
+        filePath = os.path.join(static_dir, f"{worker.id}_SS_{month}_{year}.pdf")
 
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)

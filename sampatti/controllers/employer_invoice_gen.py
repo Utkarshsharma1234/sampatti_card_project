@@ -8,18 +8,30 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
 from .cashfree_api import fetch_bank_ref
+from .utility_functions import current_year, current_date, current_month, previous_month
 
 
 def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, bonus, db:Session) :
 
-    current_date = datetime.now().date()
-    first_day_of_current_month = datetime.now().replace(day=1)
-    last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
-    previous_month = last_day_of_previous_month.strftime("%B")
-    current_year = datetime.now().year
+    ps_month = previous_month()
+    month  = ""
+    year = ""
+
+    day_only = current_date().day
+    if(abs(31-day_only) >= abs(1-day_only)):
+        month = ps_month
+        if month == "December":
+            year = current_year() - 1
+
+        else:
+            year = current_year()
+
+    else:
+        month = current_month()
+        year = current_year()
 
     static_dir = os.path.join(os.getcwd(), 'invoices')
-    pdf_path = os.path.join(static_dir, f"{employerId}_INV_{workerId}_{previous_month}_{current_year}.pdf")
+    pdf_path = os.path.join(static_dir, f"{employerId}_INV_{workerId}_{month}_{year}.pdf")
 
     if not os.path.exists('invoices'):
         os.makedirs('invoices')
@@ -98,7 +110,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     receipt_table.drawOn(c, x, y)
 
     c.setFont("Times-Roman", 10)
-    issued = f"Salary Payment Receipt issued on : {current_date} for the month of {previous_month} {current_year}"
+    issued = f"Salary Payment Receipt issued on : {current_date()} for the month of {month} {year}"
     y -= 25
     c.drawString(x, y, text=issued)
 

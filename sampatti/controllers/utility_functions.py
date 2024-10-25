@@ -89,6 +89,9 @@ def previous_month():
     ps_month = last_day_of_previous_month.strftime("%B")
     return ps_month
 
+def current_month():
+    return datetime.now().month
+
 def current_year():
 
     year = datetime.now().year
