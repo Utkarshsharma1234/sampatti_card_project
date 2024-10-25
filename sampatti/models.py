@@ -74,4 +74,4 @@ class CashAdvanceManagement(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
-    bonus = Column(Integer)    
+    bonus = Column(Integer)
