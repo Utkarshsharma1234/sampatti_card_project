@@ -259,8 +259,6 @@ def payment_link_generation(db : Session):
     
     for item in total_workers:
 
-        if item.employer_number != 916378639230:
-            continue
         dummy_number = item.employer_number
         actual_number = int(str(dummy_number)[2:])
         
