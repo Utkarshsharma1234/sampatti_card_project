@@ -366,7 +366,7 @@ def send_greetings(db : Session):
     for employer in total_employers:
         if employer.employerNumber != 916378639230:
             continue
-        whatsapp_message.send_greetings(employer.employer_number, template_name="diwali_greetings")
+        whatsapp_message.send_greetings(employer.employerNumber, template_name="diwali_greetings")
 
     return {
         "MESSAGE" : "Greetings sent successfully."
