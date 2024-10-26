@@ -139,6 +139,10 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session = De
     return userControllers.send_employer_invoice(employerNumber, orderId, db)
     
 
+@router.get("/send_greetings")
+def send_greetings_message(db : Session = Depends(get_db)):
+    return userControllers.send_greetings(db)
+
 @router.get('/generate_talk_to_agent_sheet')
 def generate_sheet():
     return talk_to_agent_excel_file.upload_data_to_google_sheets()

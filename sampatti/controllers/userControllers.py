@@ -358,6 +358,20 @@ def send_worker_salary_slips(db : Session) :
         # whatsapp_message.worker_salary_slip_message()
         
 
+# send greetings message to the employers
+def send_greetings(db : Session):
+
+    total_employers = db.query(models.Employer).all()
+
+    for employer in total_employers:
+        if employer.employerNumber != 916378639230:
+            continue
+        whatsapp_message.send_greetings(employer.employer_number, template_name="diwali_greetings")
+
+    return {
+        "MESSAGE" : "Greetings sent successfully."
+    }
+
 def create_salary_records(workerNumber : int, db : Session):
 
     total = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number==workerNumber).all()
