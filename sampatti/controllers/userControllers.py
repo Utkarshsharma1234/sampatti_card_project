@@ -290,7 +290,8 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     if existing_bonus_entry is not None:
         bonus += existing_bonus_entry.bonus
 
-    order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
+    response_data = cashfree_api.check_order_status(order_id=transaction.order_id)
+    order_status = response_data.get('order_status')
     if(order_status == "PAID"):
         
         total_salary = transaction.salary_amount + bonus
@@ -369,6 +370,36 @@ def send_greetings(db : Session):
     return {
         "MESSAGE" : "Greetings sent successfully."
     }
+
+
+def salary_payment_reminder(db : Session):
+
+    transactions = db.query(models.worker_employer).all()
+
+    month = current_month()
+    year = current_year()
+    ps_month = previous_month()
+
+    if(month == "January"):
+        month = "December"
+        year -= 1
+
+    else:
+        month = ps_month
+
+    for item in transactions:
+
+        if item.status == "SENT":
+            continue
+        
+        response_data = cashfree_api.check_order_status(order_id=item.order_id)
+        order_status = response_data.get("order_status")
+        payment_session_id = response_data.get("payment_session_id")
+
+        if order_status == "PAID":
+            continue
+        
+        whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_payment_reminder")
 
 def create_salary_records(workerNumber : int, db : Session):
 

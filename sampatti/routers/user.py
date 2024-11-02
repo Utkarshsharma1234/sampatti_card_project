@@ -138,6 +138,9 @@ def generate_mediaId(workerNumber: int, employerNumber: int, db : Session = Depe
 def send_employer_invoice(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.send_employer_invoice(employerNumber, orderId, db)
     
+@router.get('/salary_payment_reminder')
+def salary_payment_reminder(db : Session = Depends(get_db)):
+    return userControllers.salary_payment_reminder(db)
 
 @router.get("/send_greetings")
 def send_greetings_message(db : Session = Depends(get_db)):

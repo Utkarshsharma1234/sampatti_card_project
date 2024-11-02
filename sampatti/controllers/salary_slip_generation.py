@@ -111,7 +111,8 @@ def generate_salary_slip(workerNumber, db:Session) :
         order_id = transaction.order_id
         if order_id is None:
             continue
-        status = check_order_status(order_id=order_id)
+        response_data = check_order_status(order_id=order_id)
+        status = response_data.get('order_status')
         if status == "PAID":
 
             bank_ref_no = fetch_bank_ref(order_id=order_id)
