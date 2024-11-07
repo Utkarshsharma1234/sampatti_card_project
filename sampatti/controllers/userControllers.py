@@ -1,5 +1,5 @@
-import tempfile, whisper, os, re
-from fastapi import File, UploadFile, BackgroundTasks
+import tempfile, whisper, os, re, requests
+from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete, insert,update
 from .. import models, schemas
@@ -414,8 +414,8 @@ def create_salary_records(workerNumber : int, db : Session):
         db.refresh(new_entry)
 
 
-async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    if not file:
+async def process_audio(background_tasks: BackgroundTasks, file_url: str):
+    if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
     results = []
@@ -427,11 +427,12 @@ async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = Fi
     user_input = ""
     try:
         # Use NamedTemporaryFile with delete=False
+
+        response = requests.get(file_url)
         with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
             # Read the file content
-            audio_bytes = await file.read()
-            temp.write(audio_bytes)
-            temp_path = temp.name  # Store the temporary file path
+            temp.write(response.content)
+            temp_path = temp.name
 
         # Transcribe the audio using Whisper
         result = whisper.transcribe(audio=temp_path, model=model, fp16=True)
@@ -441,7 +442,7 @@ async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = Fi
 
         # Append the transcription result
         results.append({
-            "filename": file.filename,
+            "filename": os.path.basename(temp_path),
             "transcript": user_input
         })
 
@@ -456,9 +457,10 @@ async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = Fi
 
     print(results)
     extracted_info = extracted_info_from_llm(user_input)
+    print(extracted_info)
     cash_advance = extracted_info.get("Cash_Advance")
     bonus = extracted_info.get("Bonus")
     repayment = extracted_info.get("Repayment_Monthly")
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
-    return send_audio(static_dir, file.filename, sample_output, background_tasks)
+    return send_audio(static_dir, os.path.basename(temp_path), sample_output, background_tasks)

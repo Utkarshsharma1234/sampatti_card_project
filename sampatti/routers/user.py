@@ -160,5 +160,5 @@ def create_salary_records(workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.create_salary_records(workerNumber,db)
 
 @router.post('/process_audio')
-async def process_audio(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    return await userControllers.process_audio(background_tasks, file)
+async def process_audio(background_tasks: BackgroundTasks, file_url: str):
+    return await userControllers.process_audio(background_tasks, file_url)
