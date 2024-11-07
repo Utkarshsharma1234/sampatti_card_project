@@ -55,7 +55,7 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
     if not existing_worker:
 
         unique_id = generate_unique_id()
-        new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id =request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc, vendorId = None)
+        new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id =request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc)
 
         db.add(new_worker)
         db.commit()
