@@ -1,4 +1,6 @@
-import json, os, uuid, random, string,  difflib, re
+import json, os, uuid, random, string,  difflib, re, requests
+from fastapi import File, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from fastapi.responses import FileResponse, JSONResponse
@@ -149,12 +151,73 @@ def extracted_info_from_llm(user_input : str):
     else:
         print("No JSON found in the response.")
 
+def call_sarvam_api(file_path):
+    # Sarvam API URL
+    url = "https://api.sarvam.ai/speech-to-text-translate"
 
-def send_audio(static_dir : str, filename : str, sample_output : str, background_tasks : BackgroundTasks):
+    # Headers for the API
+    headers = {
+        "api-subscription-key": "3f3f7553-a322-4b7e-a4db-b13fbb93f529"
+    }
+
+    # Open the audio file and prepare it for sending
+    with open(file_path, 'rb') as file:
+        # Prepare the file as a tuple: (filename, file content, content type)
+        files = {
+            "file": (os.path.basename(file_path), file, "audio/wav")  # Adjust content type if needed
+        }
+
+        # Send the POST request with the file and headers
+        response = requests.post(url, headers=headers, files=files)
+
+    # Check if the API call was successful
+    if response.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
+
+    # Return the JSON response
+    return response.json()
+
+def translate_text_sarvam(text: str, source_language: str, target_language: str) -> str:
+
+    try:
+        # Sarvam translation API URL
+        url = "https://api.sarvam.ai/translate"
+
+        # Headers for the API request
+        headers = {
+            "api-subscription-key": "3f3f7553-a322-4b7e-a4db-b13fbb93f529",  # Replace with your actual API key
+            "Content-Type": "application/json"
+        }
+
+        # Request body for the API
+        payload = {
+            "input": text,
+            "source_language_code": source_language,
+            "target_language_code": target_language,
+            "speaker_gender": "Male",  # Example value; change if needed
+            "mode": "formal",            # Assuming "text" mode; change if needed
+            "model": "mayura:v1"
+        }
+
+        # Make the POST request to the Sarvam translation API
+        response = requests.post(url, json=payload, headers=headers)
+
+        # Check if the response was successful
+        if response.status_code == 200:
+            translated_text = response.json().get("translated_text", "")
+            return translated_text
+        else:
+            raise Exception(f"Error from Sarvam translation API: {response.text}")
+
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return text
+
+def send_audio(static_dir : str, filename : str, sample_output : str, language: str, background_tasks : BackgroundTasks):
     try:
         # Generate the audio file using gTTS and save it in the audio_files folder
         audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
-        tts = gTTS(sample_output)
+        tts = gTTS(sample_output, lang=language)
         tts.save(audio_file_path)
 
         # Add task to delete the file after the response is sent
