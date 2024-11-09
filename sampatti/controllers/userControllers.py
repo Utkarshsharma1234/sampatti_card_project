@@ -1,14 +1,11 @@
-import tempfile, whisper, os, re, requests
+import tempfile, os, re, requests
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
-
-
-model = whisper.load_model("base")
 
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
@@ -413,7 +410,6 @@ def create_salary_records(workerNumber : int, db : Session):
         db.commit()
         db.refresh(new_entry)
 
-
 async def process_audio(background_tasks: BackgroundTasks, file_url: str):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
@@ -435,15 +431,16 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
             temp_path = temp.name
 
         # Transcribe the audio using Whisper
-        result = whisper.transcribe(audio=temp_path, model=model, fp16=True)
-
-        user_input = result["text"]
+        result = call_sarvam_api(temp_path)
+        user_input = result["transcript"]
+        user_language = result["language_code"]
         print(result)
 
         # Append the transcription result
         results.append({
             "filename": os.path.basename(temp_path),
-            "transcript": user_input
+            "transcript": user_input,
+            "language_code": user_language
         })
 
     except PermissionError as e:
@@ -464,4 +461,23 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
     repayment = extracted_info.get("Repayment_Monthly")
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
-    return send_audio(static_dir, os.path.basename(temp_path), sample_output, background_tasks)
+    if user_language == "en-IN":
+        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en", background_tasks)
+    else:
+        translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
+        language_map = {
+            "hi-IN": "hi",
+            "bn-IN": "bn",
+            "kn-IN": "kn",
+            "ml-IN": "ml",
+            "mr-IN": "mr",
+            "od-IN": "or",
+            "pa-IN": "pa",
+            "ta-IN": "ta",
+            "te-IN": "te",
+            "gu-IN": "gu"
+        }
+        gtts_language = language_map.get(user_language, "en")  # Default to "en" if language code is not found
+        return send_audio(static_dir, os.path.basename(temp_path), translated_text, gtts_language, background_tasks)
+    
+        
