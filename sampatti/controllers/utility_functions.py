@@ -109,8 +109,7 @@ def extracted_info_from_llm(user_input : str):
         groq_api_key= groq_key,
         model_name="llama-3.1-70b-versatile"
     )
-
-    print(groq_key)
+    
     template = """
     Extract the following information from the user's text:
     1. Cash Advance amount

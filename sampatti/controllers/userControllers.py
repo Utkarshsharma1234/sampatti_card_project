@@ -456,6 +456,7 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
             os.remove(temp_path)
 
     print(results)
+    print(f"the temp path is  : f{os.path.basename(temp_path)}")
     extracted_info = extracted_info_from_llm(user_input)
     print(extracted_info)
     cash_advance = extracted_info.get("Cash_Advance")
