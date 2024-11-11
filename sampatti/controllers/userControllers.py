@@ -411,7 +411,7 @@ def create_salary_records(workerNumber : int, db : Session):
         db.commit()
         db.refresh(new_entry)
 
-async def process_audio(background_tasks: BackgroundTasks, file_url: str):
+async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
@@ -473,7 +473,7 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
     if user_language == "en-IN":
-        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en", background_tasks)
+        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en", background_tasks, employerNumber)
     else:
         translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
         language_map = {
@@ -489,5 +489,5 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
             "gu-IN": "gu"
         }
         gtts_language = language_map.get(user_language, "en")  # Default to "en" if language code is not found
-        return send_audio(static_dir, os.path.basename(temp_path), translated_text, gtts_language, background_tasks)
+        return send_audio(static_dir, os.path.basename(temp_path), translated_text, gtts_language, background_tasks, employerNumber)
         

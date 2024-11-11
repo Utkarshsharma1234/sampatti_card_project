@@ -226,7 +226,7 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         print(f"Translation error: {e}")
         return text
 
-def send_audio(static_dir : str, filename : str, sample_output : str, language: str, background_tasks : BackgroundTasks):
+def send_audio(static_dir : str, filename : str, sample_output : str, language: str, background_tasks : BackgroundTasks, employerNumber: int):
     try:
         
         audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
@@ -236,7 +236,7 @@ def send_audio(static_dir : str, filename : str, sample_output : str, language: 
         response = whatsapp_message.generate_audio_media_id(f"{filename}_output.mp3", static_dir)
         audio_media_id = response.get('id')
         print(audio_media_id)
-        whatsapp_message.send_audio(audio_media_id)
+        whatsapp_message.send_audio(audio_media_id, employerNumber)
         return {"MESSAGE" : "AUDIO SENT SUCCESSFULLY."}
 
     except Exception as e:

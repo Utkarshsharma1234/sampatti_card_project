@@ -190,14 +190,14 @@ def generate_audio_media_id(path : str, folder : str):
         raise HTTPException(status_code=404, detail="PDF file not found")
 
 
-def send_audio(audio_media_id : str):
+def send_audio(audio_media_id : str, employerNumber : int):
 
     url = "https://waba-v2.360dialog.io/messages"
 
     payload = json.dumps({
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
-        "to": "916378639230",
+        "to": f"{employerNumber}",
         "type": "audio",
         "audio": {
             "id": f"{audio_media_id}"
