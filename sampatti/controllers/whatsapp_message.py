@@ -146,7 +146,6 @@ def generate_mediaId(path : str, folder : str):
         files = {
             "file": (path, open(static_pdf_path, "rb"), "application/pdf")
         }
-
         
         try:
             response = requests.post(url, headers=headers, data=data, files=files)
@@ -158,3 +157,59 @@ def generate_mediaId(path : str, folder : str):
             raise HTTPException(status_code=500, detail="Generating the media Id.")
     else:
         raise HTTPException(status_code=404, detail="PDF file not found")
+    
+
+def generate_audio_media_id(path : str, folder : str):
+
+    url = "https://waba-v2.360dialog.io/media"
+
+    static_pdf_path = os.path.join(os.getcwd(), folder, path)
+    print(static_pdf_path)
+
+    if os.path.exists(static_pdf_path):
+        headers = {
+            "D360-API-KEY": orai_api_key
+        }
+
+        data = {
+            "messaging_product": "whatsapp"
+        }
+        files = {
+            "file": (path, open(static_pdf_path, "rb"), "audio/mpeg")
+        }
+
+        try:
+            response = requests.post(url, headers=headers, data=data, files=files)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+
+            print(f"Exception occurred: {e}")
+            raise HTTPException(status_code=500, detail="Generating the media Id.")
+    else:
+        raise HTTPException(status_code=404, detail="PDF file not found")
+
+
+def send_audio(audio_media_id : str):
+
+    url = "https://waba-v2.360dialog.io/messages"
+
+    payload = json.dumps({
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": "916378639230",
+        "type": "audio",
+        "audio": {
+            "id": f"{audio_media_id}"
+        }
+    })
+
+    headers = {
+    'D360-API-KEY': orai_api_key,
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.post(url, headers=headers, data=payload)
+
+    print(response.text)
+

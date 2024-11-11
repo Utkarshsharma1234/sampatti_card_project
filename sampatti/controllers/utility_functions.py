@@ -8,11 +8,12 @@ from gtts import gTTS
 from langchain_groq import ChatGroq
 from langchain import LLMChain, PromptTemplate
 from fastapi import BackgroundTasks
-
+from ..controllers import whatsapp_message
 
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
+sarvam_api_key = os.environ.get('SARVAM_API_KEY')
 
 def amount_to_words(amount: float) -> str:
     # Define word representations for numbers 0 to 19
@@ -104,6 +105,52 @@ def current_date():
     date = datetime.now().date()
     return date
 
+def llm_template():
+
+    template = """
+    Extract the following information from the user's text:
+    1. Cash Advance amount
+    2. Monthly repayment amount
+    3. Bonus (if applicable)
+    Examples:
+
+    - "Cash advance five thousand, bonus two thousand, and monthly repayment three thousand."
+    Returns:
+    {{
+        "Cash_Advance": "5000",
+        "Repayment_Monthly": "3000",
+        "Bonus": "2000"
+    }}
+
+    - "The cash advance I am giving is five thousand rupees, the monthly repayment I will take from the worker is two thousand rupees, and the bonus I am giving is one thousand rupees."
+    Returns:
+    {{
+        "Cash_Advance": "5000",
+        "Repayment_Monthly": "2000",
+        "Bonus": "1000"
+    }}
+
+    -"I am giving my worker ten thousand rupees in advance this month and I want to every month, I want to take back a thousand rupees and also give him this month's bonus, and that is two thousand rupees. The bonus I want to give him is two thousand rupees."
+
+    Returns:
+    {{
+        "Cash_Advance": "10000",
+        "Repayment_Monthly": "1000",
+        "Bonus": "2000"
+    }}
+
+    Return the information in a structured JSON format:
+    {{
+        "Cash_Advance": "<cash advance amount>",
+        "Repayment_Monthly": "<monthly repayment amount>",
+        "Bonus": "<bonus amount>"
+    }}
+    User Input: {user_input}
+    ### VALID JSON (NO PREAMBLE):
+    """
+
+    return template
+
 
 def extracted_info_from_llm(user_input : str):
     llm = ChatGroq(
@@ -112,96 +159,63 @@ def extracted_info_from_llm(user_input : str):
         model_name="llama-3.1-70b-versatile"
     )
     
-    template = """
-    Extract the following information from the user's text:
-    1. Cash Advance amount
-    2. Monthly repayment amount
-    3. Bonus (if applicable)
-    Return the information in a structured JSON format:
-    {{
-    "Cash_Advance": "<cash advance amount>",
-    "Repayment_Monthly": "<monthly repayment amount>",
-    "Bonus": "<bonus amount>"
-    }}
-    User Input: {user_input}
-    ### VALID JSON (NO PREAMBLE):
-    """
+    
+    template = llm_template() 
 
     prompt = PromptTemplate(input_variables=["user_input"], template=template)
     llm_chain = LLMChain(prompt=prompt, llm=llm)
 
     response = llm_chain.run({
-        "user_input": user_input  # Input the text containing the information
+        "user_input": user_input 
     })
 
-    # Use regex to extract the JSON part from the response
-    json_match = re.search(r'```json\n(.*?)\n```', response, re.DOTALL)
+    print(f"the response from llm is : {response}")
+    try:
+        extracted_info = json.loads(response)
+        return extracted_info
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+        return None
 
-    extracted_info = {}
-    if json_match:
-        json_str = json_match.group(1)
-        
-        # Load the JSON string into a Python dictionary
-        try:
-            extracted_info = json.loads(json_str)
-            return extracted_info
-        except json.JSONDecodeError:
-            print("Failed to decode JSON:", json_str)
-    else:
-        print("No JSON found in the response.")
 
 def call_sarvam_api(file_path):
-    # Sarvam API URL
-    url = "https://api.sarvam.ai/speech-to-text-translate"
 
-    # Headers for the API
+    url = "https://api.sarvam.ai/speech-to-text-translate"
     headers = {
-        "api-subscription-key": "3f3f7553-a322-4b7e-a4db-b13fbb93f529"
+        "api-subscription-key": sarvam_api_key
     }
 
-    # Open the audio file and prepare it for sending
     with open(file_path, 'rb') as file:
-        # Prepare the file as a tuple: (filename, file content, content type)
-        files = {
-            "file": (os.path.basename(file_path), file, "audio/wav")  # Adjust content type if needed
-        }
-
-        # Send the POST request with the file and headers
+        files = { "file": (os.path.basename(file_path), file, "audio/wav")}
         response = requests.post(url, headers=headers, files=files)
 
-    # Check if the API call was successful
+
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
-
-    # Return the JSON response
     return response.json()
+
 
 def translate_text_sarvam(text: str, source_language: str, target_language: str) -> str:
 
     try:
-        # Sarvam translation API URL
         url = "https://api.sarvam.ai/translate"
 
-        # Headers for the API request
         headers = {
-            "api-subscription-key": "3f3f7553-a322-4b7e-a4db-b13fbb93f529",  # Replace with your actual API key
+            "api-subscription-key": sarvam_api_key, 
             "Content-Type": "application/json"
         }
 
-        # Request body for the API
         payload = {
             "input": text,
             "source_language_code": source_language,
             "target_language_code": target_language,
-            "speaker_gender": "Male",  # Example value; change if needed
-            "mode": "formal",            # Assuming "text" mode; change if needed
+            "speaker_gender": "Male",  
+            "mode": "formal",          
             "model": "mayura:v1"
         }
 
-        # Make the POST request to the Sarvam translation API
         response = requests.post(url, json=payload, headers=headers)
 
-        # Check if the response was successful
         if response.status_code == 200:
             translated_text = response.json().get("translated_text", "")
             return translated_text
@@ -214,16 +228,16 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
 
 def send_audio(static_dir : str, filename : str, sample_output : str, language: str, background_tasks : BackgroundTasks):
     try:
-        # Generate the audio file using gTTS and save it in the audio_files folder
+        
         audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
         tts = gTTS(sample_output, lang=language)
         tts.save(audio_file_path)
-
-        # Add task to delete the file after the response is sent
         background_tasks.add_task(os.remove, audio_file_path)
-
-        # Return the file response
-        return FileResponse(path=audio_file_path, media_type="audio/mp3", filename=f"{filename}_output.mp3")
+        response = whatsapp_message.generate_audio_media_id(f"{filename}_output.mp3", static_dir)
+        audio_media_id = response.get('id')
+        print(audio_media_id)
+        whatsapp_message.send_audio(audio_media_id)
+        return {"MESSAGE" : "AUDIO SENT SUCCESSFULLY."}
 
     except Exception as e:
         return JSONResponse(content={"error": f"Failed to generate speech: {e}"}, status_code=500)

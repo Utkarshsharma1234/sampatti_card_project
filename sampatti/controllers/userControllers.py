@@ -6,6 +6,7 @@ from .. import models, schemas
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
+from pydub import AudioSegment
 
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
@@ -415,30 +416,39 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
     results = []
-
     static_dir = 'audio_files'
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
 
     user_input = ""
+    temp_wav_path = ""
+    
     try:
-        # Use NamedTemporaryFile with delete=False
-
+        # Download the file from the given URL
         response = requests.get(file_url)
         with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
-            # Read the file content
+            # Write the downloaded content to the temp file
             temp.write(response.content)
             temp_path = temp.name
 
-        # Transcribe the audio using Whisper
-        result = call_sarvam_api(temp_path)
+        print(f"Downloaded temp file: {temp_path}")
+        
+        # Convert the audio to .wav format
+        audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
+        temp_wav_path = f"{temp_path}.mpeg"  # Create a new temp path for the wav file
+        audio.export(temp_wav_path, format="mpeg")  # Export the audio as .wav
+        print(f"Converted to wav: {temp_wav_path}")
+        
+        # Transcribe the .wav audio using Whisper or Sarvam API
+        result = call_sarvam_api(temp_wav_path)
+
+        print(f"the result from sarvam ai is : {result}")
         user_input = result["transcript"]
         user_language = result["language_code"]
-        print(result)
-
+        
         # Append the transcription result
         results.append({
-            "filename": os.path.basename(temp_path),
+            "filename": os.path.basename(temp_wav_path),
             "transcript": user_input,
             "language_code": user_language
         })
@@ -448,12 +458,13 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
-        # Clean up by deleting the temporary file
+        # Clean up by deleting both the temporary original and .wav files
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        if os.path.exists(temp_wav_path):
+            os.remove(temp_wav_path)
 
-    print(results)
-    print(f"the temp path is  : f{os.path.basename(temp_path)}")
+    print(f"the transcription done from the given audio is this : {results}")
     extracted_info = extracted_info_from_llm(user_input)
     print(extracted_info)
     cash_advance = extracted_info.get("Cash_Advance")
@@ -479,5 +490,4 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str):
         }
         gtts_language = language_map.get(user_language, "en")  # Default to "en" if language code is not found
         return send_audio(static_dir, os.path.basename(temp_path), translated_text, gtts_language, background_tasks)
-    
         
