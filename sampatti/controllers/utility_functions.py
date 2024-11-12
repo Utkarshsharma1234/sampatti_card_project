@@ -1,4 +1,4 @@
-import json, os, uuid, random, string,  difflib, re, requests
+import json, os, uuid, random, string,  difflib, re, requests, base64
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
@@ -226,18 +226,49 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         print(f"Translation error: {e}")
         return text
 
-def send_audio(static_dir : str, filename : str, sample_output : str, language: str, background_tasks : BackgroundTasks, employerNumber: int):
+def send_audio(static_dir: str, filename: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
     try:
-        
+        # Construct the audio file path
         audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
-        tts = gTTS(sample_output, lang=language)
-        tts.save(audio_file_path)
+
+        # Using Sarvam API for text-to-speech
+        url = "https://api.sarvam.ai/text-to-speech"
+        payload = {
+            "inputs": [sample_output],
+            "target_language_code": language,  # Adjust as per the expected language code
+            "speaker": "meera",  # Choose the appropriate speaker if required
+            "enable_preprocessing": True,
+            "model": "bulbul:v1"
+        }
+        headers = {
+            "api-subscription-key": sarvam_api_key,  # Replace with your valid API key
+            "Content-Type": "application/json"
+        }
+
+        # Making the API request
+        response = requests.post(url, json=payload, headers=headers)
+        response_data = response.json()
+
+        # Extract the base64-encoded audio string from the response
+        base64_string = response_data["audios"][0]  # Assuming the response has the base64 audio
+        audio_bytes = base64.b64decode(base64_string)
+
+        # Save the audio file as an MP3
+        with open(audio_file_path, "wb") as audio_file:
+            audio_file.write(audio_bytes)
+
+        # Add a background task to remove the audio file after sending
         background_tasks.add_task(os.remove, audio_file_path)
+
+        # Generate the audio media ID using your existing WhatsApp logic
         response = whatsapp_message.generate_audio_media_id(f"{filename}_output.mp3", static_dir)
         audio_media_id = response.get('id')
         print(audio_media_id)
+
+        # Send the audio using WhatsApp
         whatsapp_message.send_audio(audio_media_id, employerNumber)
-        return {"MESSAGE" : "AUDIO SENT SUCCESSFULLY."}
+
+        return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
 
     except Exception as e:
         return JSONResponse(content={"error": f"Failed to generate speech: {e}"}, status_code=500)
