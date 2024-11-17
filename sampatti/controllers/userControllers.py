@@ -464,13 +464,14 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
     print(results)
     extracted_info = extracted_info_from_llm(user_input)
     print(extracted_info)
-    cash_advance = extracted_info.get("Cash_Advance")
-    bonus = extracted_info.get("Bonus")
-    repayment = extracted_info.get("Repayment_Monthly")
+    cash_advance = extracted_info.get("Cash_Advance", 0)
+    bonus = extracted_info.get("Bonus", 0)
+    repayment = extracted_info.get("Repayment_Monthly", 0)
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
     if user_language == "en-IN":
         return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en", background_tasks, employerNumber)
     else:
         translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
+        print(translated_text)
         return send_audio(static_dir, os.path.basename(temp_path), translated_text, user_language, background_tasks, employerNumber)

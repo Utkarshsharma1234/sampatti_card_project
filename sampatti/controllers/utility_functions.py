@@ -257,6 +257,7 @@ def send_audio(static_dir: str, filename: str, sample_output: str, language: str
         with open(audio_file_path, "wb") as audio_file:
             audio_file.write(audio_bytes)
 
+        print("audio file successfully created.")
         # Add a background task to remove the audio file after sending
         background_tasks.add_task(os.remove, audio_file_path)
 
