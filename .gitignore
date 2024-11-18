@@ -7,3 +7,4 @@ contracts
 .env
 credentials.json
 invoices
+audio_files

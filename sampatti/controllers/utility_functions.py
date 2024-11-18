@@ -112,6 +112,14 @@ def llm_template():
     1. Cash Advance amount
     2. Monthly repayment amount
     3. Bonus (if applicable)
+
+    Return the information in a structured JSON format:
+    {{
+        "Cash_Advance": "<cash advance amount>",
+        "Repayment_Monthly": "<monthly repayment amount>",
+        "Bonus": "<bonus amount>"
+    }}
+
     Examples:
 
     - "Cash advance five thousand, bonus two thousand, and monthly repayment three thousand."
@@ -130,7 +138,7 @@ def llm_template():
         "Bonus": "1000"
     }}
 
-    -"I am giving my worker ten thousand rupees in advance this month and I want to every month, I want to take back a thousand rupees and also give him this month's bonus, and that is two thousand rupees. The bonus I want to give him is two thousand rupees."
+    - "I am giving my worker ten thousand rupees in advance this month and I want to every month, I want to take back a thousand rupees and also give him this month's bonus, and that is two thousand rupees. The bonus I want to give him is two thousand rupees."
 
     Returns:
     {{
@@ -139,12 +147,6 @@ def llm_template():
         "Bonus": "2000"
     }}
 
-    Return the information in a structured JSON format:
-    {{
-        "Cash_Advance": "<cash advance amount>",
-        "Repayment_Monthly": "<monthly repayment amount>",
-        "Bonus": "<bonus amount>"
-    }}
     User Input: {user_input}
     ### VALID JSON (NO PREAMBLE):
     """
@@ -159,8 +161,7 @@ def extracted_info_from_llm(user_input : str):
         model_name="llama-3.1-70b-versatile"
     )
     
-    
-    template = llm_template() 
+    template = llm_template()
 
     prompt = PromptTemplate(input_variables=["user_input"], template=template)
     llm_chain = LLMChain(prompt=prompt, llm=llm)
@@ -226,12 +227,9 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         print(f"Translation error: {e}")
         return text
 
-def send_audio(static_dir: str, filename: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
-    try:
-        # Construct the audio file path
-        audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
+def send_audio(output_directory: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
 
-        print("entered into send audio node.")
+    try:
         # Using Sarvam API for text-to-speech
         url = "https://api.sarvam.ai/text-to-speech"
         payload = {
@@ -246,26 +244,26 @@ def send_audio(static_dir: str, filename: str, sample_output: str, language: str
             "Content-Type": "application/json"
         }
 
-        # Making the API request
         response = requests.post(url, json=payload, headers=headers)
         response_data = response.json()
+        base64_string = response_data["audios"][0] 
 
-        print("converting to audio")
-        print(response_data)
-        # Extract the base64-encoded audio string from the response
-        base64_string = response_data["audios"][0]  # Assuming the response has the base64 audio
-        audio_bytes = base64.b64decode(base64_string)
+        os.makedirs(output_directory, exist_ok=True)
 
-        # Save the audio file as an MP3
-        with open(audio_file_path, "wb") as audio_file:
-            audio_file.write(audio_bytes)
+        # Decode the Base64 string to binary data
+        audio_data = base64.b64decode(base64_string)
 
-        print("audio file successfully created.")
-        # Add a background task to remove the audio file after sending
-        background_tasks.add_task(os.remove, audio_file_path)
+        # Construct the full file path
+        output_filename = "output.ogg"
+        file_path = os.path.join(output_directory, output_filename)
 
+        # Write the binary data to a file
+        with open(file_path, "wb") as ogg_file:
+            ogg_file.write(audio_data)
+
+        print(f"File saved as: {file_path}")
         # Generate the audio media ID using your existing WhatsApp logic
-        response = whatsapp_message.generate_audio_media_id(f"{filename}_output.mp3", static_dir)
+        response = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
         audio_media_id = response.get('id')
         print(audio_media_id)
 

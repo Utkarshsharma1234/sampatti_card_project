@@ -175,7 +175,7 @@ def generate_audio_media_id(path : str, folder : str):
             "messaging_product": "whatsapp"
         }
         files = {
-            "file": (path, open(static_pdf_path, "rb"), "audio/mpeg")
+            "file": (path, open(static_pdf_path, "rb"), "application/octet-stream")
         }
 
         try:
@@ -187,7 +187,7 @@ def generate_audio_media_id(path : str, folder : str):
             print(f"Exception occurred: {e}")
             raise HTTPException(status_code=500, detail="Generating the media Id.")
     else:
-        raise HTTPException(status_code=404, detail="PDF file not found")
+        raise HTTPException(status_code=404, detail="Audio file not found.")
 
 
 def send_audio(audio_media_id : str, employerNumber : int):

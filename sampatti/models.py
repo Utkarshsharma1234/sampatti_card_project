@@ -74,4 +74,26 @@ class CashAdvanceManagement(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
+    cashAdvance = Column(Integer)
+    monthlyRepayment = Column(Integer)
     bonus = Column(Integer)
+
+class CashAdvanceRecords(Base):
+    __tablename__ = "CashAdvanceRecords"
+    id = Column(String, primary_key=True)
+    employerNumber = Column(Integer)
+    worker_id = Column(Integer, default=0)
+    employer_id = Column(String)
+    typeOfAmount = Column(String)
+    amount = Column(Integer)
+    dateIssuedOn = Column(String)
+
+class RepaymentRecords(Base):
+    __tablename__ = "RepaymentRecords"
+    id = Column(String, primary_key=True)
+    employerNumber = Column(Integer)
+    worker_id = Column(Integer, default=0)
+    employer_id = Column(String)
+    monthlyRepaymentAmount = Column(Integer)
+    dateStartedOn = Column(String)
+    dateEndingOn = Column(String)

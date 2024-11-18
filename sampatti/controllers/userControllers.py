@@ -332,11 +332,24 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
 
 def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
 
+    month = month.capitalize()
+    print(month)
     field = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-
+    if field is None:
+        return {
+            "Message" : "This worker doesn't exist in the database. Please enter some other worker number."
+        }
+    
     static_pdf_path = os.path.join(os.getcwd(), 'static', f"{field.id}_SS_{month}_{year}.pdf")
 
-    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
+    if os.path.exists(static_pdf_path):
+        return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
+    
+    else:
+        return {
+            "Message" : "The salary slip for the given worker number doesn't exist for the specified month and year."
+        }
+        
 
 
 def send_worker_salary_slips(db : Session) :
@@ -436,15 +449,15 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
         
         # Convert the audio to .wav format
         audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
-        temp_wav_path = f"{temp_path}.mpeg"  # Create a new temp path for the wav file
-        audio.export(temp_wav_path, format="mpeg")  # Export the audio as .wav
+        temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
+        audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
         print(f"Converted to wav: {temp_wav_path}")
 
         # Transcribe the audio using Whisper
-        result = call_sarvam_api(temp_path)
+        result = call_sarvam_api(temp_wav_path)
         user_input = result["transcript"]
         user_language = result["language_code"]
-        print(result)
+        print(f"the result from the sarvam api is : {result}")
 
         # Append the transcription result
         results.append({
@@ -461,10 +474,12 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
         # Clean up by deleting the temporary file
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        if os.path.exists(temp_wav_path):
+            os.remove(temp_wav_path)
 
     print(results)
     extracted_info = extracted_info_from_llm(user_input)
-    print(f"the value of the extracted object in usercontrollers is : {extracted_info}")
+    print(f"usercontrollers : {extracted_info}")
 
     cash_advance = 0
     bonus = 0
@@ -474,11 +489,14 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
         bonus = extracted_info.get("Bonus")
         repayment = extracted_info.get("Repayment_Monthly")
 
+    
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
     if user_language == "en-IN":
-        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en-IN", background_tasks, employerNumber)
+        print("enterd first.")
+        return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
     else:
+        print("entered second.")
         translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
         print(translated_text)
-        return send_audio(static_dir, os.path.basename(temp_path), translated_text, user_language, background_tasks, employerNumber)
+        return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
