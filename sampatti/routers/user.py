@@ -27,6 +27,10 @@ previous_month = last_day_of_previous_month.strftime("%B")
 current_year = datetime.now().year
 
 
+@router.get("/download_salary_slip")
+def download_worker_salary_slip(workerNumber : int, month : str, year : int, db : Session = Depends(get_db)):
+    return userControllers.download_worker_salary_slip(workerNumber, month, year, db)
+
 @router.post("/employer/create")
 def create_employer(request : schemas.Employer, db : Session = Depends(get_db)):
     return userControllers.create_employer(request, db)
@@ -153,11 +157,6 @@ def generate_sheet():
 @router.get('/copy_employer_message')
 def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
-
-
-@router.post('/create_salary_records')
-def create_salary_records(workerNumber : int, db : Session = Depends(get_db)):
-    return userControllers.create_salary_records(workerNumber,db)
 
 @router.post('/process_audio')
 async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int):
