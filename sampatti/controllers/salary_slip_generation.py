@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .. import models
 from .cashfree_api import check_order_status, fetch_bank_ref
-from .utility_functions import current_date, current_month, current_year, amount_to_words
+from .utility_functions import current_date, current_month, previous_month, current_year, amount_to_words
 
 
 def generate_salary_slip(workerNumber, db:Session) :
@@ -24,6 +24,9 @@ def generate_salary_slip(workerNumber, db:Session) :
         month = "December"
         year -= 1
 
+    else:
+        month = previous_month()
+        
     if not worker :
         raise HTTPException(status_code=404, detail="The domestic worker is not registered. You must register the worker first.")
     

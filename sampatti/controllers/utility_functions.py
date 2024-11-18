@@ -231,6 +231,7 @@ def send_audio(static_dir: str, filename: str, sample_output: str, language: str
         # Construct the audio file path
         audio_file_path = os.path.join(static_dir, f"{filename}_output.mp3")
 
+        print("entered into send audio node.")
         # Using Sarvam API for text-to-speech
         url = "https://api.sarvam.ai/text-to-speech"
         payload = {
@@ -249,6 +250,8 @@ def send_audio(static_dir: str, filename: str, sample_output: str, language: str
         response = requests.post(url, json=payload, headers=headers)
         response_data = response.json()
 
+        print("converting to audio")
+        print(response_data)
         # Extract the base64-encoded audio string from the response
         base64_string = response_data["audios"][0]  # Assuming the response has the base64 audio
         audio_bytes = base64.b64decode(base64_string)

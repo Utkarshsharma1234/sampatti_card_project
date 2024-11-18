@@ -1,6 +1,6 @@
 import tempfile, os, re, requests
 from fastapi import File, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert,update
 from .. import models, schemas
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
@@ -330,6 +330,14 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     db.commit()
     db.refresh(new_entry)
 
+def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
+
+    field = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+
+    static_pdf_path = os.path.join(os.getcwd(), 'static', f"{field.id}_SS_{month}_{year}.pdf")
+
+    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
+
 
 def send_worker_salary_slips(db : Session) :
 
@@ -337,12 +345,15 @@ def send_worker_salary_slips(db : Session) :
 
     year = current_year()
     month = current_month()
+    ps_month = previous_month()
 
     if month == "January":
         month = "December"
         year -= 1
 
-    
+    else:
+        month = ps_month
+
     for worker in total_workers:
 
         salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
@@ -399,17 +410,7 @@ def salary_payment_reminder(db : Session):
         
         whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_payment_reminder")
 
-def create_salary_records(workerNumber : int, db : Session):
 
-    total = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number==workerNumber).all()
-
-    for item in total:
-
-        new_entry = models.SalaryDetails(id=generate_unique_id(), employerNumber=item.employer_number, worker_id=item.worker_id, employer_id=item.employer_id, salary=item.salary_amount, order_id=item.order_id)
-
-        db.add(new_entry)
-        db.commit()
-        db.refresh(new_entry)
 
 async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int):
     if not file_url:
@@ -463,14 +464,20 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
 
     print(results)
     extracted_info = extracted_info_from_llm(user_input)
-    print(extracted_info)
-    cash_advance = extracted_info.get("Cash_Advance", 0)
-    bonus = extracted_info.get("Bonus", 0)
-    repayment = extracted_info.get("Repayment_Monthly", 0)
+    print(f"the value of the extracted object in usercontrollers is : {extracted_info}")
+
+    cash_advance = 0
+    bonus = 0
+    repayment = 0
+    if extracted_info is not None:
+        cash_advance = extracted_info.get("Cash_Advance")
+        bonus = extracted_info.get("Bonus")
+        repayment = extracted_info.get("Repayment_Monthly")
+
     sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
     if user_language == "en-IN":
-        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en", background_tasks, employerNumber)
+        return send_audio(static_dir, os.path.basename(temp_path), sample_output, "en-IN", background_tasks, employerNumber)
     else:
         translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
         print(translated_text)
