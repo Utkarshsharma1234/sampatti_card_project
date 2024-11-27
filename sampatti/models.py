@@ -67,8 +67,6 @@ class SalaryDetails(Base):
     salary = Column(Integer)
     bonus = Column(Integer)
     order_id=Column(String)
-    cashAdvance = Column(Integer)
-    repayment = Column(Integer)
 
 class CashAdvanceManagement(Base):
     __tablename__ = "CashAdvanceManagement"
