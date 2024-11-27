@@ -76,8 +76,9 @@ class CashAdvanceManagement(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
-    cashAdvance = Column(Integer)
-    monthlyRepayment = Column(Integer)
+    bonus = Column(Integer)
+    cashAdvance = Column(Integer, default = 0)
+    monthlyRepayment = Column(Integer, default=0)
 
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"
