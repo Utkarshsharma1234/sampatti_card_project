@@ -67,6 +67,8 @@ class SalaryDetails(Base):
     salary = Column(Integer)
     bonus = Column(Integer)
     order_id=Column(String)
+    cashAdvance = Column(Integer)
+    repayment = Column(Integer)
 
 class CashAdvanceManagement(Base):
     __tablename__ = "CashAdvanceManagement"
@@ -76,7 +78,6 @@ class CashAdvanceManagement(Base):
     employer_id = Column(String)
     cashAdvance = Column(Integer)
     monthlyRepayment = Column(Integer)
-    bonus = Column(Integer)
 
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"
@@ -94,6 +95,7 @@ class RepaymentRecords(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
+    cashAdvance = Column(String)
     monthlyRepaymentAmount = Column(Integer)
     dateStartedOn = Column(String)
     dateEndingOn = Column(String)

@@ -10,7 +10,7 @@ from cashfree_pg.api_client import Cashfree
 from cashfree_pg.models.customer_details import CustomerDetails
 from .. import models
 from .whatsapp_message import send_whatsapp_message
-from .utility_functions import generate_unique_id
+from .utility_functions import generate_unique_id, current_month, current_date, current_year
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 from dotenv import load_dotenv
@@ -262,7 +262,18 @@ def payment_link_generation(db : Session):
         actual_number = int(str(dummy_number)[2:])
         
         customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
-        createOrderRequest = CreateOrderRequest(order_amount = item.salary_amount, order_currency="INR", customer_details=customerDetails)
+
+        cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id)
+
+        repayment = 0
+
+        if cashAdvanceEntry is not None:
+
+            if cashAdvanceEntry.cashAdvance > 0:
+                repayment = cashAdvanceEntry.monthlyRepayment
+
+        total_salary = item.salary_amount - repayment
+        createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails)
         try:
             api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
             # print(api_response.data)
@@ -331,6 +342,7 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, bonus : int, 
 
     db.execute(update_statement)
     db.commit()
+
 
 
 # settle the unsettled balance on cashfree to the worker's account.

@@ -159,5 +159,10 @@ def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
 
 @router.post('/process_audio')
-async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int):
-    return await userControllers.process_audio(background_tasks, file_url, employerNumber)
+async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session = Depends(get_db)):
+    return await userControllers.process_audio(background_tasks, file_url, employerNumber, db)
+
+
+@router.post('/cash_advance')
+def cash_advance_management(cashAdvance : int, bonus: int, repayment : int, db : Session = Depends(get_db)):
+    return userControllers.cash_advance_management(cashAdvance,bonus, repayment, db)

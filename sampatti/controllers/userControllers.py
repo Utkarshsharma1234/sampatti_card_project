@@ -1,3 +1,5 @@
+import html
+import json
 import tempfile, os, re, requests
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
@@ -288,8 +290,7 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     if existing_bonus_entry is not None:
         bonus += existing_bonus_entry.bonus
 
-    response_data = cashfree_api.check_order_status(order_id=transaction.order_id)
-    order_status = response_data.get('order_status')
+    order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
     if(order_status == "PAID"):
         
         total_salary = transaction.salary_amount + bonus
@@ -330,6 +331,7 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     db.commit()
     db.refresh(new_entry)
 
+
 def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
 
     month = month.capitalize()
@@ -341,6 +343,7 @@ def download_worker_salary_slip(workerNumber: int, month : str, year : int, db :
         }
     
     static_pdf_path = os.path.join(os.getcwd(), 'static', f"{field.id}_SS_{month}_{year}.pdf")
+    print(static_pdf_path)
 
     if os.path.exists(static_pdf_path):
         return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{workerNumber}_SS_{month}_{year}.pdf")
@@ -425,7 +428,7 @@ def salary_payment_reminder(db : Session):
 
 
 
-async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int):
+async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
@@ -500,3 +503,53 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
         translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
         print(translated_text)
         return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
+
+
+def cash_advance_management(cashAdvance : int, bonus: int, repayment : int, workerNumber : int, employerNumber : int, db : Session):
+
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+    employer = db.query(models.Employer).filter(models.Employer.employerNumber == employerNumber).first()
+
+    date = current_date()
+    month = current_month()
+    year = current_year()
+
+
+    # adding the cash advance management data
+    cash_entry = models.CashAdvanceManagement(id=generate_unique_id(), employerNumber=employerNumber, worker_id = worker.id, employer_id = employer.id, cashAdvance = cashAdvance, monthlyRepayment = repayment, bonus = bonus)
+
+    db.add(cash_entry)
+    db.commit()
+    db.refresh(cash_entry)
+
+
+    # adding into the cash advance records table
+    if cashAdvance > 0:
+
+        entry = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker.id, employer_id = employer.id, typeOfAmount = "cashAdvance", amount = cashAdvance, dateIssuedOn = f"{date}-{month}-{year}")
+
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+
+    # adding into the cash advance table but the bonus record
+    if bonus > 0:
+
+        bonus_entry = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker.id, employer_id = employer.id, typeOfAmount = "Bonus", amount = cashAdvance, dateIssuedOn = f"{date}-{month}-{year}")
+
+        db.add(bonus_entry)
+        db.commit()
+        db.refresh(bonus_entry)
+
+
+    # repayment record entry
+    repayment_entry = models.RepaymentRecords(id=generate_unique_id(), employerNumber=employerNumber, worker_id = worker.id, employer_id = employer.id, cashAdvance = cashAdvance, monthlyRepaymentAmount = repayment, dateStartedOn = f"{date}-{month}-{year}", dateEndingOn = f"{date}-{month}-{year}")
+
+    db.add(repayment_entry)
+    db.commit()
+    db.refresh(repayment_entry)
+
+
+    return {
+        "Message" : "Details added successfully."
+    }
