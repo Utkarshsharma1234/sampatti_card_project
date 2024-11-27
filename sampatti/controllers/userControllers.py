@@ -290,7 +290,10 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     if existing_bonus_entry is not None:
         bonus += existing_bonus_entry.bonus
 
-    order_status = cashfree_api.check_order_status(order_id=transaction.order_id)
+    print("entered")
+    response_data = cashfree_api.check_order_status(order_id=transaction.order_id)
+    order_status = response_data["order_status"]
+    print(order_status)
     if(order_status == "PAID"):
         
         total_salary = transaction.salary_amount + bonus
@@ -305,10 +308,13 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
         print(f"the pdf path is : {filePath}")
         uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
 
+        print("uploaded")
         whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=transaction.worker_name, param3=total_salary, link_param=employer_invoice_name, template_name="employer_invoice_message")
 
+        print("message")
         update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == transaction.employer_number, models.worker_employer.c.order_id == transaction.order_id).values(status="SENT")
 
+        print("sent")
         db.execute(update_statement)
         db.commit()
     
