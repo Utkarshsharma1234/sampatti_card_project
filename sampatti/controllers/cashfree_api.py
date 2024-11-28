@@ -359,13 +359,15 @@ def unsettled_balance(db : Session):
     total_workers = db.query(models.worker_employer).all()
     for transaction in total_workers:
         
-        status = check_order_status(order_id=transaction.order_id)
+        response_data = check_order_status(order_id=transaction.order_id)
+
         bonus = 0
         existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==transaction.employer_number, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
 
         if existing_bonus_entry is not None:
             bonus += existing_bonus_entry.bonus
-        
+
+        status = response_data["order_status"]
         total_salary = transaction.salary_amount + bonus
         if(status == "PAID"):
 
