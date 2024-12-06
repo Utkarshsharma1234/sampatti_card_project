@@ -7,8 +7,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from gtts import gTTS
 from langchain_groq import ChatGroq
 from langchain import LLMChain, PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableSequence
 from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
+
 
 
 load_dotenv()
@@ -105,78 +108,197 @@ def current_date():
     date = datetime.now().date()
     return date
 
+
 def llm_template():
+    template = """You are an intelligent assistant helping to extract precise financial and attendance information for an employee cash advance record.
 
-    template = """
-    Extract the following information from the user's text:
-    1. Cash Advance amount
-    2. Monthly repayment amount
-    3. Bonus (if applicable)
+Instructions:
+1. Carefully analyze the entire user input
+2. Extract all relevant financial and attendance details
+3. If any information is missing, use reasonable defaults
+4. Be flexible in understanding variations of input
 
-    Return the information in a structured JSON format:
-    {{
-        "Cash_Advance": "<cash advance amount>",
-        "Repayment_Monthly": "<monthly repayment amount>",
-        "Bonus": "<bonus amount>"
-    }}
+Current Context:
+- Current Date: {current_date}
+- Current Month: {current_month} {current_year}
+- Previous Month: {previous_month} {previous_year}
+- Previous Record: {previous_record}
+- days in previous month: {previous_month_days}
 
-    Examples:
+Input Text: {user_input}
+employer_number: {employer_number}
 
-    - "Cash advance five thousand, bonus two thousand, and monthly repayment three thousand."
-    Returns:
-    {{
-        "Cash_Advance": "5000",
-        "Repayment_Monthly": "3000",
-        "Bonus": "2000"
-    }}
+Extract the following information with smart interpretation:
+- Cash Advance Amount: Look for any mention of cash advance, advance, loan, or financial support
+- Monthly Repayment Amount: Find the planned monthly repayment
+- Bonus: Identify any bonus or additional payment
+- Attendance: Calculate days present or if days absent then subtract from number of days in previous month.
+- Repayment Start Month: Determine when repayment begins
 
-    - "The cash advance I am giving is five thousand rupees, the monthly repayment I will take from the worker is two thousand rupees, and the bonus I am giving is one thousand rupees."
-    Returns:
-    {{
-        "Cash_Advance": "5000",
-        "Repayment_Monthly": "2000",
-        "Bonus": "1000"
-    }}
+Extraction Rules:
+- Use integers for all monetary and attendance values
+- If no bonus mentioned, use 0
+- If attendance not specified, default to days present in previous month.
+- For Repayment_Start_Month:
+  * IMPORTANT: Current date is {current_date}
+  * If not specified, use next month from current date
+  * If user mentions a specific month (e.g., "March", "June"):
+    - Compare with current month {current_month}
+    - If mentioned month comes after {current_month} in calendar, use {current_year}
+    - If mentioned month comes before or equals {current_month}, use {current_year} + 1
+  * Always format as 'YYYY-MM'
+  * Double-check: For March mentioned in {current_month} {current_year}, it should be '2025-03'
+- If user says add/subtract/take back, then add/subtract/take back the amount from previous cash advance, bonus and monthly repayment
+- If user says worker was on leave/absent/sick/not working for n days, then subtract n days from previous month
+- if employer is coming first time this month, then use 0 for all previous fields
+- If same employee is mentioned again, then use previous fields values wherever there is empty field
 
-    - "I am giving my worker ten thousand rupees in advance this month and I want to every month, I want to take back a thousand rupees and also give him this month's bonus, and that is two thousand rupees. The bonus I want to give him is two thousand rupees."
+Return ONLY a valid JSON in this format:
+{{
+    "Cash_Advance": <cash advance amount as integer>,
+    "Repayment_Monthly": <monthly repayment amount as integer>,
+    "Bonus": <bonus amount as integer>,
+    "Attendance": <number of days present as integer>,
+    "Repayment_Start_Month": <start month as 'YYYY-MM'>
+}}
 
-    Returns:
-    {{
-        "Cash_Advance": "10000",
-        "Repayment_Monthly": "1000",
-        "Bonus": "2000"
-    }}
-
-    User Input: {user_input}
-    ### VALID JSON (NO PREAMBLE):
-    """
-
+Respond with the JSON ONLY. NO additional text!"""
     return template
 
+def get_previous_record(db: Session, employer_number: int):
+    latest_record = (
+        db.query(CashAdvanceRecord)
+        .join(Employee)
+        .filter(Employee.employer_number == employer_number, CashAdvanceRecord.is_active == True)
+        .order_by(CashAdvanceRecord.created_at.desc())
+        .first()
+    )
+    
+    if latest_record:
+        return {
+            "current_cash_advance": latest_record.current_cash_advance,
+            "current_monthly_repayment": latest_record.current_monthly_repayment,
+            "remaining_balance": latest_record.remaining_balance,
+            "bonus": latest_record.bonus,
+            "attendance": latest_record.attendance
+        }
+    return None
 
-def extracted_info_from_llm(user_input : str):
+def extract_info_from_llm(user_input: str, employer_number: int, db: Session):
+    # Get previous record
+    previous_record = get_previous_record(db, employer_number)
+    
+    # Initialize LLM
     llm = ChatGroq(
         temperature=0,
-        groq_api_key= groq_key,
+        groq_api_key=groq_key,
         model_name="llama-3.1-70b-versatile"
     )
     
-    template = llm_template()
+    # Get current date info - Add explicit current_date parameter
+    current_date = current_date()
+    current_month = current_month()
+    current_year = current_year()
+    previous_month = (current_date.replace(day=1) - timedelta(days=1)).strftime("%B")
+    previous_year = (current_date.replace(day=1) - timedelta(days=1)).year
+    previous_month_days = (current_date.replace(day=1) - timedelta(days=1)).day
+    
+    # Calculate next month
+    next_month_date = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1)
+    next_month = next_month_date.strftime("%Y-%m")
+    
+    # Prepare template with explicit current date information
+    prompt = PromptTemplate(
+        input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "previous_month_days", "previous_record", "employer_number"],
+        template=llm_template()
+    )
+    
+    # Create the runnable sequence with all required variables
+    chain = RunnableSequence(
+        first=prompt,
+        last=llm
+    ) | JsonOutputParser()
 
-    prompt = PromptTemplate(input_variables=["user_input"], template=template)
-    llm_chain = LLMChain(prompt=prompt, llm=llm)
-
-    response = llm_chain.run({
-        "user_input": user_input 
-    })
-
-    print(f"the response from llm is : {response}")
     try:
-        extracted_info = json.loads(response)
-        return extracted_info
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
-        return None
+        # Run the chain with explicit current date
+        response = chain.invoke({
+            "employer_number": employer_number,
+            "user_input": user_input,
+            "current_date": current_date.strftime("%Y-%m-%d"),  # Format date explicitly
+            "current_month": current_month,
+            "current_year": current_year,
+            "previous_month": previous_month,
+            "previous_year": previous_year,
+            "previous_month_days": previous_month_days,
+            "previous_record": str(previous_record) if previous_record else "No previous record"
+        })
+        
+        # Extracted data is now a Python dictionary
+        extracted_data = response
+        # Validate and set defaults if needed
+        extracted_data['Cash_Advance'] = extracted_data.get('Cash_Advance', 0)
+        extracted_data['Repayment_Monthly'] = extracted_data.get('Repayment_Monthly', 0)
+        extracted_data['Bonus'] = extracted_data.get('Bonus', 0)
+        extracted_data['Attendance'] = extracted_data.get('Attendance', previous_month_days)  # Default to full month
+        extracted_data['Repayment_Start_Month'] = extracted_data.get('Repayment_Start_Month', next_month)
+        
+        # Get or create employee
+        employee = db.query(Employee).filter_by(employer_number=employer_number).first()
+        if not employee:
+            employee = Employee(employer_number=employer_number)
+            db.add(employee)
+            db.commit()
+        # Deactivate previous record if exists
+        if previous_record:
+            old_record = (
+                db.query(CashAdvanceRecord)
+                .filter_by(employee_id=employee.id, is_active=True)
+                .first()
+            )
+            if old_record:
+                old_record.is_active = False
+        # Create new record
+        new_record = CashAdvanceRecord(
+            employee_id=employee.id,
+            current_cash_advance=extracted_data["Cash_Advance"],
+            current_monthly_repayment=extracted_data["Repayment_Monthly"],
+            remaining_balance=extracted_data["Cash_Advance"],
+            bonus=extracted_data["Bonus"],
+            attendance=extracted_data["Attendance"],
+            repayment_start_month=extracted_data["Repayment_Start_Month"],
+            is_active=True
+        )
+        db.add(new_record)
+        db.commit()
+        
+        print(f"the response from llm is : {response}")
+        
+        return {
+            "previous_record": previous_record,
+            "new_record": extracted_data,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        print(f"Error processing response: {str(e)}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Error processing LLM response: {str(e)}"
+        )
+
+
+#delete this 
+#Test cases for checking
+test_inputs = [
+    "The worker was present for 22 days. I am giving my worker ten thousand rupees as cash advance this month and I want to take back a thousand rupees and bonus is two thousand rupees.",
+    "I wanted to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+    "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+    "Worker got a bonus of 5000 and worked for 25 days. Cash advance of 15000 with monthly repayment of 2000.", 
+    "Eight thousand as advance, repayment of five hundred, bonus of one thousand."
+    "I wanted to start monthly repayment from march"
+    "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+]
+
 
 
 def call_sarvam_api(file_path):
