@@ -98,3 +98,34 @@ class RepaymentRecords(Base):
     monthlyRepaymentAmount = Column(Integer)
     dateStartedOn = Column(String)
     dateEndingOn = Column(String)
+    
+    
+
+    
+#this new tables are created accordingly change it accordingly
+
+class Employee(Base):
+    __tablename__ = "employees"
+    id = Column(Integer, primary_key=True, index=True)
+    employer_number = Column(Integer, unique=True, index=True)
+    name = Column(String)
+    department = Column(String)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    cash_advances = relationship("CashAdvanceRecord", back_populates="employee")
+    
+class CashAdvanceRecord(Base):
+    __tablename__ = "cash_advance_records"
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"))
+    current_cash_advance = Column(Integer)
+    current_monthly_repayment = Column(Integer)
+    remaining_balance = Column(Integer)
+    bonus = Column(Integer)
+    attendance = Column(Integer)
+    repayment_start_month = Column(String)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    employee = relationship("Employee", back_populates="cash_advances")
