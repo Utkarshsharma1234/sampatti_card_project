@@ -162,11 +162,20 @@ def copy_employer_message(db : Session = Depends(get_db)):
 async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session = Depends(get_db)):
     return await userControllers.process_audio(background_tasks, file_url, employerNumber, db)
 
-@router.post("/cash_advance")
-def create_cash_advance_entry(employerNumber : int, workerNumber : int, cashAdvance : int, monthlyRepayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session = Depends(get_db)):
-
-    return userControllers.create_cash_advance_entry(employerNumber, workerNumber, cashAdvance, monthlyRepayment, repaymentStartMonth, repaymentStartYear, db)
-
 @router.post("/salary_details")
 def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.update_salary_details(employerNumber, orderId, db)
+
+@router.post("/cash_advance_entry/create")
+def create_cash_advance_entry(employerNumber : int, workerNumber : int, cashAdvance : int, monthlyRepayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session = Depends(get_db)):
+    return userControllers.create_cash_advance_entry(employerNumber, workerNumber, cashAdvance, monthlyRepayment, repaymentStartMonth, repaymentStartYear, db)
+
+@router.post("/cash_advance_record/create")
+def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, db : Session = Depends(get_db)):
+    return userControllers.cash_advance_record(employerNumber, workerNumber, cashAdvance, bonus, db)
+
+
+@router.get("/existing_advance_entry")
+def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
+
+    return userControllers.check_existing_cash_advance_entry(employerNumber, workerNumber, db)
