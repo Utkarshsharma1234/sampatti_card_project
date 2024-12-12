@@ -11,7 +11,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableSequence
 from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
-
+from sqlalchemy.orm import Session
 
 
 load_dotenv()
@@ -108,8 +108,56 @@ def current_date():
     date = datetime.now().date()
     return date
 
-
 def llm_template():
+
+    template = """
+    Extract the following information from the user's text:
+    1. Cash Advance amount
+    2. Monthly repayment amount
+    3. Bonus (if applicable)
+
+    Return the information in a structured JSON format:
+    {{
+        "Cash_Advance": "<cash advance amount>",
+        "Repayment_Monthly": "<monthly repayment amount>",
+        "Bonus": "<bonus amount>"
+    }}
+
+    Examples:
+
+    - "Cash advance five thousand, bonus two thousand, and monthly repayment three thousand."
+    Returns:
+    {{
+        "Cash_Advance": "5000",
+        "Repayment_Monthly": "3000",
+        "Bonus": "2000"
+    }}
+
+    - "The cash advance I am giving is five thousand rupees, the monthly repayment I will take from the worker is two thousand rupees, and the bonus I am giving is one thousand rupees."
+    Returns:
+    {{
+        "Cash_Advance": "5000",
+        "Repayment_Monthly": "2000",
+        "Bonus": "1000"
+    }}
+
+    - "I am giving my worker ten thousand rupees in advance this month and I want to every month, I want to take back a thousand rupees and also give him this month's bonus, and that is two thousand rupees. The bonus I want to give him is two thousand rupees."
+
+    Returns:
+    {{
+        "Cash_Advance": "10000",
+        "Repayment_Monthly": "1000",
+        "Bonus": "2000"
+    }}
+
+    User Input: {user_input}
+    ### VALID JSON (NO PREAMBLE):
+    """
+
+    return template
+
+
+def llm_template2():
     template = """You are an intelligent assistant helping to extract precise financial and attendance information for an employee cash advance record.
 
 Instructions:
@@ -165,140 +213,163 @@ Return ONLY a valid JSON in this format:
 Respond with the JSON ONLY. NO additional text!"""
     return template
 
-def get_previous_record(db: Session, employer_number: int):
-    latest_record = (
-        db.query(CashAdvanceRecord)
-        .join(Employee)
-        .filter(Employee.employer_number == employer_number, CashAdvanceRecord.is_active == True)
-        .order_by(CashAdvanceRecord.created_at.desc())
-        .first()
-    )
+# def get_previous_record(db: Session, employer_number: int):
+#     latest_record = (
+#         db.query(CashAdvanceRecord)
+#         .join(Employee)
+#         .filter(Employee.employer_number == employer_number, CashAdvanceRecord.is_active == True)
+#         .order_by(CashAdvanceRecord.created_at.desc())
+#         .first()
+#     )
     
-    if latest_record:
-        return {
-            "current_cash_advance": latest_record.current_cash_advance,
-            "current_monthly_repayment": latest_record.current_monthly_repayment,
-            "remaining_balance": latest_record.remaining_balance,
-            "bonus": latest_record.bonus,
-            "attendance": latest_record.attendance
-        }
-    return None
+#     if latest_record:
+#         return {
+#             "current_cash_advance": latest_record.current_cash_advance,
+#             "current_monthly_repayment": latest_record.current_monthly_repayment,
+#             "remaining_balance": latest_record.remaining_balance,
+#             "bonus": latest_record.bonus,
+#             "attendance": latest_record.attendance
+#         }
+#     return None
 
-def extract_info_from_llm(user_input: str, employer_number: int, db: Session):
-    # Get previous record
-    previous_record = get_previous_record(db, employer_number)
+# def extract_info_from_llm(user_input: str, employer_number: int, db: Session):
+#     # Get previous record
+#     previous_record = get_previous_record(db, employer_number)
     
-    # Initialize LLM
+#     # Initialize LLM
+#     llm = ChatGroq(
+#         temperature=0,
+#         groq_api_key=groq_key,
+#         model_name="llama-3.1-70b-versatile"
+#     )
+    
+#     # Get current date info - Add explicit current_date parameter
+#     current_date = current_date()
+#     current_month = current_month()
+#     current_year = current_year()
+#     previous_month = (current_date.replace(day=1) - timedelta(days=1)).strftime("%B")
+#     previous_year = (current_date.replace(day=1) - timedelta(days=1)).year
+#     previous_month_days = (current_date.replace(day=1) - timedelta(days=1)).day
+    
+#     # Calculate next month
+#     next_month_date = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1)
+#     next_month = next_month_date.strftime("%Y-%m")
+    
+#     # Prepare template with explicit current date information
+#     prompt = PromptTemplate(
+#         input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "previous_month_days", "previous_record", "employer_number"],
+#         template=llm_template()
+#     )
+    
+#     # Create the runnable sequence with all required variables
+#     chain = RunnableSequence(
+#         first=prompt,
+#         last=llm
+#     ) | JsonOutputParser()
+
+#     try:
+#         # Run the chain with explicit current date
+#         response = chain.invoke({
+#             "employer_number": employer_number,
+#             "user_input": user_input,
+#             "current_date": current_date.strftime("%Y-%m-%d"),  # Format date explicitly
+#             "current_month": current_month,
+#             "current_year": current_year,
+#             "previous_month": previous_month,
+#             "previous_year": previous_year,
+#             "previous_month_days": previous_month_days,
+#             "previous_record": str(previous_record) if previous_record else "No previous record"
+#         })
+        
+#         # Extracted data is now a Python dictionary
+#         extracted_data = response
+#         # Validate and set defaults if needed
+#         extracted_data['Cash_Advance'] = extracted_data.get('Cash_Advance', 0)
+#         extracted_data['Repayment_Monthly'] = extracted_data.get('Repayment_Monthly', 0)
+#         extracted_data['Bonus'] = extracted_data.get('Bonus', 0)
+#         extracted_data['Attendance'] = extracted_data.get('Attendance', previous_month_days)  # Default to full month
+#         extracted_data['Repayment_Start_Month'] = extracted_data.get('Repayment_Start_Month', next_month)
+        
+#         # Get or create employee
+#         employee = db.query(Employee).filter_by(employer_number=employer_number).first()
+#         if not employee:
+#             employee = Employee(employer_number=employer_number)
+#             db.add(employee)
+#             db.commit()
+#         # Deactivate previous record if exists
+#         if previous_record:
+#             old_record = (
+#                 db.query(CashAdvanceRecord)
+#                 .filter_by(employee_id=employee.id, is_active=True)
+#                 .first()
+#             )
+#             if old_record:
+#                 old_record.is_active = False
+#         # Create new record
+#         new_record = CashAdvanceRecord(
+#             employee_id=employee.id,
+#             current_cash_advance=extracted_data["Cash_Advance"],
+#             current_monthly_repayment=extracted_data["Repayment_Monthly"],
+#             remaining_balance=extracted_data["Cash_Advance"],
+#             bonus=extracted_data["Bonus"],
+#             attendance=extracted_data["Attendance"],
+#             repayment_start_month=extracted_data["Repayment_Start_Month"],
+#             is_active=True
+#         )
+#         db.add(new_record)
+#         db.commit()
+        
+#         print(f"the response from llm is : {response}")
+        
+#         return {
+#             "previous_record": previous_record,
+#             "new_record": extracted_data,
+#             "status": "success"
+#         }
+        
+#     except Exception as e:
+#         print(f"Error processing response: {str(e)}")
+#         raise HTTPException(
+#             status_code=422,
+#             detail=f"Error processing LLM response: {str(e)}"
+#         )
+
+
+# #delete this 
+# #Test cases for checking
+# test_inputs = [
+#     "The worker was present for 22 days. I am giving my worker ten thousand rupees as cash advance this month and I want to take back a thousand rupees and bonus is two thousand rupees.",
+#     "I wanted to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+#     "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+#     "Worker got a bonus of 5000 and worked for 25 days. Cash advance of 15000 with monthly repayment of 2000.", 
+#     "Eight thousand as advance, repayment of five hundred, bonus of one thousand."
+#     "I wanted to start monthly repayment from march"
+#     "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
+# ]
+
+def extracted_info_from_llm(user_input : str):
     llm = ChatGroq(
         temperature=0,
-        groq_api_key=groq_key,
+        groq_api_key= groq_key,
         model_name="llama-3.1-70b-versatile"
     )
     
-    # Get current date info - Add explicit current_date parameter
-    current_date = current_date()
-    current_month = current_month()
-    current_year = current_year()
-    previous_month = (current_date.replace(day=1) - timedelta(days=1)).strftime("%B")
-    previous_year = (current_date.replace(day=1) - timedelta(days=1)).year
-    previous_month_days = (current_date.replace(day=1) - timedelta(days=1)).day
-    
-    # Calculate next month
-    next_month_date = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1)
-    next_month = next_month_date.strftime("%Y-%m")
-    
-    # Prepare template with explicit current date information
-    prompt = PromptTemplate(
-        input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "previous_month_days", "previous_record", "employer_number"],
-        template=llm_template()
-    )
-    
-    # Create the runnable sequence with all required variables
-    chain = RunnableSequence(
-        first=prompt,
-        last=llm
-    ) | JsonOutputParser()
+    template = llm_template()
 
+    prompt = PromptTemplate(input_variables=["user_input"], template=template)
+    llm_chain = LLMChain(prompt=prompt, llm=llm)
+
+    response = llm_chain.run({
+        "user_input": user_input 
+    })
+
+    print(f"the response from llm is : {response}")
     try:
-        # Run the chain with explicit current date
-        response = chain.invoke({
-            "employer_number": employer_number,
-            "user_input": user_input,
-            "current_date": current_date.strftime("%Y-%m-%d"),  # Format date explicitly
-            "current_month": current_month,
-            "current_year": current_year,
-            "previous_month": previous_month,
-            "previous_year": previous_year,
-            "previous_month_days": previous_month_days,
-            "previous_record": str(previous_record) if previous_record else "No previous record"
-        })
-        
-        # Extracted data is now a Python dictionary
-        extracted_data = response
-        # Validate and set defaults if needed
-        extracted_data['Cash_Advance'] = extracted_data.get('Cash_Advance', 0)
-        extracted_data['Repayment_Monthly'] = extracted_data.get('Repayment_Monthly', 0)
-        extracted_data['Bonus'] = extracted_data.get('Bonus', 0)
-        extracted_data['Attendance'] = extracted_data.get('Attendance', previous_month_days)  # Default to full month
-        extracted_data['Repayment_Start_Month'] = extracted_data.get('Repayment_Start_Month', next_month)
-        
-        # Get or create employee
-        employee = db.query(Employee).filter_by(employer_number=employer_number).first()
-        if not employee:
-            employee = Employee(employer_number=employer_number)
-            db.add(employee)
-            db.commit()
-        # Deactivate previous record if exists
-        if previous_record:
-            old_record = (
-                db.query(CashAdvanceRecord)
-                .filter_by(employee_id=employee.id, is_active=True)
-                .first()
-            )
-            if old_record:
-                old_record.is_active = False
-        # Create new record
-        new_record = CashAdvanceRecord(
-            employee_id=employee.id,
-            current_cash_advance=extracted_data["Cash_Advance"],
-            current_monthly_repayment=extracted_data["Repayment_Monthly"],
-            remaining_balance=extracted_data["Cash_Advance"],
-            bonus=extracted_data["Bonus"],
-            attendance=extracted_data["Attendance"],
-            repayment_start_month=extracted_data["Repayment_Start_Month"],
-            is_active=True
-        )
-        db.add(new_record)
-        db.commit()
-        
-        print(f"the response from llm is : {response}")
-        
-        return {
-            "previous_record": previous_record,
-            "new_record": extracted_data,
-            "status": "success"
-        }
-        
-    except Exception as e:
-        print(f"Error processing response: {str(e)}")
-        raise HTTPException(
-            status_code=422,
-            detail=f"Error processing LLM response: {str(e)}"
-        )
-
-
-#delete this 
-#Test cases for checking
-test_inputs = [
-    "The worker was present for 22 days. I am giving my worker ten thousand rupees as cash advance this month and I want to take back a thousand rupees and bonus is two thousand rupees.",
-    "I wanted to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
-    "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
-    "Worker got a bonus of 5000 and worked for 25 days. Cash advance of 15000 with monthly repayment of 2000.", 
-    "Eight thousand as advance, repayment of five hundred, bonus of one thousand."
-    "I wanted to start monthly repayment from march"
-    "The worker was on leave for 2 days. I want to add 10000 rupees as cash advance and 1000 rupees as monthly repayment.",
-]
-
+        extracted_info = json.loads(response)
+        return extracted_info
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+        return None
 
 
 def call_sarvam_api(file_path):
@@ -318,81 +389,81 @@ def call_sarvam_api(file_path):
     return response.json()
 
 
-def translate_text_sarvam(text: str, source_language: str, target_language: str) -> str:
+# def translate_text_sarvam(text: str, source_language: str, target_language: str) -> str:
 
-    try:
-        url = "https://api.sarvam.ai/translate"
+#     try:
+#         url = "https://api.sarvam.ai/translate"
 
-        headers = {
-            "api-subscription-key": sarvam_api_key, 
-            "Content-Type": "application/json"
-        }
+#         headers = {
+#             "api-subscription-key": sarvam_api_key, 
+#             "Content-Type": "application/json"
+#         }
 
-        payload = {
-            "input": text,
-            "source_language_code": source_language,
-            "target_language_code": target_language,
-            "speaker_gender": "Male",  
-            "mode": "formal",          
-            "model": "mayura:v1"
-        }
+#         payload = {
+#             "input": text,
+#             "source_language_code": source_language,
+#             "target_language_code": target_language,
+#             "speaker_gender": "Male",  
+#             "mode": "formal",          
+#             "model": "mayura:v1"
+#         }
 
-        response = requests.post(url, json=payload, headers=headers)
+#         response = requests.post(url, json=payload, headers=headers)
 
-        if response.status_code == 200:
-            translated_text = response.json().get("translated_text", "")
-            return translated_text
-        else:
-            raise Exception(f"Error from Sarvam translation API: {response.text}")
+#         if response.status_code == 200:
+#             translated_text = response.json().get("translated_text", "")
+#             return translated_text
+#         else:
+#             raise Exception(f"Error from Sarvam translation API: {response.text}")
 
-    except Exception as e:
-        print(f"Translation error: {e}")
-        return text
+#     except Exception as e:
+#         print(f"Translation error: {e}")
+#         return text
 
-def send_audio(output_directory: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
+# def send_audio(output_directory: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
 
-    try:
-        # Using Sarvam API for text-to-speech
-        url = "https://api.sarvam.ai/text-to-speech"
-        payload = {
-            "inputs": [sample_output],
-            "target_language_code": language,  # Adjust as per the expected language code
-            "speaker": "meera",  # Choose the appropriate speaker if required
-            "enable_preprocessing": True,
-            "model": "bulbul:v1"
-        }
-        headers = {
-            "api-subscription-key": sarvam_api_key,  # Replace with your valid API key
-            "Content-Type": "application/json"
-        }
+#     try:
+#         # Using Sarvam API for text-to-speech
+#         url = "https://api.sarvam.ai/text-to-speech"
+#         payload = {
+#             "inputs": [sample_output],
+#             "target_language_code": language,  # Adjust as per the expected language code
+#             "speaker": "meera",  # Choose the appropriate speaker if required
+#             "enable_preprocessing": True,
+#             "model": "bulbul:v1"
+#         }
+#         headers = {
+#             "api-subscription-key": sarvam_api_key,  # Replace with your valid API key
+#             "Content-Type": "application/json"
+#         }
 
-        response = requests.post(url, json=payload, headers=headers)
-        response_data = response.json()
-        base64_string = response_data["audios"][0] 
+#         response = requests.post(url, json=payload, headers=headers)
+#         response_data = response.json()
+#         base64_string = response_data["audios"][0] 
 
-        os.makedirs(output_directory, exist_ok=True)
+#         os.makedirs(output_directory, exist_ok=True)
 
-        # Decode the Base64 string to binary data
-        audio_data = base64.b64decode(base64_string)
+#         # Decode the Base64 string to binary data
+#         audio_data = base64.b64decode(base64_string)
 
-        # Construct the full file path
-        output_filename = "output.ogg"
-        file_path = os.path.join(output_directory, output_filename)
+#         # Construct the full file path
+#         output_filename = "output.ogg"
+#         file_path = os.path.join(output_directory, output_filename)
 
-        # Write the binary data to a file
-        with open(file_path, "wb") as ogg_file:
-            ogg_file.write(audio_data)
+#         # Write the binary data to a file
+#         with open(file_path, "wb") as ogg_file:
+#             ogg_file.write(audio_data)
 
-        print(f"File saved as: {file_path}")
-        # Generate the audio media ID using your existing WhatsApp logic
-        response = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
-        audio_media_id = response.get('id')
-        print(audio_media_id)
+#         print(f"File saved as: {file_path}")
+#         # Generate the audio media ID using your existing WhatsApp logic
+#         response = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
+#         audio_media_id = response.get('id')
+#         print(audio_media_id)
 
-        # Send the audio using WhatsApp
-        whatsapp_message.send_audio(audio_media_id, employerNumber)
+#         # Send the audio using WhatsApp
+#         whatsapp_message.send_audio(audio_media_id, employerNumber)
 
-        return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+#         return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
 
-    except Exception as e:
-        return JSONResponse(content={"error": f"Failed to generate speech: {e}"}, status_code=500)
+#     except Exception as e:
+#         return JSONResponse(content={"error": f"Failed to generate speech: {e}"}, status_code=500)

@@ -1,3 +1,4 @@
+import datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -64,8 +65,14 @@ class SalaryDetails(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
+    totalAmount = Column(Integer)
     salary = Column(Integer)
     bonus = Column(Integer)
+    cashAdvance = Column(Integer)
+    repayment = Column(Integer)
+    attendance = Column(Integer)
+    month = Column(String)
+    year = Column(Integer)
     order_id=Column(String)
 
 class CashAdvanceManagement(Base):
@@ -74,9 +81,10 @@ class CashAdvanceManagement(Base):
     employerNumber = Column(Integer)
     worker_id = Column(Integer, default=0)
     employer_id = Column(String)
-    bonus = Column(Integer)
     cashAdvance = Column(Integer, default = 0)
     monthlyRepayment = Column(Integer, default=0)
+    repaymentStartMonth = Column(String)
+    repaymentStartYear = Column(Integer)
 
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"
@@ -87,45 +95,3 @@ class CashAdvanceRecords(Base):
     typeOfAmount = Column(String)
     amount = Column(Integer)
     dateIssuedOn = Column(String)
-
-class RepaymentRecords(Base):
-    __tablename__ = "RepaymentRecords"
-    id = Column(String, primary_key=True)
-    employerNumber = Column(Integer)
-    worker_id = Column(Integer, default=0)
-    employer_id = Column(String)
-    cashAdvance = Column(String)
-    monthlyRepaymentAmount = Column(Integer)
-    dateStartedOn = Column(String)
-    dateEndingOn = Column(String)
-    
-    
-
-    
-#this new tables are created accordingly change it accordingly
-
-class Employee(Base):
-    __tablename__ = "employees"
-    id = Column(Integer, primary_key=True, index=True)
-    employer_number = Column(Integer, unique=True, index=True)
-    name = Column(String)
-    department = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    cash_advances = relationship("CashAdvanceRecord", back_populates="employee")
-    
-class CashAdvanceRecord(Base):
-    __tablename__ = "cash_advance_records"
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"))
-    current_cash_advance = Column(Integer)
-    current_monthly_repayment = Column(Integer)
-    remaining_balance = Column(Integer)
-    bonus = Column(Integer)
-    attendance = Column(Integer)
-    repayment_start_month = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    employee = relationship("Employee", back_populates="cash_advances")

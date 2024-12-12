@@ -5,10 +5,12 @@ from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm
+# , send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
+
 
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
@@ -278,64 +280,90 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
         year = current_year()
 
 
-    if transaction.status == "SENT":
-        return
+    order_info = cashfree_api.check_order_status(orderId)
+    order_note_string = order_info["order_note"]
+
+    decoded_string = html.unescape(order_note_string)
+    order_note = json.loads(decoded_string)
+
+    employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, order_note["salary"], order_note["cashAdvance"], order_note["bonus"], order_note["repayment"], order_note["attendance"], order_info["order_amount"], db)
+
+    employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{month}_{year}.pdf"
+    object_name = f"employerInvoices/{employer_invoice_name}"
     
-    elif transaction.order_id is None:
-        return
+    static_dir = os.path.join(os.getcwd(), 'invoices')
+    filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{month}_{year}.pdf")
 
-    bonus = 0
-    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==employerNumber, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+    print(f"the pdf path is : {filePath}")
+    uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
 
-    if existing_bonus_entry is not None:
-        bonus += existing_bonus_entry.bonus
+    print("uploaded")
+    whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=transaction.worker_name, param3=order_info["order_amount"], link_param=employer_invoice_name, template_name="employer_invoice_message")
 
-    print("entered")
-    response_data = cashfree_api.check_order_status(order_id=transaction.order_id)
-    order_status = response_data["order_status"]
-    print(order_status)
-    if(order_status == "PAID"):
-        
-        total_salary = transaction.salary_amount + bonus
-        employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, bonus, db)
+    print("message")
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == transaction.employer_number, models.worker_employer.c.order_id == transaction.order_id).values(status="SENT")
 
-        employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{month}_{year}.pdf"
-        object_name = f"employerInvoices/{employer_invoice_name}"
-        
-        static_dir = os.path.join(os.getcwd(), 'invoices')
-        filePath = os.path.join(static_dir, f"{transaction.employer_id}_INV_{transaction.worker_id}_{month}_{year}.pdf")
+    print("sent")
+    db.execute(update_statement)
+    db.commit()
 
-        print(f"the pdf path is : {filePath}")
-        uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
-
-        print("uploaded")
-        whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=transaction.worker_name, param3=total_salary, link_param=employer_invoice_name, template_name="employer_invoice_message")
-
-        print("message")
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == transaction.employer_number, models.worker_employer.c.order_id == transaction.order_id).values(status="SENT")
-
-        print("sent")
-        db.execute(update_statement)
-        db.commit()
-    
 
 # making the entry in the salary details table from which employer what amount has been paid and what was the bonus amount in it and what was the main salary amount.
 
 def update_salary_details(employerNumber : int, orderId : str, db : Session):
 
-    transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
+    item = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==orderId).first()
 
-    bonus = 0
-    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==employerNumber, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+    ps_month = previous_month()
+    month  = ""
+    year = ""
 
-    if existing_bonus_entry is not None:
-        bonus += existing_bonus_entry.bonus
+    day_only = current_date().day
+    if(abs(31-day_only) >= abs(1-day_only)):
+        month = ps_month
+        if month == "December":
+            year = current_year() - 1
 
-    new_entry = models.SalaryDetails(id = generate_unique_id(), employerNumber=employerNumber, worker_id=transaction.worker_id, employer_id= transaction.employer_id, salary=transaction.salary_amount, bonus=bonus, order_id=orderId)
+        else:
+            year = current_year()
+
+    else:
+        month = current_month()
+        year = current_year()
+
+    order_info = cashfree_api.check_order_status(orderId)
+    order_note_string = order_info["order_note"]
+
+    decoded_string = html.unescape(order_note_string)
+    order_note = json.loads(decoded_string)
+
+    new_entry = models.SalaryDetails(id = generate_unique_id(), employerNumber = employerNumber, worker_id = item.worker_id, employer_id = item.employer_id, totalAmount = order_info["order_amount"], salary = order_note["salary"], bonus = order_note["bonus"], cashAdvance = order_note["cashAdvance"], repayment = order_note["repayment"], attendance = order_note["attendance"], month = month, year = year, order_id = orderId)
 
     db.add(new_entry)
     db.commit()
     db.refresh(new_entry)
+
+
+    if order_note["repayment"] > 0:
+
+        existing_cash_advance_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
+
+
+        existing_repayment = existing_cash_advance_entry.monthlyRepayment
+        existing_advance = existing_cash_advance_entry.cashAdvance
+
+        cash = existing_advance - order_note["repayment"]
+        repayment = existing_repayment
+
+        if cash <= 0:
+            cash = 0
+            repayment = 0
+
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).values(cashAdvance = cash, monthlyRepayment = repayment)
+
+        db.execute(update_statement)
+        db.commit()
+
 
 
 def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
@@ -433,7 +461,90 @@ def salary_payment_reminder(db : Session):
         whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_payment_reminder")
 
 
+def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, db : Session):
 
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== workerNumber).first()
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+
+    existing_cash_advance_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+
+    if not existing_cash_advance_entry:
+        return {
+            "MESSAGE" : "NEW_ENTRY"
+        }
+    
+    else:
+        
+        if existing_cash_advance_entry.cashAdvance > 0:
+            return {
+                "MESSAGE" : "OLD_ENTRY",
+                "ENTRY" : existing_cash_advance_entry
+            }
+        else:
+
+            return {
+                "MESSAGE" : "OLD_ENTRY",
+                "ENTRY" : "NO_REMAINING_ADVANCE"
+            }
+
+
+
+def create_cash_advance_entry(employerNumber : int, workerNumber : int, cashAdvance : int, monthlyRepayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session):
+
+    repaymentStartMonth = repaymentStartMonth.capitalize()
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== workerNumber).first()
+
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+
+    existing_cash_advance_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+
+    if not existing_cash_advance_entry:
+
+        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, cashAdvance = cashAdvance, monthlyRepayment = monthlyRepayment, repaymentStartMonth = repaymentStartMonth, repaymentStartYear=repaymentStartYear)
+
+        print(new_cash_advance_entry)
+        db.add(new_cash_advance_entry)
+        db.commit()
+        db.refresh(new_cash_advance_entry)
+        return new_cash_advance_entry
+    
+    else:
+
+        cash = existing_cash_advance_entry.cashAdvance + cashAdvance
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).values(cashAdvance = cash, monthlyRepayment = monthlyRepayment, repaymentStartMonth = repaymentStartMonth, repaymentStartYear=repaymentStartYear)
+
+        db.execute(update_statement)
+        db.commit()
+
+
+def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, db : Session):
+
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== workerNumber).first()
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+
+    if bonus > 0:
+        new_bonus_record = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, typeOfAmount = "bonus", amount = bonus, dateIssuedOn = f"{current_date()}-{current_month()}-{current_year()}")
+
+        db.add(new_bonus_record)
+        db.commit()
+        db.refresh(new_bonus_record)
+
+
+    if cashAdvance > 0:
+
+        new_cash_advance_record = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, typeOfAmount = "cashAdvance", amount = cashAdvance, dateIssuedOn = f"{current_date()}-{current_month()}-{current_year()}")
+
+        db.add(new_cash_advance_record)
+        db.commit()
+        db.refresh(new_cash_advance_record)
+
+ 
 async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
@@ -455,8 +566,6 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
             temp_path = temp.name
 
         print(f"Downloaded temp file: {temp_path}")
-        
-        # Convert the audio to .wav format
         audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
         temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
         audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
@@ -490,72 +599,22 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
     extracted_info = extracted_info_from_llm(user_input)
     print(f"usercontrollers : {extracted_info}")
 
-    cash_advance = 0
-    bonus = 0
-    repayment = 0
-    if extracted_info is not None:
-        cash_advance = extracted_info.get("Cash_Advance")
-        bonus = extracted_info.get("Bonus")
-        repayment = extracted_info.get("Repayment_Monthly")
+    # cash_advance = 0
+    # bonus = 0
+    # repayment = 0
+    # if extracted_info is not None:
+    #     cash_advance = extracted_info.get("Cash_Advance")
+    #     bonus = extracted_info.get("Bonus")
+    #     repayment = extracted_info.get("Repayment_Monthly")
 
     
-    sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
+    # sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
 
-    if user_language == "en-IN":
-        print("enterd first.")
-        return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
-    else:
-        print("entered second.")
-        translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
-        print(translated_text)
-        return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
-
-
-def cash_advance_management(cashAdvance : int, bonus: int, repayment : int, workerNumber : int, employerNumber : int, db : Session):
-
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-    employer = db.query(models.Employer).filter(models.Employer.employerNumber == employerNumber).first()
-
-    date = current_date()
-    month = current_month()
-    year = current_year()
-
-
-    # adding the cash advance management data
-    cash_entry = models.CashAdvanceManagement(id=generate_unique_id(), employerNumber=employerNumber, worker_id = worker.id, employer_id = employer.id, cashAdvance = cashAdvance, monthlyRepayment = repayment, bonus = bonus)
-
-    db.add(cash_entry)
-    db.commit()
-    db.refresh(cash_entry)
-
-
-    # adding into the cash advance records table
-    if cashAdvance > 0:
-
-        entry = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker.id, employer_id = employer.id, typeOfAmount = "cashAdvance", amount = cashAdvance, dateIssuedOn = f"{date}-{month}-{year}")
-
-        db.add(entry)
-        db.commit()
-        db.refresh(entry)
-
-    # adding into the cash advance table but the bonus record
-    if bonus > 0:
-
-        bonus_entry = models.CashAdvanceRecords(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker.id, employer_id = employer.id, typeOfAmount = "Bonus", amount = cashAdvance, dateIssuedOn = f"{date}-{month}-{year}")
-
-        db.add(bonus_entry)
-        db.commit()
-        db.refresh(bonus_entry)
-
-
-    # repayment record entry
-    repayment_entry = models.RepaymentRecords(id=generate_unique_id(), employerNumber=employerNumber, worker_id = worker.id, employer_id = employer.id, cashAdvance = cashAdvance, monthlyRepaymentAmount = repayment, dateStartedOn = f"{date}-{month}-{year}", dateEndingOn = f"{date}-{month}-{year}")
-
-    db.add(repayment_entry)
-    db.commit()
-    db.refresh(repayment_entry)
-
-
-    return {
-        "Message" : "Details added successfully."
-    }
+    # if user_language == "en-IN":
+    #     print("enterd first.")
+    #     return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
+    # else:
+    #     print("entered second.")
+    #     translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
+    #     print(translated_text)
+    #     return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)

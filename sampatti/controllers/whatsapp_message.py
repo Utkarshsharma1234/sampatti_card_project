@@ -1,7 +1,9 @@
 import json
 from fastapi import HTTPException
 import requests, os
+from dotenv import load_dotenv
 
+load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
 
@@ -9,6 +11,7 @@ orai_namespace = os.environ.get('ORAI_NAMESPACE')
 
 def send_whatsapp_message(employerNumber, worker_name, param3, link_param,template_name):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
     headers = {
         "API-KEY": orai_api_key,
         "Content-Type": "application/json"

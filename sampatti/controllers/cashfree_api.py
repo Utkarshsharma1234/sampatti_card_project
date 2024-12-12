@@ -1,4 +1,6 @@
+import calendar
 from datetime import datetime
+import math
 from fastapi import HTTPException
 import json, uuid, requests, os
 from cashfree_pg.api_client import Cashfree
@@ -250,13 +252,19 @@ def payment_link_generation(db : Session):
     Cashfree.XEnvironment = Cashfree.XProduction
     x_api_version = "2023-08-01"
 
-    current_month = datetime.now().strftime("%B")
-    current_year = datetime.now().year
+    cr_month = current_month()
+    cr_year = current_year()
+    month_to_number = {
+        "January": 1, "February": 2, "March": 3, "April": 4,
+        "May": 5, "June": 6,
+        "July": 7, "August": 8, "September": 9,
+        "October": 10, "November": 11, "December": 12
+    }
 
     payment_ids = []
-    total_workers = db.query(models.worker_employer).all()
+    total_relations = db.query(models.worker_employer).all()
     
-    for item in total_workers:
+    for item in total_relations:
 
         dummy_number = item.employer_number
         actual_number = int(str(dummy_number)[2:])
@@ -269,11 +277,17 @@ def payment_link_generation(db : Session):
 
         if cashAdvanceEntry is not None:
 
-            if cashAdvanceEntry.cashAdvance > 0:
-                repayment = cashAdvanceEntry.monthlyRepayment
+            if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
+                if cashAdvanceEntry.cashAdvance > 0:
+                    repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
 
         total_salary = item.salary_amount - repayment
-        createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails)
+        number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
+
+        note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : repayment, 'attendance' : number_of_month_days}
+
+        note_string = json.dumps(note)
+        createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
         try:
             api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
             # print(api_response.data)
@@ -283,7 +297,7 @@ def payment_link_generation(db : Session):
         response = dict(api_response.data)
         payment_session_id = response["payment_session_id"]
 
-        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{current_month} {current_year}", link_param=payment_session_id, template_name="employer_salary_payment")
+        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="employer_salary_payment")
 
         update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
 
@@ -296,37 +310,47 @@ def payment_link_generation(db : Session):
 
 # creating dynamic payment links
 
-def dynamic_payment_link(employerNumber : int, workerNumber : int, bonus : int, db : Session):
+def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, attendance : int, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
     Cashfree.XEnvironment = Cashfree.XProduction
     x_api_version = "2023-08-01"
 
-    current_month = datetime.now().strftime("%B")
-    current_year = datetime.now().year
+    cr_month = current_month()
+    cr_year = current_year()
 
-    entry = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
+    month_to_number = {
+        "January": 1, "February": 2, "March": 3, "April": 4,
+        "May": 5, "June": 6,
+        "July": 7, "August": 8, "September": 9,
+        "October": 10, "November": 11, "December": 12
+    }
 
-    existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == entry.worker_id).first()
-   
-    if existing_bonus_entry is None:
+    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
 
-        new_entry = models.CashAdvanceManagement(id=generate_unique_id(), employerNumber= employerNumber, worker_id = entry.worker_id, employer_id = entry.employer_id, bonus = bonus)
-        db.add(new_entry)
-        db.commit()
-        db.refresh(new_entry)
+    cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
 
-    else:
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == entry.worker_id).values(bonus=bonus)
+    repayment = 0
 
-        db.execute(update_statement)
-        db.commit()
+    if cashAdvanceEntry is not None:
 
+        if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
+            if cashAdvanceEntry.cashAdvance > 0:
+                repayment = cashAdvanceEntry.monthlyRepayment
+
+    total_salary = bonus + cashAdvance - repayment
+    number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
+    salary = math.ceil(item.salary_amount/number_of_month_days) * attendance 
+    total_salary += salary
+
+    note = {'salary' : salary, 'cashAdvance' : cashAdvance, 'bonus' : bonus, 'repayment' : repayment, 'attendance' : attendance}
+
+    note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])
-    total_salary = entry.salary_amount + bonus
+
     customerDetails = CustomerDetails(customer_id= f"{workerNumber}", customer_phone= f"{actual_number}")
-    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails)
+    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
     try:
         api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
         # print(api_response.data)
@@ -336,7 +360,7 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, bonus : int, 
     response = dict(api_response.data)
     payment_session_id = response["payment_session_id"]
 
-    send_whatsapp_message(employerNumber=employerNumber, worker_name=entry.worker_name, param3=f"{current_month} {current_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+    send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
 
     update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
 

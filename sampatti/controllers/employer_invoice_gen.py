@@ -11,7 +11,7 @@ from .cashfree_api import fetch_bank_ref
 from .utility_functions import current_year, current_date, current_month, previous_month
 
 
-def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, bonus, db:Session) :
+def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, salary, cashAdvance, bonus, repayment, attendance, order_amount, db:Session) :
 
     ps_month = previous_month()
     month  = ""
@@ -75,7 +75,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     c.drawString(x, y, f"Employer Phone Number : {employerNumber}")
 
     receipt_data = []
-    receipt_data.append(["Sr. No.", "Worker Name", "Worker Number", "Reference", "Salary"])
+    receipt_data.append(["Worker Name", "Worker Number", "Reference", "Salary", "Cash Advance", "Repayment", "Bonus"])
 
     rows = 0
 
@@ -87,7 +87,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     print(f"the utr no is :  {bank_ref_no}")
     workerName = transaction.worker_name
 
-    single_row = [ct, f"{workerName}", f"{workerNumber}", bank_ref_no, transaction.salary_amount+bonus]
+    single_row = [f"{workerName}", f"{workerNumber}", bank_ref_no, salary, cashAdvance, repayment, bonus]
     receipt_data.append(single_row)
     rows += 1
     ct += 1
@@ -109,7 +109,16 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     receipt_table.wrapOn(c, 0, 0)
     receipt_table.drawOn(c, x, y)
 
-    c.setFont("Times-Roman", 10)
+    c.setFont("Helvetica-Bold", 10)
+    
+    total_salary = f"Total Amount Paid : {order_amount}"
+    y -= 25 
+    c.drawString(x,y,text=total_salary)
+
+    attending = f"Attendance of {month} {year} : {attendance}"
+    y -= 25
+    c.drawString(x,y,text=attending)
+
     issued = f"Salary Payment Receipt issued on : {current_date()} for the month of {month} {year}"
     y -= 25
     c.drawString(x, y, text=issued)

@@ -162,7 +162,11 @@ def copy_employer_message(db : Session = Depends(get_db)):
 async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session = Depends(get_db)):
     return await userControllers.process_audio(background_tasks, file_url, employerNumber, db)
 
+@router.post("/cash_advance")
+def create_cash_advance_entry(employerNumber : int, workerNumber : int, cashAdvance : int, monthlyRepayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session = Depends(get_db)):
 
-@router.post('/cash_advance')
-def cash_advance_management(cashAdvance : int, bonus: int, repayment : int, db : Session = Depends(get_db)):
-    return userControllers.cash_advance_management(cashAdvance,bonus, repayment, db)
+    return userControllers.create_cash_advance_entry(employerNumber, workerNumber, cashAdvance, monthlyRepayment, repaymentStartMonth, repaymentStartYear, db)
+
+@router.post("/salary_details")
+def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
+    return userControllers.update_salary_details(employerNumber, orderId, db)
