@@ -310,7 +310,7 @@ def payment_link_generation(db : Session):
 
 # creating dynamic payment links
 
-def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, attendance : int, db : Session):
+def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, attendance : int, repaymentFlag : bool, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -337,7 +337,10 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance :
 
         if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
             if cashAdvanceEntry.cashAdvance > 0:
-                repayment = cashAdvanceEntry.monthlyRepayment
+                repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
+
+    if repaymentFlag is False:
+        repayment = 0
 
     total_salary = bonus + cashAdvance - repayment
     number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
