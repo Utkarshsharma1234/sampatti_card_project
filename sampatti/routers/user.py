@@ -11,6 +11,7 @@ from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file
 import whisper
+from ..controllers import utility_functions
 
 
 router = APIRouter(
@@ -177,5 +178,8 @@ def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : 
 
 @router.get("/existing_advance_entry")
 def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
-
     return userControllers.check_existing_cash_advance_entry(employerNumber, workerNumber, db)
+
+@router.get("/extract_date")
+def extract_date(date_str : str):
+    return utility_functions.extract_date(date_str)

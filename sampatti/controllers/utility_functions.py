@@ -89,6 +89,19 @@ def exact_match_case_insensitive(str1, str2):
     words2 = set(re.findall(r'\b\w+\b', str2.lower()))
     return not words1.isdisjoint(words2)
 
+def extract_date(date_str : str):
+
+    month, year = date_str.split('_')
+
+    month = month.capitalize()
+
+    year = int(year)
+
+    return {
+        "month" : month,
+        "year" : year
+    }
+
 def previous_month():
     first_day_of_current_month = datetime.now().replace(day=1)
     last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
