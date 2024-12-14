@@ -12,7 +12,8 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('vendor_id', String, default=''),
     Column('worker_name', String, default=''),
     Column('employer_id', String, default=''),
-    Column('worker_id', String, default = '')
+    Column('worker_id', String, default = ''),
+    Column('date_of_onboarding', String, default='')
 )   
 
 
