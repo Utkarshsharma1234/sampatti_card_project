@@ -5,8 +5,7 @@ from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm
-# , send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
@@ -545,7 +544,7 @@ def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : 
         db.refresh(new_cash_advance_record)
 
  
-async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, db : Session):
+async def process_audio(file_url: str, employerNumber : int, workerNumber: int, db : Session):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
@@ -577,12 +576,70 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
         user_language = result["language_code"]
         print(f"the result from the sarvam api is : {result}")
 
-        # Append the transcription result
         results.append({
             "filename": os.path.basename(temp_path),
             "transcript": user_input,
             "language_code": user_language
         })
+
+        # Check if there is an existing record for the employer
+        worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== workerNumber).first()
+        if not worker_employer_relation:
+            raise ValueError("Worker not found with the given worker number.")
+
+        employer_id = worker_employer_relation.employer_id
+        worker_id = worker_employer_relation.worker_id
+
+        existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+        
+        # Prepare the context for the LLM based on existing record
+        context = {
+            "Cash_Advance": existing_record.cashAdvance if existing_record else 0,
+            "Repayment_Monthly": existing_record.monthlyRepayment if existing_record else 0,
+            "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else current_month(),
+            "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else current_year(),
+            "Bonus": 0,
+            "Attendance": determine_attendance_period()
+        }
+
+        # Pass the user input and context to the LLM for extraction
+        extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
+        print(f"usercontrollers : {extracted_info}")
+
+        Cash_Advance = extracted_info.get("Cash_Advance")
+        Repayment_Monthly = extracted_info.get("Repayment_Monthly")
+        Repayment_Start_Month = extracted_info.get("Repayment_Start_Month")
+        Repayment_Start_Year = extracted_info.get("Repayment_Start_Year")
+        Bonus = extracted_info.get("Bonus")
+        Attendance = extracted_info.get("Attendance")
+
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.c.employerNumber == employerNumber, models.CashAdvanceManagement.c.worker_id == worker_id).values(Cash_Advance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
+        db.execute(update_statement)
+        
+
+        if Cash_Advance>0 and Repayment_Monthly==0:
+            output = f"You have given cash advance of {Cash_Advance} and could you please give use repayment amount and also when to start the repayment start month and year"
+            if user_input == "en-IN":
+                return send_audio(static_dir, output, "en-IN", employerNumber)
+            else:
+                translated_text = translate_text_sarvam(output, "en-IN", user_language)
+                return send_audio(static_dir, translated_text, user_language, employerNumber)
+            
+        if Cash_Advance>0 and Repayment_Monthly>0 and (Repayment_Start_Month=="sampatti" or Repayment_Start_Year==0):
+            output = f"You have cash advance of {Cash_Advance} and Repayment Amount is {Repayment_Monthly}, so could you please give Repayment Start Month and year"
+            if user_input == "en-IN":
+                return send_audio(static_dir, output, "en-IN", employerNumber)
+            else:
+                translated_text = translate_text_sarvam(output, "en-IN", user_language)
+                return send_audio(static_dir, translated_text, user_language, employerNumber)
+
+
+
+        # Prepare the sample output
+        sample_output = f"Please confirm the following details. The cash advance given by you is {existing_record.cashAdvance} and the bonus given by you is {existing_record.bonus} while the repayment per month is {existing_record.monthlyRepayment} and the repayment month is {existing_record.repaymentStartMonth}-{existing_record.repaymentStartYear}"
+
+        # Append the transcription result
+        
 
     except PermissionError as e:
         return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
@@ -596,25 +653,12 @@ async def process_audio(background_tasks: BackgroundTasks, file_url: str, employ
             os.remove(temp_wav_path)
 
     print(results)
-    extracted_info = extracted_info_from_llm(user_input)
-    print(f"usercontrollers : {extracted_info}")
 
-    # cash_advance = 0
-    # bonus = 0
-    # repayment = 0
-    # if extracted_info is not None:
-    #     cash_advance = extracted_info.get("Cash_Advance")
-    #     bonus = extracted_info.get("Bonus")
-    #     repayment = extracted_info.get("Repayment_Monthly")
-
-    
-    # sample_output = f"Please confirm the following details. The cash advance given by you is {cash_advance} and the bonus given by you is {bonus} while the repayment per month is {repayment}"
-
-    # if user_language == "en-IN":
-    #     print("enterd first.")
-    #     return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
-    # else:
-    #     print("entered second.")
-    #     translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
-    #     print(translated_text)
-    #     return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
+    if user_language == "en-IN":
+        print("enterd first.")
+        return send_audio(static_dir, sample_output, "en-IN", employerNumber)
+    else:
+        print("entered second.")
+        translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
+        print(translated_text)
+        return send_audio(static_dir, translated_text, user_language, employerNumber)
