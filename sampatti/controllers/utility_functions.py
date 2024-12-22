@@ -160,12 +160,13 @@ employer_number: {employer_number}
 existing record: {context} 
 
 Instructions:
-1. Carefully analyze the entire user input
-2. Extract all relevant financial and attendance details
-3. Always compare with the existing record and accordingly give the value
-3. If any information is missing, use existing record
-4. Be flexible in understanding variations of input
-5. Always include all fields in the result for all cases.
+1. Carefully analyze the entire user input.
+2. Extract all relevant financial and attendance details.
+3. Always compare with the existing record and accordingly give the value.
+4. currentCashAdvance is the cash advance we will make changes in this field according to the user wants.
+5. If any information is missing, use existing record.
+6. Be flexible in understanding variations of input.
+7. Always include all fields in the result for all cases.
 
 Current Context:
 - Current Date: {current_date}
@@ -175,24 +176,32 @@ Current Context:
 - Current Day in Month: {current_day}
 
 Extraction and Update Rules:
-- Focus on extracting or modifying specific fields mentioned in the input
-- If only one field is discussed, keep other fields from existing record and give them updated information in final output and {context} simultaneously.
+- Focus on extracting or modifying specific fields mentioned in the input.
+- If only one field is discussed, keep other fields from existing record and give them updated information in final output.
 - If input suggests adding/changing amount, then add or change according to the existing record field.
-- If no specific amount given, use existing record's value
-- Validate and adjust values logically
+- If no specific amount given, use existing record's value.
+- Validate and adjust values logically don't give random value.
 - use existing record and update the existing record according to the user wants and only change the field which user wants rest keep as it existing record.
 
 Specific Field Extraction:
-- Cash Advance: Look for cash advance, advance, loan, or financial support amounts
-- 
+- currentCashAdvance: 
+  * Look for cash advance, advance, loan, or financial support amounts
+  * Make change only if there is mention any cash advance, advance, loan, or financial support amounts.
+  * don't take any unnecessary values into if unless cash advance or related term mentioned in the user input.
+  * use 0 if no cash advance is mentioned in the user input.
 - Monthly Repayment: Find planned monthly repayment amount
 - Bonus: Identify any bonus or additional payment
+<<<<<<< HEAD
   * Take the bonus amount from the existing record and then if the user asks to change the bonus amount then change it or if he wants to add more amount into bonus do the necessary steps from the {user_input}.
   
+=======
+  * if only bonus or attendance is
+>>>>>>> ae99dd33fea5760109926c90046ce957b7902d40
 - Attendance: 
   * If mentioned, adjust from {attendance_period}
   * If not specified, use {attendance_period}
   * it should not be 0 anytime.
+<<<<<<< HEAD
 
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
@@ -208,22 +217,77 @@ Specific Field Extraction:
   * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is not "sampatti":
     - Set the Repayment_Start_Year according to the following rules. Rule 1 : If Repayment_Start_Month comes out to be "March" and {current_month} is after the Repayment_Start_Month like take it any month from "April" to "December" then take the Repayment_Start_Year to be {current_year}+1). Rule 2 : If the Repayment_Start_Month comes out to be "May" and {current_month} is "February" or any month before "May" which includes from "January" to "April" then take the Repayment_Start_Year to be {current_year} itself. 
 
+=======
+- For Repayment_Start_Month, Repayment_Start_Year:
+  * If not specified, use always use "sampatti" and Repayment_Start_Month=0.
+  * If Repayment_Start_Month="sampatti" and Repayment_Start_Year=0 existing, and user does not specify month in {user_input} then use same record as Repayment_Start_Month="sampatti" and Repayment_Start_Year=0.
+  * if user says next month, then use next month and year accoring to next month's year.
+  * If user mentions a specific month (e.g., "March", "June"):
+    - Compare with current month {current_month}
+    - If mentioned month comes after {current_month} in calendar, use Repayment_Start_Year: {current_year}
+    - If mentioned month comes before or equals {current_month}, use Repayment_Start_Year: {current_year} + 1
+    
+>>>>>>> ae99dd33fea5760109926c90046ce957b7902d40
 
 Key Processing Instructions:
-- Use integers for monetary and attendance values
-- If no specific value mentioned, preserve existing record's value
+- Use integers for monetary and attendance values.
+- If no specific value mentioned, preserve existing record's value.
 - Ensure final values are reasonable and consistent
 - For partial updates, only modify mentioned fields
 - Always include all fields in the result for all cases.
+- don't make change in the Cash_Advance unless it is necessary change in the currentCashAdvance.
 
 Return ONLY a valid JSON focusing on fields mentioned or changed:
 {{
-    "Cash_Advance": <cash advance amount as integer or null>,
-    "monthlyRepayment": <monthly repayment amount as integer or null>,
+    "currentCashAdvance": <cash advance amount as integer or 0>
+    "monthlyRepayment": <monthly repayment amount as integer or 0>,
     "Bonus": <bonus amount as integer or 0>,
     "Attendance": <number of days present as integer or {attendance_period}>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>
     "Repayment_Start_Year": <start year as 'YYYY'>
+}}
+
+
+examples:
+user input = "i wanted to change the repayment amont, wanted to add 500 to the repayment and add 2222 bonus."
+{{
+    "currentCashAdvance": 0,
+    "Repayment_Monthly": existing Record + 500,
+    "Bonus": 2222,
+    "Attendance": attendance priod,
+    "Repayment_Start_Month": existing record,
+    "Repayment_Start_Year": existing record
+}}   
+
+
+user input = "Add 1000 bonus and worker was on leave for 7 days"
+{{
+    "currentCashAdvance": 0,
+    "Repayment_Monthly": existing Record,
+    "Bonus": 1000,
+    "Attendance": attendance priod-7,
+    "Repayment_Start_Month": existing record,
+    "Repayment_Start_Year": existing record
+}}
+
+user input = "The repayment should start from the may month."
+{{
+    "currentCashAdvance": 0,
+    "Repayment_Monthly": existing Record,
+    "Bonus": 0,
+    "Attendance": attendance priod,
+    "Repayment_Start_Month": "May",
+    "Repayment_Start_Year": Repayment_Start_Year
+}}
+
+user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
+{{
+    "currentCashAdvance": 5000,
+    "Repayment_Monthly": 1000,
+    "Bonus": 0,
+    "Attendance": attendance priod,
+    "Repayment_Start_Month": "sampatti",
+    "Repayment_Start_Year": 0
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
@@ -239,7 +303,7 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     llm = ChatGroq(
         temperature=0,
         groq_api_key=groq_key,
-        model_name="llama-3.1-70b-versatile"
+        model_name="llama-3.3-70b-specdec"
     )
     
     current_date = datetime.now().date()
@@ -268,14 +332,18 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         "current_day": current_day,
         "context": context  # Pass the context to the LLM
     })
+    
+    cleaned_response = response.replace('```json', '').replace('```', '').strip()
 
     print(f"The response from LLM is: {response}")
     try:
-        extracted_info = json.loads(response)
+        extracted_info = json.loads(cleaned_response)
         return extracted_info
     
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
+        print(f"Raw response: {response}")
+        print(f"Cleaned response: {cleaned_response}")
         return None
     
 def call_sarvam_api(file_path):
