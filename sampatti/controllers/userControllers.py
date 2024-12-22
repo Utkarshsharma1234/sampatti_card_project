@@ -595,19 +595,19 @@ async def process_audio(background_tasks: BackgroundTasks,file_url: str, employe
         print(f"the existing record is : {existing_record}")
         # Prepare the context for the LLM based on existing record
         context = {
-            "Cash_Advance": existing_record.cashAdvance if existing_record else 0,
+            "Cash_Advance": existing_record.currentCashAdvance if existing_record else 0,
             "Repayment_Monthly": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
             "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else 0,
-            "Bonus": 0,
-            "Attendance": determine_attendance_period(current_date().day)
+            "Bonus": existing_record.bonus if existing_record else 0,
+            "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day)
         }
 
         # Pass the user input and context to the LLM for extraction
         extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
         print(f"usercontrollers : {extracted_info}")
 
-        Cash_Advance = extracted_info.get("Cash_Advance")
+        crrCashAdvance = extracted_info.get("currentCashAdvance")
         Repayment_Monthly = extracted_info.get("monthlyRepayment")
         Repayment_Start_Month = extracted_info.get("Repayment_Start_Month")
         Repayment_Start_Year = extracted_info.get("Repayment_Start_Year")
@@ -616,48 +616,58 @@ async def process_audio(background_tasks: BackgroundTasks,file_url: str, employe
         
         if existing_record is not None:
 
-            update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == worker_id).values(cashAdvance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
+            update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == worker_id).values(monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year, currentCashAdvance = crrCashAdvance, attendance = Attendance, bonus = Bonus)
             db.execute(update_statement)
             db.commit()
 
-        else:
-            new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, cashAdvance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
+        else: 
+            new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, cashAdvance = 0, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year, currentCashAdvance = crrCashAdvance, attendance = Attendance, bonus = Bonus)
 
             db.add(new_cash_advance_entry)
             db.commit()
             db.refresh(new_cash_advance_entry)
 
-        if Cash_Advance>0 and Repayment_Monthly==0:
-            output = f"You have given cash advance of {Cash_Advance} and could you please give use repayment amount and also when to start the repayment start month and year"
+        new_existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+
+        missingInformation = "Please provide the following details."
+
+        if new_existing_record.currentCashAdvance > 0 and new_existing_record.monthlyRepayment == 0:
+            missingInformation += "monthly repayment amount."
+
+        if new_existing_record.currentCashAdvance > 0 and new_existing_record.repaymentStartMonth == "sampatti":
+            missingInformation += "start date for the repayment."
+
+        if new_existing_record.attendance == determine_attendance_period(current_date().day):
+            missingInformation += "attendance for this month."
+
+        
+        if missingInformation == "Please provide the following details.":
+
+            outputAudio = f"Please confirm the following details."
+
+            if new_existing_record.currentCashAdvance > 0:
+                outputAudio += f"The cash advance amount is {new_existing_record.currentCashAdvance} while the repayment per month is {new_existing_record.monthlyRepayment}. The repayment starts from {new_existing_record.repaymentStartMonth} {new_existing_record.repaymentStartYear}."
+
+            if new_existing_record.bonus > 0:
+
+                outputAudio += f"The bonus for this month is {new_existing_record.bonus}."
+
+
+            outputAudio += f"attendance for this month is {new_existing_record.attendance}."
+
             if user_language == "en-IN":
-                return send_audio(static_dir, output, "en-IN", background_tasks, employerNumber)
+                return send_audio(static_dir, outputAudio, "en-IN", background_tasks, employerNumber)
             else:
-                translated_text = translate_text_sarvam(output, "en-IN", user_language)
+                translated_text = translate_text_sarvam(outputAudio, "en-IN", user_language)
+                return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
+        else:
+
+            if user_language == "en-IN":
+                return send_audio(static_dir, missingInformation, "en-IN", background_tasks, employerNumber)
+            else:
+                translated_text = translate_text_sarvam(missingInformation, "en-IN", user_language)
                 return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
             
-        if Cash_Advance>0 and Repayment_Monthly>0 and (Repayment_Start_Month=="sampatti" or Repayment_Start_Year==0):
-            output = f"You have cash advance of {Cash_Advance} and Repayment Amount is {Repayment_Monthly}, so could you please give Repayment Start Month and year"
-            if user_language == "en-IN":
-                return send_audio(static_dir, output, "en-IN", background_tasks, employerNumber)
-            else:
-                translated_text = translate_text_sarvam(output, "en-IN", user_language)
-                return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
-
-
-
-        # Prepare the sample output
-        sample_output = f"cash advance is : {Cash_Advance}, repayment is : {Repayment_Monthly}, repayment month is : {Repayment_Start_Month}, repayment month is : {Repayment_Start_Year}, bonus : {Bonus}, attendance : {Attendance}"
-
-        if user_language == "en-IN":
-            print("enterd first.")
-            return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
-        else:
-            print("entered second.")
-            translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
-            print(translated_text)
-            return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
-        # Append the transcription result
-        
 
     except PermissionError as e:
         return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)

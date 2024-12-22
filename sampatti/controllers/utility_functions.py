@@ -187,27 +187,26 @@ Specific Field Extraction:
 - currentCashAdvance: 
   * Look for cash advance, advance, loan, or financial support amounts
   * Make change only if there is mention any cash advance, advance, loan, or financial support amounts.
-  * don't take any unnecessary values into if unless cash advance or related term mentioned in the user input.
-  * use 0 if no cash advance is mentioned in the user input.
+  * don't take any unnecessary values into if unless cash advance or related term mentioned in the {user_input}
+  * take the value for the currentCashAdvance from the existing record if no cash advance is mentioned in the {user_input}
+
 - Monthly Repayment: Find planned monthly repayment amount
 - Bonus: Identify any bonus or additional payment
-<<<<<<< HEAD
   * Take the bonus amount from the existing record and then if the user asks to change the bonus amount then change it or if he wants to add more amount into bonus do the necessary steps from the {user_input}.
-  
-=======
-  * if only bonus or attendance is
->>>>>>> ae99dd33fea5760109926c90046ce957b7902d40
+
 - Attendance: 
-  * If mentioned, adjust from {attendance_period}
-  * If not specified, use {attendance_period}
+  * If attendance is mentioned in the {user_input} then return the value from the user input.
+  * If not specified use the value from the existing record.
+  * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
   * it should not be 0 anytime.
-<<<<<<< HEAD
 
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
   * If Repayment_Start_Month is defined with a value in the existing record, and user does not specify month in {user_input} then use same Repayment_Start_Month as mentioned in the existing record.
+  * If user does not mention month in the {user_input} then take the value of the Repayment_Start_Month from the existing record.
 
+  
 - For Repayment_Start_Year:
   * If user mentions a specific year in {user_input} (e.g., 2025, 2026):
     - Set the value of Repayment_Start_Year to the value which user mentions and then return in the response.
@@ -216,18 +215,6 @@ Specific Field Extraction:
 
   * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is not "sampatti":
     - Set the Repayment_Start_Year according to the following rules. Rule 1 : If Repayment_Start_Month comes out to be "March" and {current_month} is after the Repayment_Start_Month like take it any month from "April" to "December" then take the Repayment_Start_Year to be {current_year}+1). Rule 2 : If the Repayment_Start_Month comes out to be "May" and {current_month} is "February" or any month before "May" which includes from "January" to "April" then take the Repayment_Start_Year to be {current_year} itself. 
-
-=======
-- For Repayment_Start_Month, Repayment_Start_Year:
-  * If not specified, use always use "sampatti" and Repayment_Start_Month=0.
-  * If Repayment_Start_Month="sampatti" and Repayment_Start_Year=0 existing, and user does not specify month in {user_input} then use same record as Repayment_Start_Month="sampatti" and Repayment_Start_Year=0.
-  * if user says next month, then use next month and year accoring to next month's year.
-  * If user mentions a specific month (e.g., "March", "June"):
-    - Compare with current month {current_month}
-    - If mentioned month comes after {current_month} in calendar, use Repayment_Start_Year: {current_year}
-    - If mentioned month comes before or equals {current_month}, use Repayment_Start_Year: {current_year} + 1
-    
->>>>>>> ae99dd33fea5760109926c90046ce957b7902d40
 
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
@@ -239,9 +226,9 @@ Key Processing Instructions:
 
 Return ONLY a valid JSON focusing on fields mentioned or changed:
 {{
-    "currentCashAdvance": <cash advance amount as integer or 0>
-    "monthlyRepayment": <monthly repayment amount as integer or 0>,
-    "Bonus": <bonus amount as integer or 0>,
+    "currentCashAdvance": <cash advance amount as integer>
+    "monthlyRepayment": <monthly repayment amount as integer>,
+    "Bonus": <bonus amount as integer>,
     "Attendance": <number of days present as integer or {attendance_period}>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>
     "Repayment_Start_Year": <start year as 'YYYY'>
@@ -249,12 +236,12 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
 
 
 examples:
-user input = "i wanted to change the repayment amont, wanted to add 500 to the repayment and add 2222 bonus."
+user input = "i wanted to change the repayment amount, wanted to add 500 to the repayment and add 2222 bonus."
 {{
-    "currentCashAdvance": 0,
-    "Repayment_Monthly": existing Record + 500,
+    "currentCashAdvance": take value from the existing record.,
+    "Repayment_Monthly": take value from the existing record + 500,
     "Bonus": 2222,
-    "Attendance": attendance priod,
+    "Attendance": {attendance_period}
     "Repayment_Start_Month": existing record,
     "Repayment_Start_Year": existing record
 }}   
@@ -262,32 +249,32 @@ user input = "i wanted to change the repayment amont, wanted to add 500 to the r
 
 user input = "Add 1000 bonus and worker was on leave for 7 days"
 {{
-    "currentCashAdvance": 0,
-    "Repayment_Monthly": existing Record,
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
     "Bonus": 1000,
-    "Attendance": attendance priod-7,
-    "Repayment_Start_Month": existing record,
-    "Repayment_Start_Year": existing record
+    "Attendance": {attendance_period}-7,
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record.
 }}
 
 user input = "The repayment should start from the may month."
 {{
-    "currentCashAdvance": 0,
-    "Repayment_Monthly": existing Record,
-    "Bonus": 0,
-    "Attendance": attendance priod,
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period},
     "Repayment_Start_Month": "May",
-    "Repayment_Start_Year": Repayment_Start_Year
+    "Repayment_Start_Year": take value from the existing record.
 }}
 
 user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
 {{
     "currentCashAdvance": 5000,
     "Repayment_Monthly": 1000,
-    "Bonus": 0,
-    "Attendance": attendance priod,
-    "Repayment_Start_Month": "sampatti",
-    "Repayment_Start_Year": 0
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record.
+    "Repayment_Start_Year": take value from the existing record.
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
