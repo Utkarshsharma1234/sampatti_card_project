@@ -86,6 +86,9 @@ class CashAdvanceManagement(Base):
     monthlyRepayment = Column(Integer, default=0)
     repaymentStartMonth = Column(String)
     repaymentStartYear = Column(Integer)
+    currentCashAdvance = Column(Integer)
+    attendance = Column(Integer)
+    bonus = Column(Integer)
 
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"

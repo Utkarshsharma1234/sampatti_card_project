@@ -544,7 +544,7 @@ def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : 
         db.refresh(new_cash_advance_record)
 
  
-async def process_audio(file_url: str, employerNumber : int, workerNumber: int, db : Session):
+async def process_audio(background_tasks: BackgroundTasks,file_url: str, employerNumber : int, workerNumber: int, db : Session):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
 
@@ -592,14 +592,15 @@ async def process_audio(file_url: str, employerNumber : int, workerNumber: int, 
 
         existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
         
+        print(f"the existing record is : {existing_record}")
         # Prepare the context for the LLM based on existing record
         context = {
             "Cash_Advance": existing_record.cashAdvance if existing_record else 0,
             "Repayment_Monthly": existing_record.monthlyRepayment if existing_record else 0,
-            "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else current_month(),
-            "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else current_year(),
+            "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
+            "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else 0,
             "Bonus": 0,
-            "Attendance": determine_attendance_period()
+            "Attendance": determine_attendance_period(current_date().day)
         }
 
         # Pass the user input and context to the LLM for extraction
@@ -607,37 +608,54 @@ async def process_audio(file_url: str, employerNumber : int, workerNumber: int, 
         print(f"usercontrollers : {extracted_info}")
 
         Cash_Advance = extracted_info.get("Cash_Advance")
-        Repayment_Monthly = extracted_info.get("Repayment_Monthly")
+        Repayment_Monthly = extracted_info.get("monthlyRepayment")
         Repayment_Start_Month = extracted_info.get("Repayment_Start_Month")
         Repayment_Start_Year = extracted_info.get("Repayment_Start_Year")
         Bonus = extracted_info.get("Bonus")
         Attendance = extracted_info.get("Attendance")
-
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.c.employerNumber == employerNumber, models.CashAdvanceManagement.c.worker_id == worker_id).values(Cash_Advance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
-        db.execute(update_statement)
         
+        if existing_record is not None:
+
+            update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber == employerNumber, models.CashAdvanceManagement.worker_id == worker_id).values(cashAdvance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
+            db.execute(update_statement)
+            db.commit()
+
+        else:
+            new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, cashAdvance = Cash_Advance, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year)
+
+            db.add(new_cash_advance_entry)
+            db.commit()
+            db.refresh(new_cash_advance_entry)
 
         if Cash_Advance>0 and Repayment_Monthly==0:
             output = f"You have given cash advance of {Cash_Advance} and could you please give use repayment amount and also when to start the repayment start month and year"
-            if user_input == "en-IN":
-                return send_audio(static_dir, output, "en-IN", employerNumber)
+            if user_language == "en-IN":
+                return send_audio(static_dir, output, "en-IN", background_tasks, employerNumber)
             else:
                 translated_text = translate_text_sarvam(output, "en-IN", user_language)
-                return send_audio(static_dir, translated_text, user_language, employerNumber)
+                return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
             
         if Cash_Advance>0 and Repayment_Monthly>0 and (Repayment_Start_Month=="sampatti" or Repayment_Start_Year==0):
             output = f"You have cash advance of {Cash_Advance} and Repayment Amount is {Repayment_Monthly}, so could you please give Repayment Start Month and year"
-            if user_input == "en-IN":
-                return send_audio(static_dir, output, "en-IN", employerNumber)
+            if user_language == "en-IN":
+                return send_audio(static_dir, output, "en-IN", background_tasks, employerNumber)
             else:
                 translated_text = translate_text_sarvam(output, "en-IN", user_language)
-                return send_audio(static_dir, translated_text, user_language, employerNumber)
+                return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
 
 
 
         # Prepare the sample output
-        sample_output = f"Please confirm the following details. The cash advance given by you is {existing_record.cashAdvance} and the bonus given by you is {existing_record.bonus} while the repayment per month is {existing_record.monthlyRepayment} and the repayment month is {existing_record.repaymentStartMonth}-{existing_record.repaymentStartYear}"
+        sample_output = f"cash advance is : {Cash_Advance}, repayment is : {Repayment_Monthly}, repayment month is : {Repayment_Start_Month}, repayment month is : {Repayment_Start_Year}, bonus : {Bonus}, attendance : {Attendance}"
 
+        if user_language == "en-IN":
+            print("enterd first.")
+            return send_audio(static_dir, sample_output, "en-IN", background_tasks, employerNumber)
+        else:
+            print("entered second.")
+            translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
+            print(translated_text)
+            return send_audio(static_dir, translated_text, user_language, background_tasks, employerNumber)
         # Append the transcription result
         
 
@@ -651,14 +669,3 @@ async def process_audio(file_url: str, employerNumber : int, workerNumber: int, 
             os.remove(temp_path)
         if os.path.exists(temp_wav_path):
             os.remove(temp_wav_path)
-
-    print(results)
-
-    if user_language == "en-IN":
-        print("enterd first.")
-        return send_audio(static_dir, sample_output, "en-IN", employerNumber)
-    else:
-        print("entered second.")
-        translated_text = translate_text_sarvam(sample_output, "en-IN", user_language)
-        print(translated_text)
-        return send_audio(static_dir, translated_text, user_language, employerNumber)

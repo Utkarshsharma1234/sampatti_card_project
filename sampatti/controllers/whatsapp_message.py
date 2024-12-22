@@ -166,34 +166,28 @@ def generate_audio_media_id(path : str, folder : str):
 
     url = "https://waba-v2.360dialog.io/media"
 
-    static_pdf_path = os.path.join(os.getcwd(), folder, path)
-    print(static_pdf_path)
+    static_audio_path = os.path.join(os.getcwd(), folder, path)
+    print(static_audio_path)
+    headers = {
+        "D360-API-KEY": orai_api_key
+    }
 
-    if os.path.exists(static_pdf_path):
-        headers = {
-            "D360-API-KEY": orai_api_key
-        }
+    payload = {
+        "messaging_product": "whatsapp"
+    }
+    files=[
+        ('file',(path,open(static_audio_path,'rb'),'audio/mpeg'))
+    ]
 
-        data = {
-            "messaging_product": "whatsapp"
-        }
-        files = {
-            "file": (path, open(static_pdf_path, "rb"), "application/octet-stream")
-        }
-
-        try:
-            response = requests.post(url, headers=headers, data=data, files=files)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-
-            print(f"Exception occurred: {e}")
-            raise HTTPException(status_code=500, detail="Generating the media Id.")
-    else:
-        raise HTTPException(status_code=404, detail="Audio file not found.")
+    try:
+        response = requests.post(url, headers=headers, data=payload, files=files)
+        return response.json()
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+        raise HTTPException(status_code=500, detail="Generating the audio media Id.")
 
 
-def send_audio(audio_media_id : str, employerNumber : int):
+def send_whatsapp_audio(audio_media_id : str, employerNumber : int):
 
     url = "https://waba-v2.360dialog.io/messages"
 
@@ -201,9 +195,10 @@ def send_audio(audio_media_id : str, employerNumber : int):
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": f"{employerNumber}",
-        "type": "audio",
-        "audio": {
-            "id": f"{audio_media_id}"
+        "type": "document",
+        "document": {
+            "filename" : "response",
+            "id" : f"{audio_media_id}"
         }
     })
 

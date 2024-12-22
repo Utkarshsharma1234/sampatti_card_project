@@ -187,17 +187,26 @@ Specific Field Extraction:
 - 
 - Monthly Repayment: Find planned monthly repayment amount
 - Bonus: Identify any bonus or additional payment
+  * Take the bonus amount from the existing record and then if the user asks to change the bonus amount then change it or if he wants to add more amount into bonus do the necessary steps from the {user_input}.
+  
 - Attendance: 
   * If mentioned, adjust from {attendance_period}
   * If not specified, use {attendance_period}
   * it should not be 0 anytime.
-- For Repayment_Start_Month, Repayment_Start_Year:
-  * If not specified, use always use "sampatti" and Repayment_Start_Month=0.
-  * If Repayment_Start_Month="sampatti" and Repayment_Start_Year=0 existing, and user does not specify month in {user_input} then use same record as Repayment_Start_Month="sampatti" and Repayment_Start_Year=0.
+
+- For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
-    - Compare with current month {current_month}
-    - If mentioned month comes after {current_month} in calendar, use {current_year}
-    - If mentioned month comes before or equals {current_month}, use {current_year} + 1
+    - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
+  * If Repayment_Start_Month is defined with a value in the existing record, and user does not specify month in {user_input} then use same Repayment_Start_Month as mentioned in the existing record.
+
+- For Repayment_Start_Year:
+  * If user mentions a specific year in {user_input} (e.g., 2025, 2026):
+    - Set the value of Repayment_Start_Year to the value which user mentions and then return in the response.
+  * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is "sampatti":
+    - Set the value of Repayment_Start_Year to 0.
+
+  * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is not "sampatti":
+    - Set the Repayment_Start_Year according to the following rules. Rule 1 : If Repayment_Start_Month comes out to be "March" and {current_month} is after the Repayment_Start_Month like take it any month from "April" to "December" then take the Repayment_Start_Year to be {current_year}+1). Rule 2 : If the Repayment_Start_Month comes out to be "May" and {current_month} is "February" or any month before "May" which includes from "January" to "April" then take the Repayment_Start_Year to be {current_year} itself. 
 
 
 Key Processing Instructions:
@@ -213,8 +222,8 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "monthlyRepayment": <monthly repayment amount as integer or null>,
     "Bonus": <bonus amount as integer or 0>,
     "Attendance": <number of days present as integer or {attendance_period}>,
-    "Repayment_Start_Month": <start month as 'Month' in capitalized form or if not mentioned use "sampatti">
-    "Repayment_Start_Year": <start year as 'YYYY' or if not mentioned always use 0>
+    "Repayment_Start_Month": <start month as 'Month' in capitalized form>
+    "Repayment_Start_Year": <start year as 'YYYY'>
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
@@ -317,6 +326,7 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         print(f"Translation error: {e}")
         return text
 
+
 def send_audio(output_directory: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
 
     try:
@@ -340,20 +350,21 @@ def send_audio(output_directory: str, sample_output: str, language: str, backgro
 
         os.makedirs(output_directory, exist_ok=True)
 
+        output_file_path = os.path.join(os.getcwd(), output_directory, "output.mp3")
              # Decode the Base64 string to binary data
         audio_data = base64.b64decode(base64_string)
 
-             # Construct the full file path
-        output_filename = "output.ogg"
-        file_path = os.path.join(output_directory, output_filename)
-
              # Write the binary data to a file
-        with open(file_path, "wb") as ogg_file:
-            ogg_file.write(audio_data)
+        with open(output_file_path, "wb") as audio_file:
+            audio_file.write(audio_data)
 
-        print(f"File saved as: {file_path}")
+        print(f"File saved as: {output_file_path}")
                 #Generate the audio media ID using your existing WhatsApp logic
 
+        
+        mediaIdObj = whatsapp_message.generate_audio_media_id("output.mp3", output_directory)
+        audioMediaId = mediaIdObj["id"]
+        whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
         return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
 
     except requests.exceptions.RequestException as e:
