@@ -160,16 +160,17 @@ def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
 
 @router.post('/process_audio')
-async def process_audio(background_tasks: BackgroundTasks, file_url: str, employerNumber : int, workerNumber :int, db : Session = Depends(get_db)):
-    return await userControllers.process_audio(background_tasks, file_url, employerNumber, workerNumber, db)
+async def process_audio(file_url: str, employerNumber : int, workerName :str, db : Session = Depends(get_db)):
+    return await userControllers.process_audio(file_url, employerNumber, workerName, db)
 
 @router.post("/salary_details")
 def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.update_salary_details(employerNumber, orderId, db)
 
 @router.post("/cash_advance_entry/create")
-def create_cash_advance_entry(employerNumber : int, workerNumber : int, cashAdvance : int, monthlyRepayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session = Depends(get_db)):
-    return userControllers.create_cash_advance_entry(employerNumber, workerNumber, cashAdvance, monthlyRepayment, repaymentStartMonth, repaymentStartYear, db)
+def create_cash_advance_entry(employerNumber : int, employer_id : str, worker_id : str, crrCashAdvance : int, Repayment_Monthly : int, Repayment_Start_Month : str, Repayment_Start_Year : int, Bonus : int, Attendance : int, db : Session = Depends(get_db)):
+    return userControllers.create_cash_advance_entry(employerNumber, employer_id, worker_id, crrCashAdvance, Repayment_Monthly, Repayment_Start_Month, Repayment_Start_Year, Bonus, Attendance, db)
+
 
 @router.post("/cash_advance_record/create")
 def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, db : Session = Depends(get_db)):
@@ -183,3 +184,7 @@ def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, 
 @router.get("/extract_date")
 def extract_date(date_str : str):
     return utility_functions.extract_date(date_str)
+
+@router.post("send_audio_message")
+def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session = Depends(get_db)):
+    return userControllers.send_audio_message(employer_id, worker_id, user_language, employerNumber, db)

@@ -216,9 +216,14 @@ Specific Field Extraction:
   * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is not "sampatti":
     - Set the Repayment_Start_Year according to the following rules. Rule 1 : If Repayment_Start_Month comes out to be "March" and {current_month} is after the Repayment_Start_Month like take it any month from "April" to "December" then take the Repayment_Start_Year to be {current_year}+1). Rule 2 : If the Repayment_Start_Month comes out to be "May" and {current_month} is "February" or any month before "May" which includes from "January" to "April" then take the Repayment_Start_Year to be {current_year} itself. 
 
+
+- For detailsFlag:
+  * If the {user_input} is containing information like "yes, correct details" or "yes, the details are correct." or similar kind of text which means that the details provided are correct then just make the detailsFlag to be True otherwise keep it False.
+
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
 - If no specific value mentioned, preserve existing record's value.
+
 - Ensure final values are reasonable and consistent
 - For partial updates, only modify mentioned fields
 - Always include all fields in the result for all cases.
@@ -230,20 +235,22 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "monthlyRepayment": <monthly repayment amount as integer>,
     "Bonus": <bonus amount as integer>,
     "Attendance": <number of days present as integer or {attendance_period}>,
-    "Repayment_Start_Month": <start month as 'Month' in capitalized form>
-    "Repayment_Start_Year": <start year as 'YYYY'>
+    "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
+    "Repayment_Start_Year": <start year as 'YYYY'>,
+    "detailsFlag" : true or false
 }}
 
 
 examples:
 user input = "i wanted to change the repayment amount, wanted to add 500 to the repayment and add 2222 bonus."
 {{
-    "currentCashAdvance": take value from the existing record.,
+    "currentCashAdvance": take value from the existing record,
     "Repayment_Monthly": take value from the existing record + 500,
     "Bonus": 2222,
     "Attendance": {attendance_period}
     "Repayment_Start_Month": existing record,
-    "Repayment_Start_Year": existing record
+    "Repayment_Start_Year": existing record,
+    "detailsFlag" : "false"
 }}   
 
 
@@ -254,7 +261,8 @@ user input = "Add 1000 bonus and worker was on leave for 7 days"
     "Bonus": 1000,
     "Attendance": {attendance_period}-7,
     "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record.
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : "false"
 }}
 
 user input = "The repayment should start from the may month."
@@ -264,7 +272,8 @@ user input = "The repayment should start from the may month."
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period},
     "Repayment_Start_Month": "May",
-    "Repayment_Start_Year": take value from the existing record.
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : "false"
 }}
 
 user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
@@ -273,8 +282,21 @@ user input = "Worker needs 5000 cash advance and repayment monthly should be 100
     "Repayment_Monthly": 1000,
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record.
-    "Repayment_Start_Year": take value from the existing record.
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : "false"
+}}
+
+
+user input = "yes correct details"
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : "true"
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
@@ -323,6 +345,8 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     cleaned_response = response.replace('```json', '').replace('```', '').strip()
 
     print(f"The response from LLM is: {response}")
+    print(f"The response from LLM is: {cleaned_response}")
+
     try:
         extracted_info = json.loads(cleaned_response)
         return extracted_info
@@ -382,8 +406,9 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         return text
 
 
-def send_audio(output_directory: str, sample_output: str, language: str, background_tasks: BackgroundTasks, employerNumber: int):
+def send_audio(output_directory: str, sample_output: str, language: str, employerNumber: int):
 
+    
     try:
         # Using Sarvam API for text-to-speech
         url = "https://api.sarvam.ai/text-to-speech"
