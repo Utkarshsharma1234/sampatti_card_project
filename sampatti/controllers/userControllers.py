@@ -3,11 +3,12 @@ import json
 import tempfile, os, re, requests
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy import delete, insert,update
+from sqlalchemy import delete, func, insert,update
 from .. import models, schemas
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
+from fuzzywuzzy import fuzz
 from pydub import AudioSegment
 
 
@@ -516,7 +517,18 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
             "language_code": user_language
         })
 
-        worker = db.query(models.Domestic_Worker).where(models.Domestic_Worker.name == workerName).first()
+        potential_matches = db.query(models.Domestic_Worker).filter(func.lower(models.Domestic_Worker.name).ilike(f"%{workerName.lower()}%")).all()
+
+            # Find the best match with a similarity score above 50%
+        worker = None
+        highest_similarity = 0
+
+        for item in potential_matches:
+            similarity = fuzz.ratio(workerName.lower(), item.name.lower())
+            if similarity > 50 and similarity > highest_similarity:
+                worker = item
+                highest_similarity = similarity
+                
         # Check if there is an existing record for the employer
         worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== worker.workerNumber).first()
 
