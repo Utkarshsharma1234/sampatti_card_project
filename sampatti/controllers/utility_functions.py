@@ -168,12 +168,6 @@ Instructions:
 6. Be flexible in understanding variations of input.
 7. Always include all fields in the result for all cases.
 
-Current Context:
-- Current Date: {current_date}
-- Current Month: {current_month} {current_year}
-- Previous Month: {previous_month} {previous_year}
-- Total Days for Attendance: {attendance_period}
-- Current Day in Month: {current_day}
 
 Extraction and Update Rules:
 - Focus on extracting or modifying specific fields mentioned in the input.
@@ -218,7 +212,15 @@ Specific Field Extraction:
 
 
 - For detailsFlag:
-  * If the {user_input} is containing information like "yes, correct details" or "yes, the details are correct." or similar kind of text which means that the details provided are correct then just make the detailsFlag to be True otherwise keep it False.
+  * If the {user_input} is containing information like "yes, correct details" or "yes, the details are correct." or similar kind of text which means that the details provided are correct then just make the detailsFlag to be 1 otherwise keep it 0.
+
+  
+- For nameOfWorker:
+  * If user mentions a name then take it from the {user_input} but if not then take it from the existing record.
+  * for e.g. If user says that, please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma then extract the nameOfWorker as "utkarsh sharma".
+  * for e.g. If user says that, pay om a advance amount of 40000 to with a monthly repayment of 10000 then take nameOfWorker as "om".
+  * for e.g. If user says that, i want to give vrashali a bonus of 70000 and attendance of 25 then take the nameOfWorker as "vrashali".
+
 
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
@@ -237,7 +239,8 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "Attendance": <number of days present as integer or {attendance_period}>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
     "Repayment_Start_Year": <start year as 'YYYY'>,
-    "detailsFlag" : true or false
+    "detailsFlag" : <0 or 1 as an integer>,
+    "nameOfWorker" : <name of the worker string always in lowercase.>
 }}
 
 
@@ -250,7 +253,8 @@ user input = "i wanted to change the repayment amount, wanted to add 500 to the 
     "Attendance": {attendance_period}
     "Repayment_Start_Month": existing record,
     "Repayment_Start_Year": existing record,
-    "detailsFlag" : "false"
+    "detailsFlag" : 0,
+    "name" : "sampatti"
 }}   
 
 
@@ -262,7 +266,8 @@ user input = "Add 1000 bonus and worker was on leave for 7 days"
     "Attendance": {attendance_period}-7,
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : "false"
+    "detailsFlag" : 0,
+    "name" : "sampatti"
 }}
 
 user input = "The repayment should start from the may month."
@@ -273,7 +278,8 @@ user input = "The repayment should start from the may month."
     "Attendance": {attendance_period},
     "Repayment_Start_Month": "May",
     "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : "false"
+    "detailsFlag" : 0,
+    "name" : "sampatti"
 }}
 
 user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
@@ -284,7 +290,8 @@ user input = "Worker needs 5000 cash advance and repayment monthly should be 100
     "Attendance": {attendance_period}
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : "false"
+    "detailsFlag" : 0,
+    "name" : "sampatti"
 }}
 
 
@@ -296,12 +303,50 @@ user input = "yes correct details"
     "Attendance": {attendance_period}
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : "true"
+    "detailsFlag" : 1,
+    "name" : "sampatti"
+}}
+
+user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma"
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : 0,
+    "name" : "utkarsh sharma"
+}}
+
+user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : 0,
+    "name" : "vrashali"
+}}
+
+user input = "pay om a advance amount of 40000 to with a monthly repayment of 10000"
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : 0,
+    "name" : "om"
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
 
     return template
+
 
 def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
     # Validate employer_number

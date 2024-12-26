@@ -163,6 +163,10 @@ def copy_employer_message(db : Session = Depends(get_db)):
 async def process_audio(file_url: str, employerNumber : int, workerName :str, db : Session = Depends(get_db)):
     return await userControllers.process_audio(file_url, employerNumber, workerName, db)
 
+@router.post('/extract_name')
+async def extract_name(file_url: str, employerNumber : int):
+    return await userControllers.extract_name(file_url, employerNumber,)
+
 @router.post("/salary_details")
 def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.update_salary_details(employerNumber, orderId, db)
