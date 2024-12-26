@@ -519,16 +519,20 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
 
         potential_matches = db.query(models.Domestic_Worker).filter(func.lower(models.Domestic_Worker.name).ilike(f"%{workerName.lower()}%")).all()
 
-            # Find the best match with a similarity score above 50%
+        if not potential_matches:
+            return None  # No potential matches found
+
+        # Step 2: Compute similarity scores
         worker = None
         highest_similarity = 0
 
         for item in potential_matches:
-            similarity = fuzz.ratio(workerName.lower(), item.name.lower())
-            if similarity > 50 and similarity > highest_similarity:
+            similarity = fuzz.partial_ratio(workerName.lower(), item.name.lower())
+            if similarity > highest_similarity:
                 worker = item
                 highest_similarity = similarity
-                
+
+        print(f"the worker details are : {worker}")
         # Check if there is an existing record for the employer
         worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_number== worker.workerNumber).first()
 
