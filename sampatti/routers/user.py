@@ -100,6 +100,10 @@ def insert_salary(request : schemas.Salary, db : Session = Depends(get_db)):
 def send_worker_salary_slips(db : Session = Depends(get_db)):
     return userControllers.send_worker_salary_slips(db)
 
+@router.put("/update_salary")
+def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session = Depends(get_db)):
+    return userControllers.update_worker_salary(employer_id, worker_id, salary, db)
+
 @router.post("/contract")
 def contract_generation(request : schemas.Contract, db : Session = Depends(get_db)):
 
@@ -189,6 +193,6 @@ def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, 
 def extract_date(date_str : str):
     return utility_functions.extract_date(date_str)
 
-@router.post("send_audio_message")
+@router.post("/send_audio_message")
 def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.send_audio_message(employer_id, worker_id, user_language, employerNumber, db)

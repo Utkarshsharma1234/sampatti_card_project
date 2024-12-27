@@ -724,3 +724,16 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
             translated_text = translate_text_sarvam(missingInformation, "en-IN", user_language)
             return send_audio(static_dir, translated_text, user_language,employerNumber)
         
+
+def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session):
+
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
+
+    if not worker_employer_relation:
+        return {
+            "MESSAGE" : "No worker with the given name found."
+        }
+    
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).values(salary_amount = salary)
+    db.execute(update_statement)
+    db.commit()
