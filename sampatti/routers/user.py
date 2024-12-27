@@ -11,7 +11,7 @@ from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file
 import whisper
-from ..controllers import utility_functions
+from ..controllers import utility_functions, salary_report_gen
 
 
 router = APIRouter(

@@ -5,7 +5,7 @@ from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, func, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, calculate_year_for_month
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from fuzzywuzzy import fuzz
@@ -547,31 +547,41 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
         print(f"the existing record is : {existing_record}")
         # Prepare the context for the LLM based on existing record
         context = {
-            "Cash_Advance": existing_record.currentCashAdvance if existing_record else 0,
-            "Repayment_Monthly": existing_record.monthlyRepayment if existing_record else 0,
+            "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
+            "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
             "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else 0,
             "Bonus": existing_record.bonus if existing_record else 0,
             "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day),
-            "detailsFlag" : 0
+            "detailsFlag" : 0,
+            "nameofWorker" : workerName,
+            "salary" : worker_employer_relation.salary_amount
         }
 
         # Pass the user input and context to the LLM for extraction
         extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
         print(f"usercontrollers : {extracted_info}")
         
+
+        year = 0
+        month_name = extracted_info.get("Repayment_Start_Month")
+        if month_name != "sampatti":
+            year = calculate_year_for_month(month_name)
+
         response = {
             "crrCashAdvance" : extracted_info.get("currentCashAdvance"),
             "Repayment_Monthly" : extracted_info.get("monthlyRepayment"),
             "Repayment_Start_Month" : extracted_info.get("Repayment_Start_Month"),
-            "Repayment_Start_Year" : extracted_info.get("Repayment_Start_Year"),
+            "Repayment_Start_Year" : year,
             "Bonus" : extracted_info.get("Bonus"),
             "Attendance" : extracted_info.get("Attendance"),
             "detailsFlag" : extracted_info.get("detailsFlag"),
             "employer_id" : employer_id,
             "worker_id" : worker_id,
+            "salary" : extracted_info.get("salary"),
             "user_language" : user_language
         }
+
 
         return response
 
@@ -626,14 +636,15 @@ async def extract_name(file_url: str, employerNumber : int):
         
         # Prepare the context for the LLM based on existing record
         context = {
-            "Cash_Advance":  0,
-            "Repayment_Monthly":  0,
+            "currentCashAdvance":  0,
+            "monthlyRepayment":  0,
             "Repayment_Start_Month": "sampatti",
             "Repayment_Start_Year":  0,
             "Bonus":  0,
             "Attendance": 0,
             "detailsFlag" : 0,
-            "nameofWorker" : "sampatti"
+            "nameofWorker" : "sampatti",
+            "salary" : 0
         }
 
         # Pass the user input and context to the LLM for extraction
@@ -648,9 +659,10 @@ async def extract_name(file_url: str, employerNumber : int):
             "Bonus" : extracted_info.get("Bonus"),
             "Attendance" : extracted_info.get("Attendance"),
             "detailsFlag" : extracted_info.get("detailsFlag"),
-            "nameOfWorker" : extracted_info.get("nameOfWorker"),
+            "nameOfWorker" : extracted_info.get("nameofWorker"),
             "user_language" : user_language
         }
+
 
         return response
 

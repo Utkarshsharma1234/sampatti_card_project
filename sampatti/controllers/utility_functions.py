@@ -197,30 +197,26 @@ Specific Field Extraction:
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
+  * If user says repayment should start from the next month:
+    - Calculate the next month based on the current date.
+    - Set the value of Repayment_Start_Month to the next month.
   * If Repayment_Start_Month is defined with a value in the existing record, and user does not specify month in {user_input} then use same Repayment_Start_Month as mentioned in the existing record.
   * If user does not mention month in the {user_input} then take the value of the Repayment_Start_Month from the existing record.
 
-  
-- For Repayment_Start_Year:
-  * If user mentions a specific year in {user_input} (e.g., 2025, 2026):
-    - Set the value of Repayment_Start_Year to the value which user mentions and then return in the response.
-  * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is "sampatti":
-    - Set the value of Repayment_Start_Year to 0.
-
-  * If user does not specify year in {user_input} and the final value for the Repayment_Start_Month is not "sampatti":
-    - Set the Repayment_Start_Year according to the following rules. Rule 1 : If Repayment_Start_Month comes out to be "March" and {current_month} is after the Repayment_Start_Month like take it any month from "April" to "December" then take the Repayment_Start_Year to be {current_year}+1). Rule 2 : If the Repayment_Start_Month comes out to be "May" and {current_month} is "February" or any month before "May" which includes from "January" to "April" then take the Repayment_Start_Year to be {current_year} itself. 
-
-
 - For detailsFlag:
-  * If the {user_input} is containing information like "yes, correct details" or "yes, the details are correct." or similar kind of text which means that the details provided are correct then just make the detailsFlag to be 1 otherwise keep it 0.
-
+  * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
+  * for e.g., If {user_input} says "yes" or it says "yes, correct details" or it says "all details are correct" or it says "yes, all the provided details are correct." or similar stuff then make the detailsFlag to be 1 otherwise let it be 0 only. 
   
 - For nameOfWorker:
   * If user mentions a name then take it from the {user_input} but if not then take it from the existing record.
   * for e.g. If user says that, please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma then extract the nameOfWorker as "utkarsh sharma".
   * for e.g. If user says that, pay om a advance amount of 40000 to with a monthly repayment of 10000 then take nameOfWorker as "om".
   * for e.g. If user says that, i want to give vrashali a bonus of 70000 and attendance of 25 then take the nameOfWorker as "vrashali".
+  * for e.g If user says that, Please change the salary of utkarsh to 12000 rupees, then take the nameOfWorker as "utkarsh".
 
+- For salary:
+  * If user mentions the salary then take the salary amount from the {user_input} and if not mentioned then take the salary amount from the existing record.
+  * It should never be 0.
 
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
@@ -238,9 +234,10 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "Bonus": <bonus amount as integer>,
     "Attendance": <number of days present as integer or {attendance_period}>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
-    "Repayment_Start_Year": <start year as 'YYYY'>,
+    "Repayment_Start_Year": <always 0 as integer>,
     "detailsFlag" : <0 or 1 as an integer>,
-    "nameOfWorker" : <name of the worker string always in lowercase.>
+    "nameofWorker" : <name of the worker string always in lowercase.>,
+    "salary" : <salary amount as an integer>
 }}
 
 
@@ -254,9 +251,9 @@ user input = "i wanted to change the repayment amount, wanted to add 500 to the 
     "Repayment_Start_Month": existing record,
     "Repayment_Start_Year": existing record,
     "detailsFlag" : 0,
-    "name" : "sampatti"
+    "nameofWorker" : "sampatti",
+    "salary" : existing record
 }}   
-
 
 user input = "Add 1000 bonus and worker was on leave for 7 days"
 {{
@@ -267,19 +264,8 @@ user input = "Add 1000 bonus and worker was on leave for 7 days"
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
-    "name" : "sampatti"
-}}
-
-user input = "The repayment should start from the may month."
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period},
-    "Repayment_Start_Month": "May",
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "name" : "sampatti"
+    "nameofWorker" : "sampatti",
+    "salary" : existing record
 }}
 
 user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
@@ -291,7 +277,8 @@ user input = "Worker needs 5000 cash advance and repayment monthly should be 100
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
-    "name" : "sampatti"
+    "nameofWorker" : "sampatti",
+    "salary" : existing record
 }}
 
 
@@ -304,7 +291,8 @@ user input = "yes correct details"
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 1,
-    "name" : "sampatti"
+    "nameofWorker" : "sampatti",
+    "salary" : existing record
 }}
 
 user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma"
@@ -316,7 +304,8 @@ user input = "please pay a cash advance of 20000 with a monthly repayment of 500
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
-    "name" : "utkarsh sharma"
+    "nameofWorker" : "utkarsh sharma",
+    "salary" : existing record
 }}
 
 user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
@@ -328,7 +317,8 @@ user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
-    "name" : "vrashali"
+    "nameofWorker" : "vrashali",
+    "salary" : existing record
 }}
 
 user input = "pay om a advance amount of 40000 to with a monthly repayment of 10000"
@@ -340,7 +330,21 @@ user input = "pay om a advance amount of 40000 to with a monthly repayment of 10
     "Repayment_Start_Month": take value from the existing record,
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
-    "name" : "om"
+    "nameofWorker" : "om",
+    "salary" : existing record
+}}
+
+user input = "the salary of utkarsh from this month is 15000"
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : 0,
+    "nameofWorker" : "utkarsh",
+    "salary" : 15000
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
@@ -417,6 +421,8 @@ def call_sarvam_api(file_path):
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
     return response.json()
+
+
 
 
 def translate_text_sarvam(text: str, source_language: str, target_language: str) -> str:
@@ -498,3 +504,32 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
     except Exception as e:
         print(f"Error generating audio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+def calculate_year_for_month(month_name):
+    """
+    Takes a month name as input and calculates the year.
+    If the month occurs before the current month, return the next year.
+    Otherwise, return the current year.
+
+    :param month_name: Name of the month (e.g., "January", "September")
+    :return: A tuple (month_name, year)
+    """
+    # Get the current month and year
+    current_date = datetime.now()
+    current_month = current_date.month
+    current_year = current_date.year
+
+    # Convert input month name to a month number
+    try:
+        input_month = datetime.strptime(month_name, "%B").month
+    except ValueError:
+        return f"Invalid month name: {month_name}"
+
+    # Determine the year based on the comparison
+    if input_month < current_month:
+        year = current_year + 1
+    else:
+        year = current_year
+
+    return year
