@@ -545,12 +545,13 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
         existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
         
         print(f"the existing record is : {existing_record}")
+        print(f"groq key : {os.environ.get('GROQ_API_KEY')}")
         # Prepare the context for the LLM based on existing record
         context = {
             "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
             "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
-            "Repayment_Start_Year": existing_record.repaymentStartYear if existing_record else 0,
+            "Repayment_Start_Year": 0,
             "Bonus": existing_record.bonus if existing_record else 0,
             "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day),
             "detailsFlag" : 0,

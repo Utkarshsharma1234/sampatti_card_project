@@ -194,14 +194,11 @@ Specific Field Extraction:
   * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
   * it should not be 0 anytime.
 
+
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
-  * If user says repayment should start from the next month:
-    - Calculate the next month based on the current date.
-    - Set the value of Repayment_Start_Month to the next month.
-  * If Repayment_Start_Month is defined with a value in the existing record, and user does not specify month in {user_input} then use same Repayment_Start_Month as mentioned in the existing record.
-  * If user does not mention month in the {user_input} then take the value of the Repayment_Start_Month from the existing record.
+  * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
 
 - For detailsFlag:
   * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
