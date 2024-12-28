@@ -683,6 +683,8 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
 
     new_existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
 
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).first()
+
     static_dir = "audio_files"
     missingInformation = "Please provide the following details."
 
@@ -701,7 +703,7 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
         outputAudio = f"Please confirm the following details."
 
         if new_existing_record.currentCashAdvance > 0:
-            outputAudio += f"The cash advance amount is {new_existing_record.currentCashAdvance} while the repayment per month is {new_existing_record.monthlyRepayment}. The repayment starts from {new_existing_record.repaymentStartMonth} {new_existing_record.repaymentStartYear}."
+            outputAudio += f"The cash advance amount is {new_existing_record.currentCashAdvance} while the repayment per month is {new_existing_record.monthlyRepayment}. The repayment starts from {new_existing_record.repaymentStartMonth} {new_existing_record.repaymentStartYear}. The salary for your worker is {worker_employer_relation.salary_amount}"
 
         if new_existing_record.bonus > 0:
 
@@ -711,7 +713,7 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
         outputAudio += f"attendance for this month is {new_existing_record.attendance}."
 
         
-        if user_language == "en-IN":
+        if user_language == "en-IN" or not user_language:
             return send_audio(static_dir, outputAudio, "en-IN",employerNumber)
         else:
             translated_text = translate_text_sarvam(outputAudio, "en-IN", user_language)
