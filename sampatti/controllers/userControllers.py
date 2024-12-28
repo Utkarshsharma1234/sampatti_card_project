@@ -713,14 +713,14 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
         outputAudio += f"attendance for this month is {new_existing_record.attendance}."
 
         
-        if user_language == "en-IN" or not user_language:
+        if user_language == "en-IN" or user_language == "null":
             return send_audio(static_dir, outputAudio, "en-IN",employerNumber)
         else:
             translated_text = translate_text_sarvam(outputAudio, "en-IN", user_language)
             return send_audio(static_dir, translated_text, user_language,employerNumber)
     else:
 
-        if user_language == "en-IN":
+        if user_language == "en-IN" or user_language == "null":
             return send_audio(static_dir, missingInformation, "en-IN",employerNumber)
         else:
             translated_text = translate_text_sarvam(missingInformation, "en-IN", user_language)
