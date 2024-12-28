@@ -354,12 +354,16 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
 
         cash = existing_advance - order_note["repayment"]
         repayment = existing_repayment
+        startMonth = existing_cash_advance_entry.repaymentStartMonth
+        startYear = existing_cash_advance_entry.repaymentStartYear
 
         if cash <= 0:
             cash = 0
             repayment = 0
+            startMonth = "sampatti"
+            startYear = 0
 
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).values(cashAdvance = cash, monthlyRepayment = repayment)
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).values(cashAdvance = cash, monthlyRepayment = repayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear)
 
         db.execute(update_statement)
         db.commit()

@@ -310,7 +310,7 @@ def payment_link_generation(db : Session):
 
 # creating dynamic payment links
 
-def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, attendance : int, repaymentFlag : bool, db : Session):
+def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : str, cashAdvance : int, bonus : int, attendance : int, repaymentFlag : bool, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -327,9 +327,9 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance :
         "October": 10, "November": 11, "December": 12
     }
 
-    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
+    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
 
-    cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
+    cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
 
     repayment = 0
 
@@ -352,7 +352,7 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance :
     note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])
 
-    customerDetails = CustomerDetails(customer_id= f"{workerNumber}", customer_phone= f"{actual_number}")
+    customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
     createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
     try:
         api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
@@ -365,11 +365,20 @@ def dynamic_payment_link(employerNumber : int, workerNumber : int, cashAdvance :
 
     send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
 
-    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).values(order_id= response["order_id"])
 
     db.execute(update_statement)
     db.commit()
 
+    existing_cash_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+
+
+    total_advance = existing_cash_advance_entry.cashAdvance + existing_cash_advance_entry.currentCashAdvance
+
+    update_advance = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).values(cashAdvance = total_advance, currentCashAdvance = 0, bonus = 0, attendance = None)
+
+    db.execute(update_advance)
+    db.commit()
 
 
 # settle the unsettled balance on cashfree to the worker's account.
