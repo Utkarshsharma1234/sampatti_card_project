@@ -200,6 +200,12 @@ Specific Field Extraction:
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
   * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
 
+- For Repayment_Start_Year:
+  * If the user mentions a specific year like (2025, 2026, "january 2025", "march 2026"):
+    - Set the value of Repayment_Start_Year to the value which the user mentionsand then return in the response.
+
+  * If user does not mentions anythiing related to the year then set the value of Repayment_Start_Year to 0. 
+   
 - For detailsFlag:
   * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
   * for e.g., If {user_input} says "yes" or it says "yes, correct details" or it says "all details are correct" or it says "yes, all the provided details are correct." or similar stuff then make the detailsFlag to be 1 otherwise let it be 0 only. 
@@ -231,7 +237,7 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "Bonus": <bonus amount as integer>,
     "Attendance": <number of days present as integer or {attendance_period}>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
-    "Repayment_Start_Year": <always 0 as integer>,
+    "Repayment_Start_Year": <integer in the form of yyyy>,
     "detailsFlag" : <0 or 1 as an integer>,
     "nameofWorker" : <name of the worker string always in lowercase.>,
     "salary" : <salary amount as an integer>

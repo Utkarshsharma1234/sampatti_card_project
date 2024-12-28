@@ -570,8 +570,15 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
 
         year = 0
         month_name = extracted_info.get("Repayment_Start_Month")
+        given_year = extracted_info.get("Repayment_Start_Year")
+
         if month_name != "sampatti":
-            year = calculate_year_for_month(month_name)
+
+            if given_year == 0:
+                year = calculate_year_for_month(month_name)
+
+            else:
+                year = given_year
 
         response = {
             "crrCashAdvance" : extracted_info.get("currentCashAdvance"),
