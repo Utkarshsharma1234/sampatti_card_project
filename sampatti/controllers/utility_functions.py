@@ -152,6 +152,8 @@ def determine_attendance_period(current_day):
 def llm_template():
     current_day = datetime.now().day
     attendance_period = determine_attendance_period(current_day)
+    current_month = datetime.now().strftime("%B")
+    current_year = datetime.now().year
 
     template = """You are an intelligent assistant helping to extract precise financial and attendance information for an employee cash advance record.
 
@@ -167,6 +169,8 @@ Instructions:
 5. If any information is missing, use existing record.
 6. Be flexible in understanding variations of input.
 7. Always include all fields in the result for all cases.
+8. if month is extracted from user input then year also should be extracted don't make it 0.
+9. extracted month and year should be always grater than {current_date}.
 
 
 Extraction and Update Rules:
@@ -192,19 +196,25 @@ Specific Field Extraction:
   * If attendance is mentioned in the {user_input} then return the value from the user input.
   * If not specified use the value from the existing record.
   * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
+  * If user says worker was present for full month or present for all days or was not on leave or present 100 percent or anything similar to this statemet then make attendance as {attendance_period}.
   * it should not be 0 anytime.
 
 
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
+  * If user does not mention the month then use take from existing record and if user does not have existing record then make Repayment_Start_Month='sampatti'.
   * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
+  
 
 - For Repayment_Start_Year:
   * If the user mentions a specific year like (2025, 2026, "january 2025", "march 2026"):
     - Set the value of Repayment_Start_Year to the value which the user mentionsand then return in the response.
-
   * If user does not mentions anythiing related to the year then set the value of Repayment_Start_Year to 0. 
+  * If user says start repayment from the month(e.g., "March", "June") and if month is above the {current_month} then set the to the month and Repayment_Start_Year to the {current_year}+1.
+  * If user says start repayment from the month(e.g., "March", "June") and if month is below the {current_month} then set the to the month and Repayment_Start_Year to the {current_year}.
+  * e.g if month extracted from user input is may and current month is october and current year is x then make Repayment_Start_Year as x+1.
+  * e.g if month extracted from user input is may and current month is february and current year is x then make Repayment_Start_Year as x.
    
 - For detailsFlag:
   * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
@@ -219,6 +229,7 @@ Specific Field Extraction:
 
 - For salary:
   * If user mentions the salary then take the salary amount from the {user_input} and if not mentioned then take the salary amount from the existing record.
+  * If user says add or subtract some amount from the salary then do the necessary steps and return the salary amount.
   * It should never be 0.
 
 Key Processing Instructions:
@@ -396,7 +407,6 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     
     cleaned_response = response.replace('```json', '').replace('```', '').strip()
 
-    print(f"The response from LLM is: {response}")
     print(f"The response from LLM is: {cleaned_response}")
 
     try:
