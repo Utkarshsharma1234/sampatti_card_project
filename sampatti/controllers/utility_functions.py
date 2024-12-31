@@ -199,6 +199,7 @@ Specific Field Extraction:
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
+  * If user says next month then set the Repayment_Start_Month to the next month calculated from the {current_month}.
   * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
 
 - For Repayment_Start_Year:
