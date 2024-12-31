@@ -327,7 +327,8 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
         "January": 1, "February": 2, "March": 3, "April": 4,
         "May": 5, "June": 6,
         "July": 7, "August": 8, "September": 9,
-        "October": 10, "November": 11, "December": 12
+        "October": 10, "November": 11, "December": 12,
+        "sampatti" : 20
     }
 
     item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
