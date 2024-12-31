@@ -610,87 +610,6 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
             os.remove(temp_wav_path)
 
 
-async def extract_name(file_url: str, employerNumber : int):
-    if not file_url:
-        raise HTTPException(status_code=400, detail="File is not uploaded.")
-
-    results = []
-    static_dir = 'audio_files'
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-
-    user_input = ""
-    temp_wav_path = ""
-    
-    try:
-        # Download the file from the given URL
-        response = requests.get(file_url)
-        with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
-            # Write the downloaded content to the temp file
-            temp.write(response.content)
-            temp_path = temp.name
-
-        audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
-        temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
-        audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
-
-        # Transcribe the audio using Whisper
-        result = call_sarvam_api(temp_wav_path)
-        user_input = result["transcript"]
-        user_language = result["language_code"]
-        print(f"the result from the sarvam api is : {result}")
-
-        results.append({
-            "filename": os.path.basename(temp_path),
-            "transcript": user_input,
-            "language_code": user_language
-        })
-        
-        
-        # Prepare the context for the LLM based on existing record
-        context = {
-            "currentCashAdvance":  0,
-            "monthlyRepayment":  0,
-            "Repayment_Start_Month": "sampatti",
-            "Repayment_Start_Year":  0,
-            "Bonus":  0,
-            "Attendance": 0,
-            "detailsFlag" : 0,
-            "nameofWorker" : "sampatti",
-            "salary" : 0
-        }
-
-        # Pass the user input and context to the LLM for extraction
-        extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
-        print(f"usercontrollers : {extracted_info}")
-        
-        response = {
-            "crrCashAdvance" : extracted_info.get("currentCashAdvance"),
-            "Repayment_Monthly" : extracted_info.get("monthlyRepayment"),
-            "Repayment_Start_Month" : extracted_info.get("Repayment_Start_Month"),
-            "Repayment_Start_Year" : extracted_info.get("Repayment_Start_Year"),
-            "Bonus" : extracted_info.get("Bonus"),
-            "Attendance" : extracted_info.get("Attendance"),
-            "detailsFlag" : extracted_info.get("detailsFlag"),
-            "nameofWorker" : extracted_info.get("nameofWorker"),
-            "user_language" : user_language
-        }
-
-
-        return response
-
-    except PermissionError as e:
-        return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-    finally:
-        # Clean up by deleting the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        if os.path.exists(temp_wav_path):
-            os.remove(temp_wav_path)
-
-
 def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session):
 
     new_existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
@@ -725,18 +644,18 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
         outputAudio += f"attendance for this month is {new_existing_record.attendance}."
 
         
-        if user_language == "en-IN" or user_language == "null":
-            return send_audio(static_dir, outputAudio, "en-IN",employerNumber)
+        if user_language == "hi-IN":
+            return send_audio(static_dir, outputAudio, "hi-IN",employerNumber)
         else:
             translated_text = translate_text_sarvam(outputAudio, "en-IN", user_language)
-            return send_audio(static_dir, translated_text, user_language,employerNumber)
+            return send_audio(static_dir, translated_text, "en-IN",employerNumber)
     else:
 
-        if user_language == "en-IN" or user_language == "null":
-            return send_audio(static_dir, missingInformation, "en-IN",employerNumber)
+        if user_language == "hi-IN":
+            return send_audio(static_dir, missingInformation, "hi-IN",employerNumber)
         else:
             translated_text = translate_text_sarvam(missingInformation, "en-IN", user_language)
-            return send_audio(static_dir, translated_text, user_language,employerNumber)
+            return send_audio(static_dir, translated_text, "en-IN",employerNumber)
         
 
 def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session):

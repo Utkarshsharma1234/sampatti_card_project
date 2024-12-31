@@ -190,9 +190,9 @@ Specific Field Extraction:
 
 - Attendance: 
   * If attendance is mentioned in the {user_input} then return the value from the user input.
-  * If not specified use the value from the existing record.
+  * If nothing related to attendance is specified in the {user_input} take the Attendance value from the existing record.
   * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
-  * If user says worker was present for full month or present for all days or was not on leave or attendance is 100 percent or anything like you listen is 100 for attendance or anything similar to this statemet then make attendance as {attendance_period}.
+  * If user says worker was present for full month or present for all days or was not on leave or attendance is 100 percent or anything similar to this statemet then make attendance as {attendance_period}.
   * it should not be 0 anytime.
 
 
@@ -235,7 +235,7 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "currentCashAdvance": <cash advance amount as integer>
     "monthlyRepayment": <monthly repayment amount as integer>,
     "Bonus": <bonus amount as integer>,
-    "Attendance": <number of days present as integer or {attendance_period}>,
+    "Attendance": <number of days present as integer>,
     "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
     "Repayment_Start_Year": <integer in the form of yyyy>,
     "detailsFlag" : <0 or 1 as an integer>,
