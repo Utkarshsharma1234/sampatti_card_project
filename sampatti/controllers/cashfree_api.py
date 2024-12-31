@@ -344,7 +344,7 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
     total_salary = bonus + cashAdvance - repayment
     number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
-    salary = math.ceil(item.salary_amount/number_of_month_days) * attendance 
+    salary = math.ceil((item.salary_amount * attendance)/number_of_month_days) 
     total_salary += salary
 
     note = {'salary' : salary, 'cashAdvance' : cashAdvance, 'bonus' : bonus, 'repayment' : repayment, 'attendance' : attendance}
