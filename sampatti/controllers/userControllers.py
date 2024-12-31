@@ -465,6 +465,23 @@ def salary_payment_reminder(db : Session):
         whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_payment_reminder")
 
 
+def find_all_workers(employerNumber : int, db : Session):
+
+    total_workers = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber).all()
+
+    multiple_workers = []
+    for item in total_workers:
+        record = {
+            "text": item.worker_name,
+            "postback": f"data_nameofWorker={item.worker_name}"
+        }
+        multiple_workers.append(record)
+    
+    return {
+        "worker_array" : multiple_workers
+    }
+
+
 def create_cash_advance_entry(employerNumber : int, employer_id : str, worker_id : str, crrCashAdvance : int, Repayment_Monthly : int, Repayment_Start_Month : str, Repayment_Start_Year : int, Bonus : int, Attendance : int, db : Session):
 
     existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
@@ -557,7 +574,7 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
             "Repayment_Start_Year": 0,
             "Bonus": existing_record.bonus if existing_record else 0,
-            "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day),
+            "Attendance": existing_record.attendance if existing_record else 50,
             "detailsFlag" : 0,
             "nameofWorker" : workerName,
             "salary" : worker_employer_relation.salary_amount
@@ -671,7 +688,7 @@ async def extract_name(file_url: str, employerNumber : int):
             "Bonus" : extracted_info.get("Bonus"),
             "Attendance" : extracted_info.get("Attendance"),
             "detailsFlag" : extracted_info.get("detailsFlag"),
-            "nameOfWorker" : extracted_info.get("nameofWorker"),
+            "nameofWorker" : extracted_info.get("nameofWorker"),
             "user_language" : user_language
         }
 
@@ -705,7 +722,7 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
     if new_existing_record.currentCashAdvance > 0 and new_existing_record.repaymentStartMonth == "sampatti":
         missingInformation += "start date for the repayment."
 
-    if new_existing_record.attendance == determine_attendance_period(current_date().day):
+    if new_existing_record.attendance == 100:
         missingInformation += "attendance for this month."
 
     

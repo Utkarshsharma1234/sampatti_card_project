@@ -196,3 +196,7 @@ def extract_date(date_str : str):
 @router.post("/send_audio_message")
 def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.send_audio_message(employer_id, worker_id, user_language, employerNumber, db)
+
+@router.get("/get_all_workers")
+def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
+    return userControllers.find_all_workers(employerNumber, db)

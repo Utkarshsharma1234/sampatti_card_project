@@ -192,6 +192,7 @@ Specific Field Extraction:
   * If attendance is mentioned in the {user_input} then return the value from the user input.
   * If not specified use the value from the existing record.
   * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
+  * If user says worker was present for full month or present for all days or was not on leave or attendance is 100 percent or anything similar to this statemet then make attendance as {attendance_period}.
   * it should not be 0 anytime.
 
 
@@ -202,8 +203,7 @@ Specific Field Extraction:
 
 - For Repayment_Start_Year:
   * If the user mentions a specific year like (2025, 2026, "january 2025", "march 2026"):
-    - Set the value of Repayment_Start_Year to the value which the user mentionsand then return in the response.
-
+    - Set the value of Repayment_Start_Year to the value which the user mentions and then return in the response.
   * If user does not mentions anythiing related to the year then set the value of Repayment_Start_Year to 0. 
    
 - For detailsFlag:
