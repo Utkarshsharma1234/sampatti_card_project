@@ -266,44 +266,47 @@ def payment_link_generation(db : Session):
     
     for item in total_relations:
 
-        dummy_number = item.employer_number
-        actual_number = int(str(dummy_number)[2:])
-        
-        customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
+        if item.employer_number != 916378639230:
+            continue
+        else:
+            dummy_number = item.employer_number
+            actual_number = int(str(dummy_number)[2:])
+            
+            customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
 
-        cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
+            cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
 
-        repayment = 0
+            repayment = 0
 
-        if cashAdvanceEntry is not None:
+            if cashAdvanceEntry is not None:
 
-            if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
-                if cashAdvanceEntry.cashAdvance > 0:
-                    repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
+                if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
+                    if cashAdvanceEntry.cashAdvance > 0:
+                        repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
 
-        total_salary = item.salary_amount - repayment
-        number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
+            total_salary = item.salary_amount - repayment
+            number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
 
-        note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : repayment, 'attendance' : number_of_month_days}
+            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : repayment, 'attendance' : number_of_month_days}
 
-        note_string = json.dumps(note)
-        createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
-        try:
-            api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
-            # print(api_response.data)
-        except Exception as e:
-            print(e)
+            note_string = json.dumps(note)
+            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+            try:
+                api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
+                # print(api_response.data)
+            except Exception as e:
+                print(e)
 
-        response = dict(api_response.data)
-        payment_session_id = response["payment_session_id"]
+            response = dict(api_response.data)
+            payment_session_id = response["payment_session_id"]
 
-        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
+            send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
 
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
+            update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
 
-        db.execute(update_statement)
-        db.commit()
-        payment_ids.append(payment_session_id)
+            db.execute(update_statement)
+            db.commit()
+            payment_ids.append(payment_session_id)
 
     return payment_ids
 
