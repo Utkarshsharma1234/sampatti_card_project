@@ -271,7 +271,7 @@ def payment_link_generation(db : Session):
         
         customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
 
-        cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id)
+        cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
 
         repayment = 0
 
@@ -297,7 +297,7 @@ def payment_link_generation(db : Session):
         response = dict(api_response.data)
         payment_session_id = response["payment_session_id"]
 
-        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="employer_salary_payment")
+        send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
 
         update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
 
@@ -383,7 +383,7 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
 # settle the unsettled balance on cashfree to the worker's account.
 
-def unsettled_balance(db : Session):
+def unsettled_balance(employerNumber : int, orderId : str, db : Session):
 
     
     headers = {
@@ -392,39 +392,23 @@ def unsettled_balance(db : Session):
         'Content-Type': 'application/json'
     }
 
-    total_workers = db.query(models.worker_employer).all()
-    for transaction in total_workers:
-        
-        response_data = check_order_status(order_id=transaction.order_id)
+    order_info = check_order_status(orderId)
+    totalAmount = order_info["order_amount"]
+    transaction = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).first()
 
-        bonus = 0
-        existing_bonus_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employerNumber==transaction.employer_number, models.CashAdvanceManagement.worker_id==transaction.worker_id).first()
+    url = f'https://api.cashfree.com/api/v2/easy-split/orders/{orderId}/split'
 
-        if existing_bonus_entry is not None:
-            bonus += existing_bonus_entry.bonus
-
-        status = response_data["order_status"]
-        total_salary = transaction.salary_amount + bonus
-        if(status == "PAID"):
-
-            url = f'https://api.cashfree.com/api/v2/easy-split/orders/{transaction.order_id}/split'
-
-            data = {
-                "split": [
-                    {
-                        "vendorId": transaction.vendor_id,
-                        "amount" : total_salary,
-                        "percentage" : None
-                    }
-                ],
-                "splitType" : "ORDER_AMOUNT"
+    data = {
+        "split": [
+            {
+                "vendorId": transaction.vendor_id,
+                "amount" : totalAmount,
+                "percentage" : None
             }
+        ],
+        "splitType" : "ORDER_AMOUNT"
+    }
 
-            json_data = json.dumps(data)
-            response = requests.post(url, headers=headers, data=json_data)
-
-            print(response.text)
-
-        else:
-            continue
-
+    json_data = json.dumps(data)
+    response = requests.post(url, headers=headers, data=json_data)
+    print(response.text)

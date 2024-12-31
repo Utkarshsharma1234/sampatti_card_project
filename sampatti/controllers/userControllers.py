@@ -428,7 +428,7 @@ def send_greetings(db : Session):
     total_employers = db.query(models.Employer).all()
 
     for employer in total_employers:
-        whatsapp_message.send_greetings(employer.employerNumber, template_name="diwali_greetings")
+        whatsapp_message.send_greetings(employer.employerNumber, template_name="salary_adjust_greetings")
 
     return {
         "MESSAGE" : "Greetings sent successfully."

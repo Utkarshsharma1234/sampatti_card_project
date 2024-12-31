@@ -73,48 +73,35 @@ def send_whatsapp_message(employerNumber, worker_name, param3, link_param,templa
 
 def send_greetings(employerNumber,template_name):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
     headers = {
         "API-KEY": orai_api_key,
         "Content-Type": "application/json"
     }
 
     data = {
-        "messaging_product": "whatsapp",
-        "to": employerNumber,
-        "type": "template",
-        "template" : {
+        "template": {
             "namespace": orai_namespace,
-            "language": {
-                "code": "en_US",
-                "policy": "deterministic"
-            },
             "name": template_name,
-            "components" : [
-
+            "components": [
                 {
-                    "type" : "header",
-                    "parameters" : [
-                        {
-                            "type": "image",
-                            "image": {
-                                "link": "https://sampattifilstorage.sgp1.digitaloceanspaces.com/diwali_image.jpg"
-                            }
-                        }
-                    ]
-                },
-
-                {
-                    "type" : "body",
-                    "parameters" : [
+                    "type": "body",
+                    "parameters": [
                         {
                             "type": "text",
                             "text": employerNumber
                         }
                     ]
                 }
-            ]
-        }
-
+            ],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
     }
 
     response = requests.post(url, headers=headers, json=data)
@@ -123,7 +110,6 @@ def send_greetings(employerNumber,template_name):
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
-
 
 
 # generate media id for the file uploading
