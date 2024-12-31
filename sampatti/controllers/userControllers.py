@@ -706,7 +706,7 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
     if new_existing_record.currentCashAdvance > 0 and new_existing_record.repaymentStartMonth == "sampatti":
         missingInformation += "start date for the repayment."
 
-    if new_existing_record.attendance == 100:
+    if new_existing_record.attendance == 50:
         missingInformation += "attendance for this month."
 
     
@@ -715,7 +715,7 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
         outputAudio = f"Please confirm the following details."
 
         if new_existing_record.currentCashAdvance > 0:
-            outputAudio += f"The cash advance amount is {new_existing_record.currentCashAdvance} while the repayment per month is {new_existing_record.monthlyRepayment}. The repayment starts from {new_existing_record.repaymentStartMonth} {new_existing_record.repaymentStartYear}. The salary for your worker is {worker_employer_relation.salary_amount}"
+            outputAudio += f"The cash advance amount is {new_existing_record.currentCashAdvance} while the repayment per month is {new_existing_record.monthlyRepayment}. The repayment starts from {new_existing_record.repaymentStartMonth} {new_existing_record.repaymentStartYear}. The salary for your worker is {worker_employer_relation.salary_amount}."
 
         if new_existing_record.bonus > 0:
 
