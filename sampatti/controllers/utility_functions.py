@@ -190,7 +190,6 @@ Specific Field Extraction:
 
 - Attendance: 
   * If attendance is mentioned in the {user_input} then return the value from the user input.
-  * If user says attendance is 100 or the attendance 100 percent then take the attendance as {attendance_period}.
   * If not specified use the value from the existing record.
   * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
   * If user says worker was present for full month or present for all days or was not on leave or attendance is 100 percent or anything like you listen is 100 for attendance or anything similar to this statemet then make attendance as {attendance_period}.
