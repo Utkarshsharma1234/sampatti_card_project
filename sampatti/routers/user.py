@@ -200,3 +200,11 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
 @router.get("/get_all_workers")
 def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.find_all_workers(employerNumber, db)
+
+@router.get("/generate_salary_records_all_worker")
+def generate_salary_records_all_worker(employerNumber: int, db: Session = Depends(get_db)):
+    return userControllers.generate_salary_records_all_worker_controller(employerNumber, db)
+
+@router.get("/generate_salary_record")
+def generate_salary_record(employerNumber: int, workerName: str, db: Session = Depends(get_db)):
+    return userControllers.generate_salary_record_controller(employerNumber, workerName, db)
