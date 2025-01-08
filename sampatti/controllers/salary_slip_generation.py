@@ -186,7 +186,7 @@ employer for the worker for whom salary record is generated."""
     c.rect(0,0,w,30, fill=True)
     c.setFillColorRGB(1,1,1)
     c.drawString(x+20, 12.5, "Phone : +91 86603 52558")
-    c.drawString(x+ 170, 12.5, "website : www.sampatticard.in          support : vrashali@sampatticard.in")
+    c.drawString(x+ 170, 12.5, "website : www.sampatticard.in          support : support@sampatticard.in")
 
     c.showPage()
     c.save()

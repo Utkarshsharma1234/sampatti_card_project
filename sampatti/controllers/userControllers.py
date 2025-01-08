@@ -10,6 +10,7 @@ from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to
 from sqlalchemy.orm import Session
 from fuzzywuzzy import fuzz
 from pydub import AudioSegment
+from .salary_report_gen import generate_salary_records_all_worker, generate_salary_record
 
 
 # creating the employer
@@ -670,3 +671,22 @@ def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : 
     update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).values(salary_amount = salary)
     db.execute(update_statement)
     db.commit()
+    
+def generate_salary_records_all_worker_controller(employerNumber: int, db : Session):
+    generate_salary_records_all_worker(employerNumber, db)
+    
+    employer_salary_report_name = f"salary_record_{employerNumber}.pdf"
+    object_name = f"employerReport/{employer_salary_report_name}"
+    static_dir = os.path.join(os.getcwd(), 'Salary_Report')
+    filePath = os.path.join(static_dir, f"salary_record_{employerNumber}.pdf")
+    print("Sent")
+    
+
+def generate_salary_record_controller(employerNumber: int, workerName: str, db : Session):
+    generate_salary_record(employerNumber, workerName, db)
+    
+    employer_salary_report_name = f"salary_record_of_{workerName}.pdf"
+    object_name = f"employerReport/{employer_salary_report_name}"
+    static_dir = os.path.join(os.getcwd(), 'Salary_Report')
+    filePath = os.path.join(static_dir, f"salary_record_of_{workerName}.pdf")
+    print("Sent")
