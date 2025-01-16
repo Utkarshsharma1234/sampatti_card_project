@@ -12,11 +12,15 @@ from langchain_core.runnables import RunnableSequence
 from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
 from sqlalchemy.orm import Session
+from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
+openai_api_key = os.environ.get('OPENAI_API_KEY')
 
 def amount_to_words(amount: float) -> str:
     # Define word representations for numbers 0 to 19
@@ -537,3 +541,92 @@ def calculate_year_for_month(month_name):
         year = current_year
 
     return year
+
+
+
+questions = {
+    "1": "Please record your occupation",
+    "2": "Number of family members",
+    "3": "Do you have a bank account? (Yes/No) ",
+    "4": "If Yes, which bank? (State Bank of India, Union Bank of India, Canara Bank, Other)",
+    "5": "If No, why not? (Check all that apply) (Lack of documents, No bank nearby, Don't know how to open, Don't need one, Other (specify))" ,
+    "6": "What services do you use at the bank? (Deposits, Withdrawals, Money transfers, Loan payments, Other)",
+    "7": "Do you have an ATM card? (Yes/No)",
+    "8": "If Yes, how often do you use it? (Several times a week, Weekly, Monthly, Rarely, Never)",
+    "9": "Do you use any digital payment methods? (UPI, Mobile banking, Internet banking, None)",
+    "10": "If you use digital payments, what do you use them for? (Utility bills, Shopping, Money transfers, Other)",
+    "11": "What challenges do you face with digital payments? (Lack of smartphone, Poor internet connectivity, Fear of fraud, Difficulty understanding technology, Other)",
+    "12": "Have you ever taken a loan? (Yes/No)",
+    "13": "If Yes, from where? (Bank, Microfinance Institution, Self-Help Group, Money lender, Family/Friends, Other)",
+    "14": "Purpose of loan(s): (Business, Education, Medical expenses, Housing, Personal needs, Other)",
+    "15": "Have you ever been rejected for a loan? (Yes/No)",
+    "16": "If Yes, why? (Check all that apply) (Low income, No collateral, Poor credit history, Lack of documents, Other)",
+    "17": "Record any information on interest and terms of repayment",
+    "18": "Do you save money? (Yes/No)",
+    "19": "If Yes, how do you save? (Bank account, Cash at home, Chit funds, Self-Help Groups, Other)",
+    "20": "How much can you typically save per month? (Less than ₹500, ₹500 - ₹1,000, ₹1,000 - ₹2,000, More than ₹2,000)",
+    "21": "What do you save for? (Emergencies, Children's education, Business, Marriage/festivals, Old age, Other)",
+    "22": "Do you have any insurance? (Yes/No)",
+    "23": "If Yes, what type? (LIC, Ayushman Bharat, Private Insurance, Other)",
+    "24": "If No, why not? (Too expensive, Don't understand insurance, Don't think it's necessary, Never approached by anyone, Other)",
+    "25": "Please share any other challenges or suggestions regarding financial services"
+}
+
+# Function to process the response
+def process_response(worker_id : str, question_id : str, answer : str):
+    
+    llm = ChatOpenAI(
+        model="gpt-4", 
+        temperature=0.7, 
+        api_key = openai_api_key
+    )
+
+    #Current question
+    current_question_text = questions[question_id]
+
+    #prompt to process the answer
+    prompt_template = PromptTemplate(
+        input_variables=["worker_id", "current_question", "answer", "questions"],
+        template="""
+        Worker ID: {worker_id}
+        Current Question: {current_question}
+        Worker Answer: {answer}
+
+        Here is the full list of survey questions:
+        {questions}
+
+        1. If the provided answer contains responses for multiple questions, extract and match them to their respective question IDs.
+        2. Generate the next most relevant question ID and text based on the provided answers.
+        3. if the answer does not match question and then check if it matches to the other questions. If it matches to other questions then extract the answer and question id and repeat the question with question id.
+        4. please remove if yes or no from the question and provide the revised question in next question.
+
+
+        Respond in the following JSON format:
+        {{
+            "extracted_answers": [
+                {{"question_id": "<ID>", "answer": "<Answer>"}},
+                ...
+            ],
+            "next_question": {{"id": "<ID>", "text": "<Text>"}}
+        }}
+        """
+    )
+
+    # Generate the prompt
+    questions_list = "\n".join([f"ID {qid}: {text}" for qid, text in questions.items()])
+    prompt = prompt_template.format(
+        worker_id=worker_id,
+        current_question=current_question_text,
+        answer=answer,
+        questions=questions_list
+    )
+
+    # Get LLM response
+    response = llm.predict(prompt)
+
+    # Parse the LLM response
+    try:
+        response_data = json.loads(response)
+        return response_data
+    except json.JSONDecodeError as e:
+        return {"error": "Failed to parse LLM response", "details": str(e)}
