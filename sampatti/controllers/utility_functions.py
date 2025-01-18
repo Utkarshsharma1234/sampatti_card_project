@@ -12,11 +12,15 @@ from langchain_core.runnables import RunnableSequence
 from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
 from sqlalchemy.orm import Session
+from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
+openai_api_key = os.environ.get('OPENAI_API_KEY')
 
 def amount_to_words(amount: float) -> str:
     # Define word representations for numbers 0 to 19
@@ -356,6 +360,7 @@ Respond with the JSON ONLY. NO additional text!"""
     return template
 
 
+
 def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
     # Validate employer_number
     if not employer_number:
@@ -537,3 +542,103 @@ def calculate_year_for_month(month_name):
         year = current_year
 
     return year
+
+
+
+questions = {
+    "1": "Please provide your age?",
+    "2": "What is your education?(No formal eduaction, primary eductaion, secondary education, higher secondary education, diploma, graduate, post graduate, other)",
+    "3": "what is your monthly household income?",
+    "4": "Please record your occupation",
+    "5": "Number of family members",
+    "6": "Do you have a bank account? (Yes/No) ",
+    "7": "If Yes, which bank? (State Bank of India, Union Bank of India, Canara Bank, Other)",
+    "8": "If No, why don't you have bank account? (Check all that apply) (Lack of documents, No bank nearby, Don't know how to open, Don't need one, Other (specify))" ,
+    "9": "What services do you use at the bank? (Deposits, Withdrawals, Money transfers, Loan payments, Other)",
+    "10": "Do you have an ATM card? (Yes/No)",
+    "11": "If Yes, how often do you use it? (Several times a week, Weekly, Monthly, Rarely, Never)",
+    "12": "Do you use any digital payment methods? (UPI, Mobile banking, Internet banking, None)",
+    "13": "If you use digital payments, what do you use them for? (Utility bills, Shopping, Money transfers, Other)",
+    "14": "What challenges do you face with digital payments? (Lack of smartphone, Poor internet connectivity, Fear of fraud, Difficulty understanding technology, Other)",
+    "15": "Have you ever taken a loan? (Yes/No)",
+    "16": "If Yes, from where? (Bank, Microfinance Institution, Self-Help Group, Money lender, Family/Friends, Other)",
+    "17": "Purpose of loan(s): (Business, Education, Medical expenses, Housing, Personal needs, Other)",
+    "18": "Have you ever been rejected for a loan? (Yes/No)",
+    "19": "If Yes, why? (Check all that apply) (Low income, No collateral, Poor credit history, Lack of documents, Other)",
+    "20": "Record any information on interest and terms of repayment",
+    "21": "Do you save money? (Yes/No)",
+    "22": "If Yes, how do you save? (Bank account, Cash at home, Chit funds, Self-Help Groups, Other)",
+    "23": "How much can you typically save per month? (Less than ₹500, ₹500 - ₹1,000, ₹1,000 - ₹2,000, More than ₹2,000)",
+    "24": "What do you save for? (Emergencies, Children's education, Business, Marriage/festivals, Old age, Other)",
+    "25": "Do you have any insurance? (Yes/No)",
+    "26": "If Yes, what type? (LIC, Ayushman Bharat, Private Insurance, Other)",
+    "27": "If No, why don't you have insurance? (Too expensive, Don't understand insurance, Don't think it's necessary, Never approached by anyone, Other)",
+    "28": "Please share any other challenges or suggestions regarding financial services"
+}
+
+# Function to process the response
+def process_response(worker_id : str, question_id : str, answer : str):
+    
+    llm = ChatOpenAI(
+        model="gpt-4", 
+        temperature=0.7, 
+        api_key = openai_api_key
+    )
+
+    #Current question
+    current_question_text = questions[question_id]
+
+    #prompt to process the answer
+    prompt_template = PromptTemplate(
+        input_variables=["worker_id", "current_question", "answer", "questions"],
+        template="""
+        Worker ID: {worker_id}
+        Current Question: {current_question}
+        Worker Answer: {answer}
+
+        Here is the full list of survey questions:
+        {questions}
+
+        1. If the provided answer contains responses for multiple questions, extract and match them to their respective question IDs.
+        2. Generate the next most relevant question ID and text based on the provided answers.
+        3. If the answer does not match the current question, check if it matches other questions. If it matches other questions, extract the answer and question ID and repeat the question with the question ID.
+        4. Please remove "if yes" or "if no" from the question and provide the revised question in the next question.
+        5. Store the answer as required only for the key question; don't save unnecessary information.
+        6. For "yes or no" type questions, if the answer is "yes", then for the "no" question save the answer accordingly and vice versa.
+        7. For "yes or no" type answers, if the answer is "no", then for the "yes" question save the answer accordingly and vice versa.
+        8. If the answer is "yes", then for the "no" type question save the answer accordingly and vice versa.
+        9. If the answer is "no", then for the "yes" type question save the answer accordingly and vice versa.
+        Examples: 
+        * If the user says "I have a bank account in SBI bank", then for the question "If no, why not" save the answer as "I have a bank account in SBI bank".
+        * If the user says "I don't have insurance", then for the question "If yes, what type" save the answer accordingly to yourself.
+        
+
+        Respond in the following JSON format:
+        {{
+            "extracted_answers": [
+                {{"question_id": "<ID>", "answer": "<Answer>"}},
+                ...
+            ],
+            "next_question": {{"id": "<ID>", "text": "<Text>"}}
+        }}
+        """
+    )
+
+    # Generate the prompt
+    questions_list = "\n".join([f"ID {qid}: {text}" for qid, text in questions.items()])
+    prompt = prompt_template.format(
+        worker_id=worker_id,
+        current_question=current_question_text,
+        answer=answer,
+        questions=questions_list
+    )
+
+    # Get LLM response
+    response = llm.predict(prompt)
+
+    # Parse the LLM response
+    try:
+        response_data = json.loads(response)
+        return response_data
+    except json.JSONDecodeError as e:
+        return {"error": "Failed to parse LLM response", "details": str(e)}
