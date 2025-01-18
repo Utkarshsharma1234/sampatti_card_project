@@ -632,12 +632,15 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         answer=answer,
         questions=questions_list
     )
-
     # Get LLM response
+
+    print(f"the prompt is : {prompt}")
     response = llm.predict(prompt)
 
+    print(f"the response is : {response}")
     # Parse the LLM response
     try:
+        print("entering response data.")
         response_data = json.loads(response)
         print(response_data)
 
@@ -660,14 +663,3 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         return next_question
     except json.JSONDecodeError as e:
         return {"error": "Failed to parse LLM response", "details": str(e)}
-    
-
-    id = Column(String, primary_key=True)
-    responseText = Column(String, nullable=False)
-    workerId = Column(String, ForeignKey('Domestic_Worker.id'))
-    questionId = Column(Integer, ForeignKey('QuestionBank.id'))
-    surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
-    timestamp = Column(String)
-# take audio input and return the transalated text.  -> done
-# take question and answer as input and return the next question id.
-# given a question id return an audio for the question.  -> done

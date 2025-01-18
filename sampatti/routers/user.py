@@ -163,18 +163,6 @@ def generate_sheet():
 def copy_employer_message(db : Session = Depends(get_db)):
     return userControllers.copy_employer_message(db)
 
-@router.post('/process_audio')
-async def process_audio(file_url: str, employerNumber : int, workerName :str, db : Session = Depends(get_db)):
-    return await userControllers.process_audio(file_url, employerNumber, workerName, db)
-
-@router.get("/get_translated_text")
-async def get_transalated_text(file_url: str):
-    return await userControllers.get_transalated_text(file_url)
-
-@router.post('/extract_name')
-async def extract_name(file_url: str, employerNumber : int):
-    return await userControllers.extract_name(file_url, employerNumber,)
-
 @router.post("/salary_details")
 def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.update_salary_details(employerNumber, orderId, db)
@@ -205,9 +193,21 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
 def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.find_all_workers(employerNumber, db)
 
+@router.post('/process_audio')
+async def process_audio(file_url: str, employerNumber : int, workerName :str, db : Session = Depends(get_db)):
+    return await userControllers.process_audio(file_url, employerNumber, workerName, db)
+
+@router.post('/extract_name')
+async def extract_name(file_url: str, employerNumber : int):
+    return await userControllers.extract_name(file_url, employerNumber,)
+
 @router.get("/get_next_question")
 def get_next_question(workerId : str, questionId : int, answer : str, surveyId : int, db : Session = Depends(get_db)):
     return utility_functions.get_next_question(workerId, questionId, answer, surveyId, db)
+
+@router.get("/get_translated_text")
+async def get_transalated_text(file_url: str):
+    return await userControllers.get_transalated_text(file_url)
 
 @router.get("/send_question_audio")
 def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session = Depends(get_db)):
