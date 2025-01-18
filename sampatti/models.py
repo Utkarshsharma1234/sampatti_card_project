@@ -99,3 +99,27 @@ class CashAdvanceRecords(Base):
     typeOfAmount = Column(String)
     amount = Column(Integer)
     dateIssuedOn = Column(String)
+
+class Survey(Base):
+    __tablename__ = "SurveyDetails"
+    id = Column(Integer, primary_key=True)
+    surveyTitle = Column(String, nullable=False)
+    description = Column(String)
+    startDate = Column(String)
+    endDate = Column(String)
+
+class QuestionBank(Base):
+    __tablename__ = "QuestionBank"
+    id = Column(Integer, primary_key=True)
+    questionText = Column(String)
+    surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
+    questionType = Column(String)
+
+class Responses(Base):
+    __tablename__ = "Responses"
+    id = Column(String, primary_key=True)
+    responseText = Column(String, nullable=False)
+    workerId = Column(String, ForeignKey('Domestic_Worker.id'))
+    questionId = Column(Integer, ForeignKey('QuestionBank.id'))
+    surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
+    timestamp = Column(String)

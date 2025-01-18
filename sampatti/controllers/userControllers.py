@@ -500,6 +500,50 @@ def create_cash_advance_entry(employerNumber : int, employer_id : str, worker_id
         db.refresh(new_cash_advance_entry)
 
 
+async def get_transalated_text(file_url: str):
+
+    if not file_url:
+        raise HTTPException(status_code=400, detail="File is not uploaded.")
+    
+    static_dir = 'audio_files'
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+
+    temp_wav_path = ""
+
+    try:
+        # Download the file from the given URL
+        response = requests.get(file_url)
+        with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
+            # Write the downloaded content to the temp file
+            temp.write(response.content)
+            temp_path = temp.name
+
+        print(f"Downloaded temp file: {temp_path}")
+        audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
+        temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
+        audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
+        print(f"Converted to wav: {temp_wav_path}")
+
+        # Transcribe the audio using Whisper
+        result = call_sarvam_api(temp_wav_path)
+        return {
+            "text" : result["transcript"],
+            "user_language" : result["language_code"]
+        }
+
+    except PermissionError as e:
+        return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        # Clean up by deleting the temporary file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        if os.path.exists(temp_wav_path):
+            os.remove(temp_wav_path)
+
+
 async def process_audio(file_url: str, employerNumber : int, workerName: str, db : Session):
     if not file_url:
         raise HTTPException(status_code=400, detail="File is not uploaded.")
@@ -670,3 +714,10 @@ def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : 
     update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).values(salary_amount = salary)
     db.execute(update_statement)
     db.commit()
+
+
+def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session):
+
+    question = db.query(models.QuestionBank).filter(models.QuestionBank.id == question_id).first()
+    questionText = question.questionText
+    return send_audio("audio_files", questionText, user_language ,employerNumber)

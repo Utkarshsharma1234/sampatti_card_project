@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
-
+from .. import models
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
@@ -547,8 +547,8 @@ def calculate_year_for_month(month_name):
 
 questions = {
     "1": "Please provide your age?",
-    "2": "What is your education?(No formal eduaction, primary eductaion, secondary education, higher secondary education, diploma, graduate, post graduate, other)",
-    "3": "what is your monthly household income?",
+    "2": "What is your education?(No formal education, primary education, secondary education, higher secondary education, diploma, graduate, post graduate, other)",
+    "3": "what is your monthly household income? (20000/5000/100000/52000 integer value)",
     "4": "Please record your occupation",
     "5": "Number of family members",
     "6": "Do you have a bank account? (Yes/No) ",
@@ -577,7 +577,7 @@ questions = {
 }
 
 # Function to process the response
-def process_response(worker_id : str, question_id : str, answer : str):
+def get_next_question(workerId : str, questionId : int, answer : str, surveyId : int, db : Session):
     
     llm = ChatOpenAI(
         model="gpt-4", 
@@ -586,7 +586,7 @@ def process_response(worker_id : str, question_id : str, answer : str):
     )
 
     #Current question
-    current_question_text = questions[question_id]
+    current_question_text = questions[f"{questionId}"]
 
     #prompt to process the answer
     prompt_template = PromptTemplate(
@@ -627,7 +627,7 @@ def process_response(worker_id : str, question_id : str, answer : str):
     # Generate the prompt
     questions_list = "\n".join([f"ID {qid}: {text}" for qid, text in questions.items()])
     prompt = prompt_template.format(
-        worker_id=worker_id,
+        worker_id=workerId,
         current_question=current_question_text,
         answer=answer,
         questions=questions_list
@@ -639,6 +639,35 @@ def process_response(worker_id : str, question_id : str, answer : str):
     # Parse the LLM response
     try:
         response_data = json.loads(response)
-        return response_data
+        print(response_data)
+
+        extracted_answers = response_data["extracted_answers"]
+        next_question = response_data["next_question"]
+
+        print(f"extracted answers : {extracted_answers}")
+        print(f"next ques : {next_question}")
+        for item in extracted_answers:
+
+            qId = item["question_id"]
+            ans = item["answer"]
+
+            new_response_entry = models.Responses(id = generate_unique_id(), responseText = ans, workerId = workerId, questionId = qId, surveyId = surveyId, timestamp = f"{datetime.now()}")
+
+            db.add(new_response_entry)
+            db.commit()
+            db.refresh(new_response_entry)
+
+        return next_question
     except json.JSONDecodeError as e:
         return {"error": "Failed to parse LLM response", "details": str(e)}
+    
+
+    id = Column(String, primary_key=True)
+    responseText = Column(String, nullable=False)
+    workerId = Column(String, ForeignKey('Domestic_Worker.id'))
+    questionId = Column(Integer, ForeignKey('QuestionBank.id'))
+    surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
+    timestamp = Column(String)
+# take audio input and return the transalated text.  -> done
+# take question and answer as input and return the next question id.
+# given a question id return an audio for the question.  -> done
