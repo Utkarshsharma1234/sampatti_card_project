@@ -660,6 +660,9 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
             db.commit()
             db.refresh(new_response_entry)
 
-        return next_question
+        return {
+            "id" : int(next_question["id"]),
+            "text" : next_question["text"]
+        }
     except json.JSONDecodeError as e:
         return {"error": "Failed to parse LLM response", "details": str(e)}
