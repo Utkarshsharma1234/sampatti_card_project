@@ -162,7 +162,7 @@ def generate_audio_media_id(path : str, folder : str):
         "messaging_product": "whatsapp"
     }
     files=[
-        ('file',(path,open(static_audio_path,'rb'),'application/octet-stream'))
+        ('file',(path,open(static_audio_path,'rb'),'audio/mpeg'))
     ]
 
     try:
