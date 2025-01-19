@@ -212,3 +212,15 @@ async def get_transalated_text(file_url: str):
 @router.get("/send_question_audio")
 def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session = Depends(get_db)):
     return userControllers.send_question_audio(employerNumber, question_id, user_language, db)
+
+
+@router.get("/send_audio")
+def send_audio( sample_output: str, language: str, employerNumber: int):
+
+    output_directory = "audio_files"
+    return utility_functions.send_audio(output_directory, sample_output, language, employerNumber)
+
+@router.get("/send_ogg")
+def send_ogg(employerNumber : int):
+    return utility_functions.send_ogg(employerNumber)
+

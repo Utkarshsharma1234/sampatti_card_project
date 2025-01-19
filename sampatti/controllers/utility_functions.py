@@ -1,3 +1,4 @@
+import shutil
 import json, os, uuid, random, string,  difflib, re, requests, base64
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
@@ -16,6 +17,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
 from .. import models
+from pydub import AudioSegment
+import subprocess
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
@@ -490,19 +493,22 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
 
         os.makedirs(output_directory, exist_ok=True)
 
-        output_file_path = os.path.join(os.getcwd(), output_directory, "output.mp3")
+        mp3_file_path = os.path.join(os.getcwd(), output_directory, "output.mp3")
+        ogg_file_path = os.path.join(os.getcwd(), output_directory, "output.ogg")
+
              # Decode the Base64 string to binary data
         audio_data = base64.b64decode(base64_string)
 
              # Write the binary data to a file
-        with open(output_file_path, "wb") as audio_file:
+        with open(mp3_file_path, "wb") as audio_file:
             audio_file.write(audio_data)
 
-        print(f"File saved as: {output_file_path}")
+        print(f"File saved as: {mp3_file_path}")
                 #Generate the audio media ID using your existing WhatsApp logic
 
         
-        mediaIdObj = whatsapp_message.generate_audio_media_id("output.mp3", output_directory)
+        convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
+        mediaIdObj = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
         audioMediaId = mediaIdObj["id"]
         whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
         return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
@@ -666,3 +672,28 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         }
     except json.JSONDecodeError as e:
         return {"error": "Failed to parse LLM response", "details": str(e)}
+    
+
+def convert_mp3_to_ogg(input_file : str, output_file : str):
+
+    try:
+        # Check if ffmpeg is installed
+        if not shutil.which("ffmpeg"):
+            raise EnvironmentError("ffmpeg is not installed or not in PATH.")
+
+        # Construct ffmpeg command
+        command = [
+            "ffmpeg",
+            "-i", input_file,
+            "-ar", "16000",  # Set sample rate to 16kHz
+            "-c:a", "libopus",  # Use libopus codec
+            output_file
+        ]
+
+        # Run the command
+        subprocess.run(command, check=True)
+        print(f"Conversion successful: {output_file}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during conversion: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
