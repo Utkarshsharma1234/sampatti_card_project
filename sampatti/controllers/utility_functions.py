@@ -507,8 +507,8 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
                 #Generate the audio media ID using your existing WhatsApp logic
 
         
-        # convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
-        mediaIdObj = whatsapp_message.generate_audio_media_id("output.mp3", output_directory)
+        convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
+        mediaIdObj = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
         audioMediaId = mediaIdObj["id"]
         whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
         return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}

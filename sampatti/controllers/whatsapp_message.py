@@ -152,19 +152,18 @@ def generate_audio_media_id(path : str, folder : str):
 
     url = "https://waba-v2.360dialog.io/media"
 
-    static_audio_path = os.path.join(os.getcwd(), folder, path)
-    print(static_audio_path)
-    headers = {
-        "D360-API-KEY": orai_api_key
-    }
+    file_path = os.path.join(os.getcwd(), folder, path)
+    print("entering into media id for the ogg file.")
+    print(file_path)
 
-    payload = {
-        "messaging_product": "whatsapp"
-    }
+    payload = {'messaging_product': 'whatsapp'}
     files=[
-        ('file',(path,open(static_audio_path,'rb'),'audio/mpeg'))
+        ('file',('output.ogg',open(file_path,'rb'),'audio/opus'))
     ]
-
+    headers = {
+        'D360-API-KEY': orai_api_key,
+        'Accept': 'application/json'
+    }
     try:
         response = requests.post(url, headers=headers, data=payload, files=files)
         return response.json()
@@ -181,9 +180,8 @@ def send_whatsapp_audio(audio_media_id : str, employerNumber : int):
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": f"{employerNumber}",
-        "type": "document",
-        "document": {
-            "filename" : "response",
+        "type": "audio",
+        "audio": {
             "id" : f"{audio_media_id}"
         }
     })
