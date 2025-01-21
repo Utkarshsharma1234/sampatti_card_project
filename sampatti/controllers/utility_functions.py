@@ -586,7 +586,7 @@ questions = {
 def get_next_question(workerId : str, questionId : int, answer : str, surveyId : int, db : Session):
     
     llm = ChatOpenAI(
-        model="gpt-4", 
+        model="gpt-4o", 
         temperature=0.7, 
         api_key = openai_api_key
     )
@@ -607,18 +607,13 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
 
         1. If the provided answer contains responses for multiple questions, extract and match them to their respective question IDs.
         2. Generate the next most relevant question ID and text based on the provided answers.
-        3. If the answer does not match the current question, check if it matches other questions. If it matches other questions, extract the answer and question ID and repeat the question with the question ID.
-        4. Please remove "if yes" or "if no" from the question and provide the revised question in the next question.
-        5. Store the answer as required only for the key question; don't save unnecessary information.
-        6. For "yes or no" type questions, if the answer is "yes", then for the "no" question save the answer accordingly and vice versa.
-        7. For "yes or no" type answers, if the answer is "no", then for the "yes" question save the answer accordingly and vice versa.
-        8. If the answer is "yes", then for the "no" type question save the answer accordingly and vice versa.
-        9. If the answer is "no", then for the "yes" type question save the answer accordingly and vice versa.
-        Examples: 
-        * If the user says "I have a bank account in SBI bank", then for the question "If no, why not" save the answer as "I have a bank account in SBI bank".
-        * If the user says "I don't have insurance", then for the question "If yes, what type" save the answer accordingly to yourself.
+        3. If the answer does not match the current question, check if it matches other questions. If it matches other questions, extract the answer and question ID and repeat the question with the question ID only once with respect to {worker_id}.
+        4. if the  and answer is yes, then for  save the response accordingly and give it in the extracted answers.
+        5. If the user answers "Yes" to a yes/no question, add a corresponding inferred answer to related follow-up questions (e.g., if question 6 is "Yes," save question 8 as "You have a bank account").
+        6. If the user answers "No," add a corresponding inferred answer to related follow-up questions (e.g., if question 6 is "No," save question 8 as "You do not have a bank account").
+        7. Extract the user's answer and match it to the corresponding question ID.
+        8. Generate the next most relevant question based on the provided answer.
         
-
         Respond in the following JSON format:
         {{
             "extracted_answers": [
@@ -641,13 +636,15 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
     # Get LLM response
 
     print(f"the prompt is : {prompt}")
-    response = llm.predict(prompt)
+    response = llm.invoke(prompt)  
+    response_text = response.content
+    cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
 
-    print(f"the response is : {response}")
+    print(f"the response is : {cleaned_response}")
     # Parse the LLM response
     try:
         print("entering response data.")
-        response_data = json.loads(response)
+        response_data = json.loads(cleaned_response)
         print(response_data)
 
         extracted_answers = response_data["extracted_answers"]
