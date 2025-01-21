@@ -684,6 +684,7 @@ def convert_mp3_to_ogg(input_file : str, output_file : str):
         # Construct ffmpeg command
         command = [
             "ffmpeg",
+            "-y",
             "-i", input_file,
             "-ar", "16000",  # Set sample rate to 16kHz
             "-c:a", "libopus",  # Use libopus codec
