@@ -720,4 +720,6 @@ def send_question_audio(employerNumber : int, question_id : int, user_language :
 
     question = db.query(models.QuestionBank).filter(models.QuestionBank.id == question_id).first()
     questionText = question.questionText
+    if user_language == "null":
+        user_language = "en-IN"
     return send_audio("audio_files", questionText, user_language ,employerNumber)
