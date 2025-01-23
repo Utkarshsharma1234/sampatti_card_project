@@ -743,11 +743,12 @@ def get_all_languages():
     for code, language in total_languages.items():
         record = {
             "text": language,
-            "postback": f"data_selectedLanguage={code}"
+            "postback": f"data_language={code}"
         }
         language_array.append(record)
     
     return {
         "language_array" : language_array
     }
+
 
