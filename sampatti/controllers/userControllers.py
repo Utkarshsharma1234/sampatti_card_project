@@ -720,6 +720,34 @@ def send_question_audio(employerNumber : int, question_id : int, user_language :
 
     question = db.query(models.QuestionBank).filter(models.QuestionBank.id == question_id).first()
     questionText = question.questionText
-    if user_language == "null":
-        user_language = "en-IN"
-    return send_audio("audio_files", questionText, user_language ,employerNumber)
+    translated_text = translate_text_sarvam(questionText, "en-IN", user_language)
+    return send_audio("audio_files", translated_text, user_language ,employerNumber)
+
+
+def get_all_languages():
+    
+    total_languages = {
+    "hi-IN": "Hindi",
+    "bn-IN": "Bengali",
+    "kn-IN": "Kannada",
+    "ml-IN": "Malayalam",
+    "mr-IN": "Marathi",
+    "od-IN": "Odia",
+    "pa-IN": "Punjabi",
+    "ta-IN": "Tamil",
+    "te-IN": "Telugu",
+    "en-IN": "English",
+    "gu-IN": "Gujarati"
+}
+    language_array = []
+    for code, language in total_languages.items():
+        record = {
+            "text": language,
+            "postback": f"data_selectedLanguage={code}"
+        }
+        language_array.append(record)
+    
+    return {
+        "language_array" : language_array
+    }
+

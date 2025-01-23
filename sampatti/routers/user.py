@@ -213,3 +213,8 @@ async def get_transalated_text(file_url: str):
 def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session = Depends(get_db)):
     return userControllers.send_question_audio(employerNumber, question_id, user_language, db)
 
+
+@router.get("/get_languages")
+def get_all_languages():
+    return userControllers.get_all_languages()
+
