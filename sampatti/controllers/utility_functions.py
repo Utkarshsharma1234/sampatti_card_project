@@ -601,6 +601,7 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         Worker ID: {worker_id}
         Current Question: {current_question}
         Worker Answer: {answer}
+        Questions ID: {questionId}
 
         Here is the full list of survey questions:
         {questions}
@@ -613,6 +614,9 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         6. If the user answers "No," add a corresponding inferred answer to related follow-up questions (e.g., if question 6 is "No," save question 8 as "You do not have a bank account").
         7. Extract the user's answer and match it to the corresponding question ID.
         8. Generate the next most relevant question based on the provided answer.
+        9. Ensure that the response is structured correctly and includes the extracted answers and the next suggested question. 
+        10. Generate the next most relevant question based on the provided answer.
+        11. when the {questionId}=28 then extract the answer and give next {questionId}=0.
         
         Respond in the following JSON format:
         {{
@@ -631,7 +635,8 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
         worker_id=workerId,
         current_question=current_question_text,
         answer=answer,
-        questions=questions_list
+        questions=questions_list,
+        questionId=questionId
     )
     # Get LLM response
 
