@@ -774,4 +774,6 @@ def create_confirmation_message(workerId: str, respondentId: str, surveyId: int,
             message += f"{i}. {question.questionText}\n   Answer {i}: {response.responseText}\n\n"
 
     print(message)
-    return message
+    return {
+        "confirmation_message" : message
+    }
