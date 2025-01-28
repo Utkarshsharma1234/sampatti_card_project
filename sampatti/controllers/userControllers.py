@@ -755,7 +755,9 @@ def get_all_languages():
 def get_respondent_id():
 
     respondentId = generate_unique_id()
-    return respondentId
+    return {
+        "respondentId" : respondentId
+    }
 
 
 def create_confirmation_message(workerId: str, respondentId: str, surveyId: int, db: Session):
