@@ -583,7 +583,7 @@ questions = {
 }
 
 # Function to process the response
-def get_next_question(workerId : str, questionId : int, answer : str, surveyId : int, db : Session):
+def get_next_question(respondentId : str, workerId : str, questionId : int, answer : str, surveyId : int, db : Session):
     
     llm = ChatOpenAI(
         model="gpt-4o", 
@@ -662,7 +662,7 @@ def get_next_question(workerId : str, questionId : int, answer : str, surveyId :
             qId = item["question_id"]
             ans = item["answer"]
 
-            new_response_entry = models.Responses(id = generate_unique_id(), responseText = ans, workerId = workerId, questionId = qId, surveyId = surveyId, timestamp = f"{datetime.now()}")
+            new_response_entry = models.Responses(id = generate_unique_id(), responseText = ans, workerId = workerId, questionId = qId, surveyId = surveyId, timestamp = f"{datetime.now()}", respondentId=respondentId)
 
             db.add(new_response_entry)
             db.commit()

@@ -202,8 +202,8 @@ async def extract_name(file_url: str, employerNumber : int):
     return await userControllers.extract_name(file_url, employerNumber,)
 
 @router.get("/get_next_question")
-def get_next_question(workerId : str, questionId : int, answer : str, surveyId : int, db : Session = Depends(get_db)):
-    return utility_functions.get_next_question(workerId, questionId, answer, surveyId, db)
+def get_next_question(respondentId : str, workerId : str, questionId : int, answer : str, surveyId : int, db : Session = Depends(get_db)):
+    return utility_functions.get_next_question(respondentId, workerId, questionId, answer, surveyId, db)
 
 @router.get("/get_translated_text")
 async def get_transalated_text(file_url: str):
