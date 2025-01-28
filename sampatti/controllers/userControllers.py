@@ -710,7 +710,7 @@ def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : 
         return {
             "MESSAGE" : "No worker with the given name found."
         }
-    
+     
     update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).values(salary_amount = salary)
     db.execute(update_statement)
     db.commit()
@@ -751,4 +751,25 @@ def get_all_languages():
         "language_array" : language_array
     }
 
+ 
+def get_respondent_id():
 
+    respondentId = generate_unique_id()
+    return respondentId
+
+
+def create_confirmation_message(workerId: str, respondentId: str, surveyId: int, db: Session):
+
+    total_survey_messages = db.query(models.Responses).filter(models.Responses.workerId == workerId, models.Responses.respondentId == respondentId, models.Responses.surveyId == surveyId).all()
+
+    message = "Here are the answers you provided:\n\n"
+
+    for i, response in enumerate(total_survey_messages, start=1):
+
+        question = db.query(models.QuestionBank).filter(models.QuestionBank.id == response.questionId).first()
+        
+        if question:
+            message += f"{i}. {question.questionText}\n   Answer {i}: {response.responseText}\n\n"
+
+    print(message)
+    return message

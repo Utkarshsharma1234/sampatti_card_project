@@ -120,6 +120,7 @@ class Responses(Base):
     id = Column(String, primary_key=True)
     responseText = Column(String, nullable=False)
     workerId = Column(String, ForeignKey('Domestic_Worker.id'))
+    respondentId = Column(String)
     questionId = Column(Integer, ForeignKey('QuestionBank.id'))
     surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
     timestamp = Column(String)

@@ -218,3 +218,10 @@ def send_question_audio(employerNumber : int, question_id : int, user_language :
 def get_all_languages():
     return userControllers.get_all_languages()
 
+@router.get("/get_respondent_id")
+def get_respondent_id():
+    return userControllers.get_respondent_id()
+
+@router.get("/get_all_messages")
+def create_confirmation_message(workerId : str, respondentId : str, surveyId : int, db : Session = Depends(get_db)):
+    return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
