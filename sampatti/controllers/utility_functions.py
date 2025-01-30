@@ -665,6 +665,7 @@ def get_next_question(respondentId : str, workerId : str, questionId : int, answ
             new_response_entry = models.Responses(id = generate_unique_id(), responseText = ans, workerId = workerId, questionId = qId, surveyId = surveyId, timestamp = f"{datetime.now()}", respondentId=respondentId)
 
             db.add(new_response_entry)
+            
             db.commit()
             db.refresh(new_response_entry)
 

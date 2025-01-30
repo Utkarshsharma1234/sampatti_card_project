@@ -52,5 +52,5 @@ def pan_verification(pan : str, name : str):
 
 
 @router.get("/unsettled_balance")
-def unsettled_balance(db : Session = Depends(get_db)):
-    return cashfree_api.unsettled_balance(db)
+def unsettled_balance(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
+    return cashfree_api.unsettled_balance(employerNumber, orderId, db)
