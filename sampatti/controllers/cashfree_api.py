@@ -388,7 +388,7 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
 # settle the unsettled balance on cashfree to the worker's account.
 
-def unsettled_balance(employerNumber : int, orderId : str, db : Session):
+def unsettled_balance(db : Session):
 
     
     headers = {
@@ -397,31 +397,29 @@ def unsettled_balance(employerNumber : int, orderId : str, db : Session):
         'Content-Type': 'application/json'
     }
 
-    transaction = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == orderId).first()
 
+    total_records = db.query(models.worker_employer).all()
 
-    # total_records = db.query(models.worker_employer).all()
+    for transaction in total_records:
+        order_info = check_order_status(transaction.order_id)
+        totalAmount = order_info["order_amount"]
 
-    # for transaction in total_records:
-    order_info = check_order_status(transaction.order_id)
-    totalAmount = order_info["order_amount"]
+        url = f'https://api.cashfree.com/api/v2/easy-split/orders/{transaction.order_id}/split'
 
-    url = f'https://api.cashfree.com/api/v2/easy-split/orders/{transaction.order_id}/split'
+        data = {
+            "split": [
+                {
+                    "vendorId": transaction.vendor_id,
+                    "amount" : totalAmount,
+                    "percentage" : None
+                }
+            ],
+            "splitType" : "ORDER_AMOUNT"
+        }
 
-    data = {
-        "split": [
-            {
-                "vendorId": transaction.vendor_id,
-                "amount" : totalAmount,
-                "percentage" : None
-            }
-        ],
-        "splitType" : "ORDER_AMOUNT"
-    }
-
-    json_data = json.dumps(data)
-    response = requests.post(url, headers=headers, data=json_data)
-    print(response.text)
+        json_data = json.dumps(data)
+        response = requests.post(url, headers=headers, data=json_data)
+        print(response.text)
     return {
-        "message" : "Split created."
+        "message" : "Splits created."
     }
