@@ -689,17 +689,17 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
 
         
         if user_language == "hi-IN":
-            return send_audio(static_dir, outputAudio, "hi-IN",employerNumber)
-        else:
             translated_text = translate_text_sarvam(outputAudio, "en-IN", user_language)
-            return send_audio(static_dir, translated_text, "en-IN",employerNumber)
+            return send_audio(static_dir, translated_text, "hi-IN",employerNumber)
+        else:
+            return send_audio(static_dir, outputAudio, "en-IN",employerNumber)
     else:
 
         if user_language == "hi-IN":
-            return send_audio(static_dir, missingInformation, "hi-IN",employerNumber)
-        else:
             translated_text = translate_text_sarvam(missingInformation, "en-IN", user_language)
-            return send_audio(static_dir, translated_text, "en-IN",employerNumber)
+            return send_audio(static_dir, translated_text, "hi-IN",employerNumber)
+        else:
+            return send_audio(static_dir, missingInformation, "en-IN",employerNumber)
         
 
 def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session):
