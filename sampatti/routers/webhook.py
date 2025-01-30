@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers, cashfree_api
+import asyncio
 
 router = APIRouter(
     prefix="/webhook",
@@ -34,6 +35,7 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
         customer_phone = f"91{customer_phone}"
         userControllers.send_employer_invoice(employerNumber=customer_phone, orderId=order_id, db=db)
         userControllers.update_salary_details(employerNumber=customer_phone, orderId=order_id, db=db)
+        await asyncio.sleep(30)
         cashfree_api.unsettled_balance(employerNumber=customer_phone, orderId=order_id, db=db)
         return {"status": "success"}
     
