@@ -462,7 +462,7 @@ def salary_payment_reminder(db : Session):
         if order_status == "PAID":
             continue
         
-        whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_payment_reminder")
+        whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_reminder")
 
 
 def find_all_workers(employerNumber : int, db : Session):
