@@ -521,6 +521,52 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
         raise HTTPException(status_code=500, detail=str(e))
     
 
+def question_language_audio(output_directory: str, sample_output: str, surveyId : int, questionId : int, language: str):
+
+    try:
+        # Using Sarvam API for text-to-speech
+        url = "https://api.sarvam.ai/text-to-speech"
+        payload = {
+                "inputs": [sample_output],
+                "target_language_code": language,     #Adjust as per the expected language code
+                "speaker": "meera",     #Choose the appropriate speaker if required
+                "enable_preprocessing": True,
+                "model": "bulbul:v1"
+            }
+        headers = {
+            "api-subscription-key": sarvam_api_key,     #Replace with your valid API key
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        response_data = response.json()
+        base64_string = response_data["audios"][0] 
+
+        os.makedirs(output_directory, exist_ok=True)
+
+        mp3_file_path = os.path.join(os.getcwd(), output_directory, f"{surveyId}_{questionId}_{language}.mp3")
+        ogg_file_path = os.path.join(os.getcwd(), output_directory, f"{surveyId}_{questionId}_{language}.ogg")
+
+             # Decode the Base64 string to binary data
+        audio_data = base64.b64decode(base64_string)
+
+             # Write the binary data to a file
+        with open(mp3_file_path, "wb") as audio_file:
+            audio_file.write(audio_data)
+        
+        convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
+
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to communicate with speech service")
+    except Exception as e:
+        print(f"Error generating audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(mp3_file_path):
+            os.remove(mp3_file_path)
+    
+
 def calculate_year_for_month(month_name):
     """
     Takes a month name as input and calculates the year.

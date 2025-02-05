@@ -210,9 +210,8 @@ async def get_transalated_text(file_url: str):
     return await userControllers.get_transalated_text(file_url)
 
 @router.get("/send_question_audio")
-def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session = Depends(get_db)):
-    return userControllers.send_question_audio(employerNumber, question_id, user_language, db)
-
+def send_question_audio(employerNumber : int, questionId : int, surveyId : int, language : str, db : Session = Depends(get_db)):
+    return userControllers.send_question_audio(employerNumber, questionId, surveyId, language, db)
 
 @router.get("/get_languages")
 def get_all_languages():
@@ -225,3 +224,8 @@ def get_respondent_id():
 @router.get("/get_all_messages")
 def create_confirmation_message(workerId : str, respondentId : str, surveyId : int, db : Session = Depends(get_db)):
     return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
+
+
+@router.post("/make_question_audio")
+def create_question_audio(surveyId : int, language : str, db : Session = Depends(get_db)):
+    return userControllers.create_question_audio(surveyId, language, db)

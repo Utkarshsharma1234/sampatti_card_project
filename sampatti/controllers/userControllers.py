@@ -5,13 +5,14 @@ from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, func, insert,update
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, calculate_year_for_month
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, calculate_year_for_month, question_language_audio
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from fuzzywuzzy import fuzz
 from pydub import AudioSegment
 
 
+sarvam_api_key = os.environ.get('SARVAM_API_KEY')
 # creating the employer
 def create_employer(request : schemas.Employer, db: Session):
 
@@ -716,12 +717,12 @@ def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : 
     db.commit()
 
 
-def send_question_audio(employerNumber : int, question_id : int, user_language : str, db : Session):
+def send_question_audio(employerNumber : int, questionId : int, surveyId : int, language : str, db : Session):
 
-    question = db.query(models.QuestionBank).filter(models.QuestionBank.id == question_id).first()
-    questionText = question.questionText
-    translated_text = translate_text_sarvam(questionText, "en-IN", user_language)
-    return send_audio("audio_files", translated_text, user_language ,employerNumber)
+    mediaIdObj = whatsapp_message.generate_audio_media_id(f"{surveyId}_{questionId}_{language}.ogg", "questions")
+    audioMediaId = mediaIdObj["id"]
+    whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+    return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
 
 
 def get_all_languages():
@@ -776,4 +777,19 @@ def create_confirmation_message(workerId: str, respondentId: str, surveyId: int,
     print(message)
     return {
         "confirmation_message" : message
+    }
+
+
+def create_question_audio(surveyId : int, language : str, db : Session):
+
+    survey_questions = db.query(models.QuestionBank).filter(models.QuestionBank.surveyId == surveyId).all()
+    for question in survey_questions:
+
+        questionText = question.questionText
+        questionId = question.id
+        translatedQuestion = translate_text_sarvam(questionText, "en-IN", language)
+        question_language_audio("questions", translatedQuestion, surveyId, questionId, language)
+
+    return {
+        "Message" : "All questions generated."
     }
