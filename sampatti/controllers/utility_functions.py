@@ -159,7 +159,6 @@ def determine_attendance_period(current_day):
 def llm_template():
     current_day = datetime.now().day
     attendance_period = determine_attendance_period(current_day)
-
     template = """You are an intelligent assistant helping to extract precise financial and attendance information for an employee cash advance record.
 
 Input Text: {user_input}
@@ -186,7 +185,7 @@ Extraction and Update Rules:
 
 Specific Field Extraction:
 - currentCashAdvance: 
-  * Look for cash advance, advance, loan, or financial support amounts
+  * Look for cash advance, advance, loan, cash award or financial support amounts.
   * Make change only if there is mention any cash advance, advance, loan, or financial support amounts.
   * don't take any unnecessary values into if unless cash advance or related term mentioned in the {user_input}
   * take the value for the currentCashAdvance from the existing record if no cash advance is mentioned in the {user_input}
@@ -370,10 +369,10 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         raise ValueError("Employer number is required")
 
     # Get or create employer record
-    llm = ChatGroq(
-        temperature=0,
-        groq_api_key=groq_key,
-        model_name="llama-3.3-70b-specdec"
+    llm = ChatOpenAI(
+        model="gpt-4o", 
+        temperature=0.7, 
+        api_key = openai_api_key
     )
     
     current_date = datetime.now().date()
@@ -383,27 +382,29 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     template = llm_template()
 
     # Include context in the prompt
-    prompt = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", 
+    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", 
                                              "previous_month", "previous_year", "employer_number", 
                                              "attendance_period", "current_day", "context"], 
                              template=template)
-    
-    llm_chain = LLMChain(prompt=prompt, llm=llm)
 
-    response = llm_chain.run({
-        "user_input": user_input,
-        "current_date": current_date,
-        "current_month": current_month(),
-        "current_year": current_year(),
-        "previous_month": previous_month(),
-        "previous_year": current_year(),
-        "employer_number": employer_number,
-        "attendance_period": attendance_period,
-        "current_day": current_day,
-        "context": context  # Pass the context to the LLM
-    })
+    prompt = prompt_template.format(
+        user_input=user_input,
+        current_date=current_date,
+        current_month=current_month(),
+        current_year=current_year(),
+        previous_month=previous_month(),
+        previous_year=current_year(),
+        employer_number=employer_number,
+        attendance_period=attendance_period,
+        current_day=current_day,
+        context=json.dumps(context)  # Convert context to JSON string
+    )
     
-    cleaned_response = response.replace('```json', '').replace('```', '').strip()
+    #print(f"the prompt is : {prompt}")
+    response = llm.invoke(prompt)  
+    response_text = response.content 
+    
+    cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
 
     print(f"The response from LLM is: {response}")
     print(f"The response from LLM is: {cleaned_response}")
