@@ -717,13 +717,6 @@ def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : 
     db.commit()
 
 
-def send_question_audio(employerNumber : int, questionId : int, surveyId : int, language : str, db : Session):
-
-    mediaIdObj = whatsapp_message.generate_audio_media_id(f"{surveyId}_{questionId}_{language}.ogg", "questions")
-    audioMediaId = mediaIdObj["id"]
-    whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
-    return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
-
 
 def get_all_languages():
     
@@ -780,16 +773,34 @@ def create_confirmation_message(workerId: str, respondentId: str, surveyId: int,
     }
 
 
-def create_question_audio(surveyId : int, language : str, db : Session):
+def send_question_audio(employerNumber : int, questionId : int, surveyId : int, language : str, db : Session):
 
-    survey_questions = db.query(models.QuestionBank).filter(models.QuestionBank.surveyId == surveyId).all()
-    for question in survey_questions:
+    questionPath = os.path.join(os.getcwd(), "questions", f"{surveyId}_{questionId}_{language}.ogg")
 
-        questionText = question.questionText
-        questionId = question.id
-        translatedQuestion = translate_text_sarvam(questionText, "en-IN", language)
-        question_language_audio("questions", translatedQuestion, surveyId, questionId, language)
+    if os.path.exists(questionPath):
+
+        mediaIdObj = whatsapp_message.generate_audio_media_id(f"{surveyId}_{questionId}_{language}.ogg", "questions")
+        audioMediaId = mediaIdObj["id"]
+        whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+        return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+    
+    else:
+
+        create_question_audio(surveyId, questionId, language, db)
+        mediaIdObj = whatsapp_message.generate_audio_media_id(f"{surveyId}_{questionId}_{language}.ogg", "questions")
+        audioMediaId = mediaIdObj["id"]
+        whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+        return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+
+
+def create_question_audio(surveyId : int, questionId : int,  language : str, db : Session):
+
+    question = db.query(models.QuestionBank).filter(models.QuestionBank.surveyId == surveyId, models.QuestionBank.id == questionId).first()
+    questionText = question.questionText
+    questionId = question.id
+    translatedQuestion = translate_text_sarvam(questionText, "en-IN", language)
+    question_language_audio("questions", translatedQuestion, surveyId, questionId, language)
 
     return {
-        "Message" : "All questions generated."
+        "Message" : "question generated."
     }

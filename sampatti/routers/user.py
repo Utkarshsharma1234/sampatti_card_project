@@ -224,8 +224,3 @@ def get_respondent_id():
 @router.get("/get_all_messages")
 def create_confirmation_message(workerId : str, respondentId : str, surveyId : int, db : Session = Depends(get_db)):
     return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
-
-
-@router.post("/make_question_audio")
-def create_question_audio(surveyId : int, language : str, db : Session = Depends(get_db)):
-    return userControllers.create_question_audio(surveyId, language, db)
