@@ -10,6 +10,7 @@ from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to
 from sqlalchemy.orm import Session
 from fuzzywuzzy import fuzz
 from pydub import AudioSegment
+from datetime import datetime, date, timedelta
 
 
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
@@ -804,3 +805,55 @@ def create_question_audio(surveyId : int, questionId : int,  language : str, db 
     return {
         "Message" : "question generated."
     }
+    
+def calculate_total_days(year, month):
+    """ Calculate the total number of days in the given month of the given year. """
+    start_of_month = datetime(year, month, 1)
+    if month == 12:
+        end_of_month = datetime(year + 1, 1, 1)
+    else:
+        end_of_month = datetime(year, month + 1, 1)
+    return (end_of_month - start_of_month).days
+
+def mark_leave(employerNumber : str, workerName : str, db: Session):
+    current_date = date.today()
+    current_month = current_date.month
+    current_year = current_date.year
+
+    worker = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+    last_leave_date = worker.last_leave_date
+    monthly_leave = worker.monthly_leave
+    attendance = worker.attendance
+    
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+    # Check if last_leave_date is None or if the date is from a previous month/year
+    if (last_leave_date is None or last_leave_date.month != current_month or last_leave_date.year != current_year):
+        # Reset the monthly leave count and initialize attendance
+        monthly_leave = 0
+        attendance = calculate_total_days(current_year, current_month)
+
+    # Marking a leave if it's not already marked for today
+    if last_leave_date != current_date:
+        last_leave_date = current_date
+        monthly_leave += 1
+        attendance -= 1  # Assuming that marking a leave subtracts from attendance
+        print(last_leave_date, monthly_leave, attendance)
+        update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
+        db.execute(update_statement)
+        db.commit()
+        return {"message": f"Leave marked for {workerName} on {current_date}"}
+    else:
+        raise HTTPException(status_code=400, detail="Leave already marked for today")
+    
+    
+    
+"""update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
+    db.execute(update_statement)
+    db.commit()
+    
+    return{
+        "message" : "Leave marked successfully"
+    }
+"""

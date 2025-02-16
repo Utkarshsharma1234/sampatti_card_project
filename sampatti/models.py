@@ -14,7 +14,10 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('worker_name', String, default=''),
     Column('employer_id', String, default=''),
     Column('worker_id', String, default = ''),
-    Column('date_of_onboarding', String, default='')
+    Column('date_of_onboarding', String, default=''),
+    Column('monthly_leave', Integer, default=0),  # Tracks the number of leave days in the current month
+    Column('attendance', Integer, default=0),
+    Column('last_leave_date', String, default=None)
 )   
 
 

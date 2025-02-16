@@ -224,3 +224,8 @@ def get_respondent_id():
 @router.get("/get_all_messages")
 def create_confirmation_message(workerId : str, respondentId : str, surveyId : int, db : Session = Depends(get_db)):
     return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
+
+
+@router.post("/mark_leave")
+def mark_leave(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
+    return userControllers.mark_leave(employerNumber, workerName, db)
