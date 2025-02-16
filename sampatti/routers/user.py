@@ -226,6 +226,10 @@ def create_confirmation_message(workerId : str, respondentId : str, surveyId : i
     return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
 
 
-@router.post("/mark_leave")
+@router.get("/mark_leave")
 def mark_leave(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
     return userControllers.mark_leave(employerNumber, workerName, db)
+
+@router.get("/number_of_leaves")
+def number_of_leaves(employerNumber : int, workerName : str, numberofleaves : int, db : Session = Depends(get_db)):
+    return userControllers.number_leave(employerNumber, workerName, numberofleaves, db)

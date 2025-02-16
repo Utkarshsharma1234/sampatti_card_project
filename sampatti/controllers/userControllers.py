@@ -830,15 +830,13 @@ def mark_leave(employerNumber : str, workerName : str, db: Session):
     
     # Check if last_leave_date is None or if the date is from a previous month/year
     if (last_leave_date is None or last_leave_date.month != current_month or last_leave_date.year != current_year):
-        # Reset the monthly leave count and initialize attendance
         monthly_leave = 0
         attendance = calculate_total_days(current_year, current_month)
 
-    # Marking a leave if it's not already marked for today
     if last_leave_date != current_date:
         last_leave_date = current_date
         monthly_leave += 1
-        attendance -= 1  # Assuming that marking a leave subtracts from attendance
+        attendance -= 1  
         print(last_leave_date, monthly_leave, attendance)
         update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
         db.execute(update_statement)
@@ -848,12 +846,33 @@ def mark_leave(employerNumber : str, workerName : str, db: Session):
         raise HTTPException(status_code=400, detail="Leave already marked for today")
     
     
+def number_of_leave(employerNumber : str, workerName : str, number_of_leaves : int, db: Session):
+    current_date = date.today()
+    current_month = current_date.month
+    current_year = current_date.year
+
+    worker = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+    last_leave_date = worker.last_leave_date
+    monthly_leave = worker.monthly_leave
+    attendance = worker.attendance
     
-"""update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+    # Check if last_leave_date is None or if the date is from a previous month/year
+    if (last_leave_date is None or last_leave_date.month != current_month or last_leave_date.year != current_year):
+        # Reset the monthly leave count and initialize attendance
+        monthly_leave = 0
+        attendance = calculate_total_days(current_year, current_month)
+
+    last_leave_date = current_date
+    monthly_leave += number_of_leaves
+    attendance -= number_of_leaves  
+    print(last_leave_date, monthly_leave, attendance)
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
     db.execute(update_statement)
     db.commit()
-    
-    return{
-        "message" : "Leave marked successfully"
+    return {
+        "message": f"Leave marked for {workerName} for {number_of_leaves} days from {current_date}",
+        "last_leave_date": last_leave_date
     }
-"""

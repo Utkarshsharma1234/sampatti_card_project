@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -17,7 +17,7 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('date_of_onboarding', String, default=''),
     Column('monthly_leave', Integer, default=0),  # Tracks the number of leave days in the current month
     Column('attendance', Integer, default=0),
-    Column('last_leave_date', String, default=None)
+    Column('last_leave_date', Date, default=None)
 )   
 
 
