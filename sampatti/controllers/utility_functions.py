@@ -173,10 +173,15 @@ Instructions:
 5. If any information is missing, use existing record.
 6. Be flexible in understanding variations of input.
 7. Always include all fields in the result for all cases.
+8. don't include current cash cash unless it is mentioned by the user.
+9. Analyze the key word properly make changes according to the user wants if user wantes to changes the salary then make changes in the salary field according to the user wants.
 
 
 Extraction and Update Rules:
 - Focus on extracting or modifying specific fields mentioned in the input.
+- Always analyze the entire input to ensure all relevant fields are considered.
+- If there is not any mention of cash advance then make current cash advance it as 0.
+- If your wants to change the salary then make changes in salary field according to the user wants.
 - If only one field is discussed, keep other fields from existing record and give them updated information in final output.
 - If input suggests adding/changing amount, then add or change according to the existing record field.
 - If no specific amount given, use existing record's value.
@@ -227,6 +232,7 @@ Specific Field Extraction:
 - For salary:
   * If user mentions the salary then take the salary amount from the {user_input} and if not mentioned then take the salary amount from the existing record.
   * It should never be 0.
+  * check if user has world similar to word salary or monthly payment or simailar.
 
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
@@ -355,6 +361,19 @@ user input = "the salary of utkarsh from this month is 15000"
     "detailsFlag" : 0,
     "nameofWorker" : "utkarsh",
     "salary" : 15000
+}}
+
+user input = I wanted to deduct 2000 from salary and wanted to give only 3500 instead of 5500 this month only.
+{{
+    "currentCashAdvance": take value from the existing record,
+    "Repayment_Monthly": take value from the existing record,
+    "Bonus": take value from the existing record,
+    "Attendance": {attendance_period}
+    "Repayment_Start_Month": take value from the existing record,
+    "Repayment_Start_Year": take value from the existing record,
+    "detailsFlag" : 0,
+    "nameofWorker" : "sampatti",
+    "salary" : 3500
 }}
 
 Respond with the JSON ONLY. NO additional text!"""
