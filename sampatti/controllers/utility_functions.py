@@ -187,6 +187,8 @@ Extraction and Update Rules:
 - If no specific amount given, use existing record's value.
 - Validate and adjust values logically don't give random value.
 - use existing record and update the existing record according to the user wants and only change the field which user wants rest keep as it existing record.
+- for deduction field only make change if user wants to make change in the salary else keep it as 0.
+- deduction is only the amount that is deducted from the salary amount as per {user_input}.
 
 Specific Field Extraction:
 - currentCashAdvance: 
@@ -233,6 +235,10 @@ Specific Field Extraction:
   * If user mentions the salary then take the salary amount from the {user_input} and if not mentioned then take the salary amount from the existing record.
   * It should never be 0.
   * check if user has world similar to word salary or monthly payment or simailar.
+  
+- For Deduction:
+  * If user mentions the word deduction then take the value from the {user_input} and keep it in deduction field.
+  * The deduction is the amount that is deducted or changed from the salary amount.
 
 Key Processing Instructions:
 - Use integers for monetary and attendance values.
@@ -253,7 +259,8 @@ Return ONLY a valid JSON focusing on fields mentioned or changed:
     "Repayment_Start_Year": <integer in the form of yyyy>,
     "detailsFlag" : <0 or 1 as an integer>,
     "nameofWorker" : <name of the worker string always in lowercase.>,
-    "salary" : <salary amount as an integer>
+    "salary" : <salary amount as an integer>,
+    "deduction" : <deduction amount as an integer>
 }}
 
 
@@ -268,7 +275,8 @@ user input = "i wanted to change the repayment amount, wanted to add 500 to the 
     "Repayment_Start_Year": existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}   
 
 user input = "Add 1000 bonus and worker was on leave for 7 days"
@@ -281,7 +289,8 @@ user input = "Add 1000 bonus and worker was on leave for 7 days"
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
@@ -294,7 +303,8 @@ user input = "Worker needs 5000 cash advance and repayment monthly should be 100
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 
@@ -308,7 +318,8 @@ user input = "yes correct details"
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 1,
     "nameofWorker" : "sampatti",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma"
@@ -321,7 +332,8 @@ user input = "please pay a cash advance of 20000 with a monthly repayment of 500
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "utkarsh sharma",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
@@ -334,7 +346,8 @@ user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "vrashali",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 user input = "pay om a advance amount of 40000 to with a monthly repayment of 10000"
@@ -347,7 +360,8 @@ user input = "pay om a advance amount of 40000 to with a monthly repayment of 10
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "om",
-    "salary" : existing record
+    "salary" : existing record,
+    "deduction" : 0
 }}
 
 user input = "the salary of utkarsh from this month is 15000"
@@ -360,7 +374,8 @@ user input = "the salary of utkarsh from this month is 15000"
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "utkarsh",
-    "salary" : 15000
+    "salary" : 15000,
+    "deduction" : 0
 }}
 
 user input = I wanted to deduct 2000 from salary and wanted to give only 3500 instead of 5500 this month only.
@@ -373,7 +388,8 @@ user input = I wanted to deduct 2000 from salary and wanted to give only 3500 in
     "Repayment_Start_Year": take value from the existing record,
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
-    "salary" : 3500
+    "salary" : 3500,
+    "deduction" : 2000
 }}
 
 Respond with the JSON ONLY. NO additional text!"""

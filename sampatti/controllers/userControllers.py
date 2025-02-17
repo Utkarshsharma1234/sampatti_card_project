@@ -638,6 +638,7 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
             "employer_id" : employer_id,
             "worker_id" : worker_id,
             "salary" : extracted_info.get("salary"),
+            "deduction" : extracted_info.get("deduction"),
             "user_language" : user_language
         }
 
