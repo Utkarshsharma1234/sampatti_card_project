@@ -314,7 +314,7 @@ def payment_link_generation(db : Session):
 
 # creating dynamic payment links
 
-def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session):
+def dynamic_payment_link(employerNumber : int, workerName : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -326,7 +326,10 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
     total_salary = cashAdvance + bonus + salary - repayment
 
-    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
+    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    workerId = item.worker_id
+    employerId = item.employer_id
 
     note = {'salary' : salary, 'cashAdvance' : cashAdvance, 'bonus' : bonus, 'repayment' : repayment, 'attendance' : attendance}
 
@@ -346,19 +349,19 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
     send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
 
-    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).values(order_id= response["order_id"])
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
 
     db.execute(update_statement)
     db.commit()
 
-    existing_cash_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+    existing_cash_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == workerId, models.CashAdvanceManagement.employer_id == employerId).first()
 
     if existing_cash_advance_entry is None:
         return {"Link sent successfully."}
     
     total_advance = existing_cash_advance_entry.cashAdvance + existing_cash_advance_entry.currentCashAdvance
 
-    update_advance = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).values(cashAdvance = total_advance, currentCashAdvance = 0, bonus = 0, attendance = None)
+    update_advance = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == workerId, models.CashAdvanceManagement.employer_id == employerId).values(cashAdvance = total_advance, currentCashAdvance = 0, bonus = 0, attendance = None)
 
     db.execute(update_advance)
     db.commit()
