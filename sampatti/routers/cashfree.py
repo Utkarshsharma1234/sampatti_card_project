@@ -25,8 +25,8 @@ def payment_link_generation(db : Session = Depends(get_db)):
     return cashfree_api.payment_link_generation(db)
 
 @router.get("/dynamic_payment_link")
-def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session = Depends(get_db)):
-    return cashfree_api.dynamic_payment_link(employerNumber, worker_id, employer_id, cashAdvance, bonus, attendance, repayment, salary, db)
+def dynamic_payment_link(employerNumber : int, workerName : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session = Depends(get_db)):
+    return cashfree_api.dynamic_payment_link(employerNumber, workerName, cashAdvance, bonus, attendance, repayment, salary, db)
 
 @router.get("/order_status")
 def check_order_status(orderId : str):
