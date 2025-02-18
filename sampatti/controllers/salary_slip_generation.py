@@ -102,29 +102,39 @@ def generate_salary_slip(workerNumber, db:Session) :
     worker_table.drawOn(c,x, y)
 
     receipt_data = []
-    receipt_data.append(["Sr. No.", "Employer Code", "Mode", "Reference", "Salary", "Variable Pay"])
+    receipt_data.append(["Sr. No.", "Employer Code", "Mode", "Reference", "Salary", "Variable Pay", "Deductions"])
 
     rows = 0
 
     total_transactions = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber).all()
-    total_salary = 0
+    total_amount = 0
     
     ct = 1
     for transaction in total_transactions:
         order_id = transaction.order_id
         if order_id is None:
             continue
-        response_data = check_order_status(order_id=order_id)
-        status = response_data.get('order_status')
+        order_info = check_order_status(order_id=order_id)
+        status = order_info.get('order_status')
+        order_amount = order_info.get["order_amount"]
+        salary = transaction.salary_amount
         if status == "PAID":
 
             bank_ref_no = fetch_bank_ref(order_id=order_id)
             employer_id = transaction.employer_id
-            single_row = [ct, f"EMP-{employer_id}", "UPI", bank_ref_no, transaction.salary_amount, 0]
+            variablePay = 0
+            deduction = 0
+
+            if order_amount >= salary:
+                variablePay = order_amount - salary
+            else:
+                deduction = salary - order_amount
+
+            single_row = [ct, f"EMP-{employer_id}", "UPI", bank_ref_no, salary, variablePay, deduction]
             receipt_data.append(single_row)
             rows += 1
             ct += 1
-            total_salary += transaction.salary_amount
+            total_amount += order_amount
 
         else:
             continue
@@ -153,8 +163,8 @@ def generate_salary_slip(workerNumber, db:Session) :
 
     c.setFont("Helvetica-Bold", 10)
     y -= 30
-    salary_in_words = amount_to_words(total_salary)
-    c.drawString(x, y, f"Total Salary Credited INR {total_salary}/- Only")
+    salary_in_words = amount_to_words(total_amount)
+    c.drawString(x, y, f"Total amount Credited INR {total_amount}/- Only")
     c.drawString(x, y-20, f"Amount in Words : {salary_in_words} Only")
           
 

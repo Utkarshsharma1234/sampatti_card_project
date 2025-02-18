@@ -314,7 +314,7 @@ def payment_link_generation(db : Session):
 
 # creating dynamic payment links
 
-def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : str, cashAdvance : int, bonus : int, attendance : int, repaymentFlag : bool, db : Session):
+def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -324,33 +324,9 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
     cr_month = current_month()
     cr_year = current_year()
 
-    month_to_number = {
-        "January": 1, "February": 2, "March": 3, "April": 4,
-        "May": 5, "June": 6,
-        "July": 7, "August": 8, "September": 9,
-        "October": 10, "November": 11, "December": 12,
-        "sampatti" : 20
-    }
+    total_salary = cashAdvance + bonus + salary - repayment
 
     item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
-
-    cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
-
-    repayment = 0
-
-    if cashAdvanceEntry is not None:
-
-        if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
-            if cashAdvanceEntry.cashAdvance > 0:
-                repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
-
-    if repaymentFlag is False:
-        repayment = 0
-
-    total_salary = bonus + cashAdvance - repayment
-    number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
-    salary = math.ceil((item.salary_amount * attendance)/number_of_month_days) 
-    total_salary += salary
 
     note = {'salary' : salary, 'cashAdvance' : cashAdvance, 'bonus' : bonus, 'repayment' : repayment, 'attendance' : attendance}
 
@@ -377,7 +353,9 @@ def dynamic_payment_link(employerNumber : int, worker_id : str, employer_id : st
 
     existing_cash_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
 
-
+    if existing_cash_advance_entry is None:
+        return {"Link sent successfully."}
+    
     total_advance = existing_cash_advance_entry.cashAdvance + existing_cash_advance_entry.currentCashAdvance
 
     update_advance = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).values(cashAdvance = total_advance, currentCashAdvance = 0, bonus = 0, attendance = None)

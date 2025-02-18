@@ -1,5 +1,7 @@
+import calendar
 import html
 import json
+import math
 import tempfile, os, re, requests
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
@@ -546,44 +548,9 @@ async def get_transalated_text(file_url: str):
             os.remove(temp_wav_path)
 
 
-async def process_audio(file_url: str, employerNumber : int, workerName: str, db : Session):
-    if not file_url:
-        raise HTTPException(status_code=400, detail="File is not uploaded.")
-
-    results = []
-    static_dir = 'audio_files'
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-
-    user_input = ""
-    temp_wav_path = ""
+async def process_audio(user_input : str, user_language : str, employerNumber : int, workerName: str, db : Session):
     
     try:
-        # Download the file from the given URL
-        response = requests.get(file_url)
-        with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
-            # Write the downloaded content to the temp file
-            temp.write(response.content)
-            temp_path = temp.name
-
-        print(f"Downloaded temp file: {temp_path}")
-        audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
-        temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
-        audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
-        print(f"Converted to wav: {temp_wav_path}")
-
-        # Transcribe the audio using Whisper
-        result = call_sarvam_api(temp_wav_path)
-        user_input = result["transcript"]
-        user_language = result["language_code"]
-        print(f"the result from the sarvam api is : {result}")
-
-        results.append({
-            "filename": os.path.basename(temp_path),
-            "transcript": user_input,
-            "language_code": user_language
-        })
-
         # Check if there is an existing record for the employer
         worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
 
@@ -595,16 +562,13 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
 
         existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
         
-        print(f"the existing record is : {existing_record}")
-        print(f"groq key : {os.environ.get('GROQ_API_KEY')}")
-        # Prepare the context for the LLM based on existing record
         context = {
             "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
             "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
             "Repayment_Start_Year": 0,
             "Bonus": existing_record.bonus if existing_record else 0,
-            "Attendance": existing_record.attendance if existing_record else 50,
+            "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day),
             "detailsFlag" : 0,
             "nameofWorker" : workerName,
             "salary" : worker_employer_relation.salary_amount
@@ -642,19 +606,13 @@ async def process_audio(file_url: str, employerNumber : int, workerName: str, db
             "user_language" : user_language
         }
 
-
         return response
 
     except PermissionError as e:
         return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-    finally:
-        # Clean up by deleting the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        if os.path.exists(temp_wav_path):
-            os.remove(temp_wav_path)
+    
 
 
 def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session):
@@ -705,19 +663,18 @@ def send_audio_message(employer_id : str, worker_id : str, user_language : str, 
             return send_audio(static_dir, missingInformation, "en-IN",employerNumber)
         
 
-def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session):
+def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session):
 
-    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_id == worker_id, models.worker_employer.c.employer_id == employer_id).first()
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name == workerName).first()
 
     if not worker_employer_relation:
         return {
             "MESSAGE" : "No worker with the given name found."
         }
      
-    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_id == employer_id, models.worker_employer.c.worker_id == worker_id).values(salary_amount = salary)
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name == workerName).values(salary_amount = salary)
     db.execute(update_statement)
     db.commit()
-
 
 
 def get_all_languages():
@@ -816,64 +773,55 @@ def calculate_total_days(year, month):
         end_of_month = datetime(year, month + 1, 1)
     return (end_of_month - start_of_month).days
 
-def mark_leave(employerNumber : str, workerName : str, db: Session):
-    current_date = date.today()
-    current_month = current_date.month
-    current_year = current_date.year
 
-    worker = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
-    last_leave_date = worker.last_leave_date
-    monthly_leave = worker.monthly_leave
-    attendance = worker.attendance
+def mark_leave(employerNumber : str, workerName : str, leaves : int, db: Session):
     
-    if not worker:
-        raise HTTPException(status_code=404, detail="Worker not found")
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
     
-    # Check if last_leave_date is None or if the date is from a previous month/year
-    if (last_leave_date is None or last_leave_date.month != current_month or last_leave_date.year != current_year):
-        monthly_leave = 0
-        attendance = calculate_total_days(current_year, current_month)
+    current_leaves = worker_employer_relation.monthly_leaves
+    new_leaves = current_leaves + leaves
 
-    if last_leave_date != current_date:
-        last_leave_date = current_date
-        monthly_leave += 1
-        attendance -= 1  
-        print(last_leave_date, monthly_leave, attendance)
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
-        db.execute(update_statement)
-        db.commit()
-        return {"message": f"Leave marked for {workerName} on {current_date}"}
-    else:
-        raise HTTPException(status_code=400, detail="Leave already marked for today")
-    
-    
-def number_of_leave(employerNumber : str, workerName : str, number_of_leaves : int, db: Session):
-    current_date = date.today()
-    current_month = current_date.month
-    current_year = current_date.year
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leaves=new_leaves)
 
-    worker = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
-    last_leave_date = worker.last_leave_date
-    monthly_leave = worker.monthly_leave
-    attendance = worker.attendance
-    
-    if not worker:
-        raise HTTPException(status_code=404, detail="Worker not found")
-    
-    # Check if last_leave_date is None or if the date is from a previous month/year
-    if (last_leave_date is None or last_leave_date.month != current_month or last_leave_date.year != current_year):
-        # Reset the monthly leave count and initialize attendance
-        monthly_leave = 0
-        attendance = calculate_total_days(current_year, current_month)
-
-    last_leave_date = current_date
-    monthly_leave += number_of_leaves
-    attendance -= number_of_leaves  
-    print(last_leave_date, monthly_leave, attendance)
-    update_statement = update(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).values(monthly_leave=monthly_leave, attendance=attendance, last_leave_date=current_date)
     db.execute(update_statement)
     db.commit()
+
+def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int, workerName : str,db : Session):
+
+    number_of_month_days = determine_attendance_period(current_date().day)
+    attendance = number_of_month_days - leaves
+
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    salary = worker_employer_relation.salary_amount
+    newSalary = math.ceil(salary/number_of_month_days) * attendance 
+    newSalary -= deduction
+
     return {
-        "message": f"Leave marked for {workerName} for {number_of_leaves} days from {current_date}",
-        "last_leave_date": last_leave_date
+        "newSalary" : newSalary,
+        "attendance" : attendance,
+        "deduction" : deduction
     }
+
+
+def check_existing_repayment(employerNumber : int, workerName : str, db : Session):
+
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    workerId = worker_employer_relation.worker_id
+    employerId = worker_employer_relation.employer_id
+
+    existing_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).first()
+
+    if existing_advance_entry is None:
+        return {
+            "cashAdvance" : 0,
+            "repayment" : 0
+        }
+    
+    else:
+        return {
+            "cashAdvance" : existing_advance_entry.cashAdvance,
+            "repayment" : existing_advance_entry.monthlyRepayment
+        }
+

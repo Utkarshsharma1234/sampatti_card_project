@@ -101,8 +101,8 @@ def send_worker_salary_slips(db : Session = Depends(get_db)):
     return userControllers.send_worker_salary_slips(db)
 
 @router.put("/update_salary")
-def update_worker_salary(employer_id : str, worker_id : str, salary : int, db : Session = Depends(get_db)):
-    return userControllers.update_worker_salary(employer_id, worker_id, salary, db)
+def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session = Depends(get_db)):
+    return userControllers.update_worker_salary(employerNumber, workerName, salary, db)
 
 @router.post("/contract")
 def contract_generation(request : schemas.Contract, db : Session = Depends(get_db)):
@@ -194,8 +194,8 @@ def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.find_all_workers(employerNumber, db)
 
 @router.post('/process_audio')
-async def process_audio(file_url: str, employerNumber : int, workerName :str, db : Session = Depends(get_db)):
-    return await userControllers.process_audio(file_url, employerNumber, workerName, db)
+async def process_audio(user_input : str, user_language : str, employerNumber : int, workerName: str, db : Session = Depends(get_db)):
+    return await userControllers.process_audio(user_input, user_language, employerNumber, workerName, db)
 
 @router.post('/extract_name')
 async def extract_name(file_url: str, employerNumber : int):
@@ -225,11 +225,14 @@ def get_respondent_id():
 def create_confirmation_message(workerId : str, respondentId : str, surveyId : int, db : Session = Depends(get_db)):
     return userControllers.create_confirmation_message(workerId, respondentId, surveyId, db)
 
+@router.post("/mark_leave")
+def mark_leave(employerNumber : int, workerName : str, leaves : int, db : Session = Depends(get_db)):
+    return userControllers.mark_leave(employerNumber, workerName, leaves, db)
 
-@router.get("/mark_leave")
-def mark_leave(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
-    return userControllers.mark_leave(employerNumber, workerName, db)
+@router.get("/calculate_salary_amount")
+def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int, workerName : str, db : Session = Depends(get_db)):
+    return userControllers.calculate_salary_amount(leaves, deduction, employerNumber, workerName, db)
 
-@router.get("/number_of_leaves")
-def number_of_leaves(employerNumber : int, workerName : str, numberofleaves : int, db : Session = Depends(get_db)):
-    return userControllers.number_leave(employerNumber, workerName, numberofleaves, db)
+@router.get("/existing_repayment")
+def check_existing_repayment(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
+    return userControllers.check_existing_repayment(employerNumber, workerName, db)

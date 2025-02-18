@@ -397,7 +397,6 @@ Respond with the JSON ONLY. NO additional text!"""
     return template
 
 
-
 def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
     # Validate employer_number
     if not employer_number:
@@ -417,10 +416,7 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     template = llm_template()
 
     # Include context in the prompt
-    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", 
-                                             "previous_month", "previous_year", "employer_number", 
-                                             "attendance_period", "current_day", "context"], 
-                             template=template)
+    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "employer_number","attendance_period", "current_day", "context"],template=template)
 
     prompt = prompt_template.format(
         user_input=user_input,
