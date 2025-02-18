@@ -486,19 +486,23 @@ def find_all_workers(employerNumber : int, db : Session):
     }
 
 
-def create_cash_advance_entry(employerNumber : int, employer_id : str, worker_id : str, crrCashAdvance : int, Repayment_Monthly : int, Repayment_Start_Month : str, Repayment_Start_Year : int, Bonus : int, Attendance : int, db : Session):
+def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, db : Session):
 
-    existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    employerId = worker_employer_relation.employer_id
+    workerId = worker_employer_relation.worker_id
+
+    existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == workerId, models.CashAdvanceManagement.employer_id == employerId).first()
 
     if existing_record is not None:
 
-            update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employer_id == employer_id, models.CashAdvanceManagement.worker_id == worker_id).values(monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year, currentCashAdvance = crrCashAdvance, attendance = Attendance, bonus = Bonus)
-            db.execute(update_statement)
-            db.commit()
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).values(monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance)
+        db.execute(update_statement)
+        db.commit()
 
     else: 
-        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = worker_id, employer_id = employer_id, cashAdvance = 0, monthlyRepayment = Repayment_Monthly, repaymentStartMonth = Repayment_Start_Month, repaymentStartYear = Repayment_Start_Year, currentCashAdvance = crrCashAdvance, attendance = Attendance, bonus = Bonus)
-
+        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = workerId, employer_id = employerId, cashAdvance = 0, monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance)
         db.add(new_cash_advance_entry)
         db.commit()
         db.refresh(new_cash_advance_entry)

@@ -168,8 +168,8 @@ def create_salary_details(employerNumber : int, orderId : str, db : Session = De
     return userControllers.update_salary_details(employerNumber, orderId, db)
 
 @router.post("/cash_advance_entry/create")
-def create_cash_advance_entry(employerNumber : int, employer_id : str, worker_id : str, crrCashAdvance : int, Repayment_Monthly : int, Repayment_Start_Month : str, Repayment_Start_Year : int, Bonus : int, Attendance : int, db : Session = Depends(get_db)):
-    return userControllers.create_cash_advance_entry(employerNumber, employer_id, worker_id, crrCashAdvance, Repayment_Monthly, Repayment_Start_Month, Repayment_Start_Year, Bonus, Attendance, db)
+def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, db : Session = Depends(get_db)):
+    return userControllers.create_cash_advance_entry(employerNumber, workerName, crrCashAdvance, monthlyRepayment, startMonth, startYear, db)
 
 
 @router.post("/cash_advance_record/create")
