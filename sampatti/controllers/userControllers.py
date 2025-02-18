@@ -603,6 +603,7 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
             "worker_id" : worker_id,
             "salary" : extracted_info.get("salary"),
             "deduction" : extracted_info.get("deduction"),
+            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance"),
             "user_language" : user_language
         }
 
