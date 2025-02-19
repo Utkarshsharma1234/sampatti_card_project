@@ -486,7 +486,7 @@ def find_all_workers(employerNumber : int, db : Session):
     }
 
 
-def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, db : Session):
+def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, bonus : int, attendance : int, db : Session):
 
     worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
 
@@ -497,12 +497,12 @@ def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdv
 
     if existing_record is not None:
 
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).values(monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance)
+        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).values(monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance, bonus = bonus, attendance = attendance)
         db.execute(update_statement)
         db.commit()
 
     else: 
-        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = workerId, employer_id = employerId, cashAdvance = 0, monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance)
+        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = workerId, employer_id = employerId, cashAdvance = 0, monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance, bonus = bonus, attendance = attendance)
         db.add(new_cash_advance_entry)
         db.commit()
         db.refresh(new_cash_advance_entry)
