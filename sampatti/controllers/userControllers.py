@@ -566,13 +566,17 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
 
         existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
         
+        attend = determine_attendance_period(current_date().day)
+        if existing_record is not None:
+            if existing_record.attendance is not None:
+                attend = existing_record.attendance
         context = {
             "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
             "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
             "Repayment_Start_Year": 0,
             "Bonus": existing_record.bonus if existing_record else 0,
-            "Attendance": existing_record.attendance if existing_record else determine_attendance_period(current_date().day),
+            "Attendance": attend,
             "detailsFlag" : 0,
             "nameofWorker" : workerName,
             "salary" : worker_employer_relation.salary_amount
