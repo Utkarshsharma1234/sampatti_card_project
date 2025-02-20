@@ -803,7 +803,7 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
     worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
 
     salary = worker_employer_relation.salary_amount
-    newSalary = math.ceil(salary/number_of_month_days) * attendance 
+    newSalary = math.ceil((salary/number_of_month_days) * attendance)
     newSalary -= deduction
 
     return {

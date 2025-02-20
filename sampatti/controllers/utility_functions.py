@@ -128,6 +128,16 @@ def current_date():
     date = datetime.now().date()
     return date
 
+def next_month():
+    current_date = datetime.now()
+    next_month_date = current_date.replace(day=28) + timedelta(days=4)  
+    return next_month_date.strftime("%B")  
+
+def next_month_year():
+    current_date = datetime.now()
+    next_month_date = current_date.replace(day=28) + timedelta(days=4) 
+    return next_month_date.year  
+
 
 
 def current_month_days():
@@ -164,17 +174,20 @@ def llm_template():
 Input Text: {user_input}
 employer_number: {employer_number}
 existing record: {context} 
+next_month: {next_month}
+next_month_year: {next_month_year}
 
 Instructions:
 1. Carefully analyze the entire user input.
 2. Extract all relevant financial and attendance details.
 3. Always compare with the existing record and accordingly give the value.
 4. currentCashAdvance is the cash advance we will make changes in this field according to the user wants.
-5. If any information is missing, use existing record.
-6. Be flexible in understanding variations of input.
-7. Always include all fields in the result for all cases.
-8. don't include current cash cash unless it is mentioned by the user.
-9. Analyze the key word properly make changes according to the user wants if user wantes to changes the salary then make changes in the salary field according to the user wants.
+5. If any information is missing, use existing record expect Repayment_Start_Month and Repayment_Start_Year to {next_month} and {next_month_year} correspondingly.
+6. If user give cash advance and repayment amount and does not mention the repaymnet start moth then set Repayment_Start_Month to {next_month} and Repayment_Start_Year to {next_month_year}.
+7. Be flexible in understanding variations of input.
+8. Always include all fields in the result for all cases.
+9. don't include current cash cash unless it is mentioned by the user.
+10. Analyze the key word properly make changes according to the user wants if user wantes to changes the salary then make changes in the salary field according to the user wants.
 
 
 Extraction and Update Rules:
@@ -189,6 +202,7 @@ Extraction and Update Rules:
 - use existing record and update the existing record according to the user wants and only change the field which user wants rest keep as it existing record.
 - for deduction field only make change if user wants to make change in the salary else keep it as 0.
 - deduction is only the amount that is deducted from the salary amount as per {user_input}.
+- If user give cash advance and repayment amount and does not mention the repaymnet start moth then set Repayment_Start_Month to {next_month} and Repayment_Start_Year to {next_month_year}.
 
 Specific Field Extraction:
 - currentCashAdvance: 
@@ -197,9 +211,16 @@ Specific Field Extraction:
   * don't take any unnecessary values into if unless cash advance or related term mentioned in the {user_input}
   * take the value for the currentCashAdvance from the existing record if no cash advance is mentioned in the {user_input}
 
-- Monthly Repayment: Find planned monthly repayment amount
-- Bonus: Identify any bonus or additional payment
-  * Take the bonus amount from the existing record and then if the user asks to change the bonus amount then change it or if he wants to add more amount into bonus do the necessary steps from the {user_input}.
+- Monthly Repayment: 
+  * Find planned monthly repayment amount.
+  * It is the amount give corresponding to the cash advance.
+  * If nothing related to repayment is specified in the {user_input} take the repayment amount from the existing record.
+  
+- Bonus: 
+  * Identify any bonus or additional payment.
+  * If bonus is mentioned in the {user_input} then return the value from the user input.
+  * If nothing related to bonus is specified in the {user_input} take the bonus 0.
+      
 
 - Attendance: 
   * If attendance is mentioned in the {user_input} then return the value from the user input.
@@ -212,13 +233,14 @@ Specific Field Extraction:
 - For Repayment_Start_Month:
   * If user mentions a specific month (e.g., "March", "June"):
     - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
-  * If user says next month then set the Repayment_Start_Month to the next month calculated from the {current_month}.
-  * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
+  * If user says next month then set the Repayment_Start_Month as {next_month}.
+  * If user does not mention the month in the {user_input} then take the Repayment_Start_Month as {next_month}.
 
 - For Repayment_Start_Year:
   * If the user mentions a specific year like (2025, 2026, "january 2025", "march 2026"):
     - Set the value of Repayment_Start_Year to the value which the user mentions and then return in the response.
-  * If user does not mentions anythiing related to the year then set the value of Repayment_Start_Year to 0. 
+  * If user does not mentions anything related to the year then set the value of Repayment_Start_Year as {next_month_year}.
+  * If user does not mention the year in the {user_input} then take the Repayment_Start_Year as {next_month_year}. 
    
 - For detailsFlag:
   * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
@@ -271,8 +293,8 @@ user input = "i wanted to change the repayment amount, wanted to add 500 to the 
     "Repayment_Monthly": take value from the existing record + 500,
     "Bonus": 2222,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": existing record,
-    "Repayment_Start_Year": existing record,
+    "Repayment_Start_Month": {next_month},
+    "Repayment_Start_Year": {next_month_year},
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
     "salary" : existing record,
@@ -285,22 +307,22 @@ user input = "Add 1000 bonus and worker was on leave for 7 days"
     "Repayment_Monthly": take value from the existing record,
     "Bonus": 1000,
     "Attendance": {attendance_period}-7,
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
+    "Repayment_Start_Month": {next_month},
+    "Repayment_Start_Year": {next_month_year},
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
     "salary" : existing record,
     "deduction" : 0
 }}
 
-user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
+user input = "Worker needs 5000 cash advance and repayment monthly should be 1000. repayment start from next month"
 {{
     "currentCashAdvance": 5000,
     "Repayment_Monthly": 1000,
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
+    "Repayment_Start_Month": {next_month},
+    "Repayment_Start_Year": {next_month_year},
     "detailsFlag" : 0,
     "nameofWorker" : "sampatti",
     "salary" : existing record,
@@ -322,14 +344,14 @@ user input = "yes correct details"
     "deduction" : 0
 }}
 
-user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma"
+user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma and repayment start from April 2025"
 {{
     "currentCashAdvance": take value from the existing record,
     "Repayment_Monthly": take value from the existing record,
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
+    "Repayment_Start_Month": "April",
+    "Repayment_Start_Year": 2025,
     "detailsFlag" : 0,
     "nameofWorker" : "utkarsh sharma",
     "salary" : existing record,
@@ -342,8 +364,8 @@ user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
     "Repayment_Monthly": take value from the existing record,
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
+    "Repayment_Start_Month": {next_month},
+    "Repayment_Start_Year": {next_month_year},
     "detailsFlag" : 0,
     "nameofWorker" : "vrashali",
     "salary" : existing record,
@@ -356,8 +378,8 @@ user input = "pay om a advance amount of 40000 to with a monthly repayment of 10
     "Repayment_Monthly": take value from the existing record,
     "Bonus": take value from the existing record,
     "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
+    "Repayment_Start_Month": {next_month},
+    "Repayment_Start_Year": {next_month_year},
     "detailsFlag" : 0,
     "nameofWorker" : "om",
     "salary" : existing record,
@@ -412,17 +434,21 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     current_date = datetime.now().date()
     current_day = datetime.now().day
     attendance_period = determine_attendance_period(current_day)
+    next_month_value = next_month()  # Assign next_month before using it
+    next_month_year_value = next_month_year()  # Assign next_month_year before using it
 
     template = llm_template()
 
     # Include context in the prompt
-    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "employer_number","attendance_period", "current_day", "context"],template=template)
+    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", "next_month", "next_month_year", "previous_month", "previous_year", "employer_number","attendance_period", "current_day", "context"],template=template)
 
     prompt = prompt_template.format(
         user_input=user_input,
         current_date=current_date,
         current_month=current_month(),
         current_year=current_year(),
+        next_month=next_month_value,  # Use the assigned value
+        next_month_year=next_month_year_value,  # Use the assigned value
         previous_month=previous_month(),
         previous_year=current_year(),
         employer_number=employer_number,
