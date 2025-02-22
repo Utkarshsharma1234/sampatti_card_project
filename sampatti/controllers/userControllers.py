@@ -570,49 +570,36 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
         if existing_record is not None:
             if existing_record.attendance is not None:
                 attend = existing_record.attendance
+        
         context = {
             "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
             "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
             "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
-            "Repayment_Start_Year": 0,
+            "Repayment_Start_Year": existing_record.repaymentStartMonth if existing_record else 0,
             "Bonus": existing_record.bonus if existing_record else 0,
             "Attendance": attend,
-            "detailsFlag" : 0,
             "nameofWorker" : workerName,
-            "salary" : worker_employer_relation.salary_amount
+            "salary" : worker_employer_relation.salary_amount,
+            "deduction": existing_record.deduction if existing_record else 0,
+            "leaves": 0
         }
 
         # Pass the user input and context to the LLM for extraction
         extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
         print(f"usercontrollers : {extracted_info}")
+        print(f"the context is : {context}")
         
 
-        year = 0
-        month_name = extracted_info.get("Repayment_Start_Month")
-        given_year = extracted_info.get("Repayment_Start_Year")
-
-        if month_name != "sampatti":
-
-            if given_year == 0:
-                year = calculate_year_for_month(month_name)
-
-            else:
-                year = given_year
-
         response = {
-            "crrCashAdvance" : extracted_info.get("currentCashAdvance"),
-            "Repayment_Monthly" : extracted_info.get("monthlyRepayment"),
+            "crrCashAdvance" : extracted_info.get("crrCashAdvance"),
+            "Repayment_Monthly" : extracted_info.get("Repayment_Monthly"),
             "Repayment_Start_Month" : extracted_info.get("Repayment_Start_Month"),
-            "Repayment_Start_Year" : year,
+            "Repayment_Start_Year" : extracted_info.get("Repayment_Start_Year"),
             "Bonus" : extracted_info.get("Bonus"),
             "Attendance" : extracted_info.get("Attendance"),
-            "detailsFlag" : extracted_info.get("detailsFlag"),
-            "employer_id" : employer_id,
-            "worker_id" : worker_id,
             "salary" : extracted_info.get("salary"),
             "deduction" : extracted_info.get("deduction"),
-            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance"),
-            "user_language" : user_language
+            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance")
         }
 
         return response

@@ -1,4 +1,6 @@
+import calendar
 import shutil
+from openai import OpenAI
 import json, os, uuid, random, string,  difflib, re, requests, base64
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
@@ -139,6 +141,7 @@ def previous_month_days():
     last_day_of_previous_month = current_month_first - timedelta(days=1)
     return last_day_of_previous_month.day
 
+
 def determine_attendance_period(current_day):
     """
     Determine whether to use previous month or current month's days for attendance
@@ -156,285 +159,104 @@ def determine_attendance_period(current_day):
         return total_current_month_days
 
 
-def llm_template():
-    current_day = datetime.now().day
-    attendance_period = determine_attendance_period(current_day)
-    template = """You are an intelligent assistant helping to extract precise financial and attendance information for an employee cash advance record.
-
-Input Text: {user_input}
-employer_number: {employer_number}
-existing record: {context} 
-
-Instructions:
-1. Carefully analyze the entire user input.
-2. Extract all relevant financial and attendance details.
-3. Always compare with the existing record and accordingly give the value.
-4. currentCashAdvance is the cash advance we will make changes in this field according to the user wants.
-5. If any information is missing, use existing record.
-6. Be flexible in understanding variations of input.
-7. Always include all fields in the result for all cases.
-8. don't include current cash cash unless it is mentioned by the user.
-9. Analyze the key word properly make changes according to the user wants if user wantes to changes the salary then make changes in the salary field according to the user wants.
-
-
-Extraction and Update Rules:
-- Focus on extracting or modifying specific fields mentioned in the input.
-- Always analyze the entire input to ensure all relevant fields are considered.
-- If there is not any mention of cash advance then make current cash advance it as 0.
-- If your wants to change the salary then make changes in salary field according to the user wants.
-- If only one field is discussed, keep other fields from existing record and give them updated information in final output.
-- If input suggests adding/changing amount, then add or change according to the existing record field.
-- If no specific amount given, use existing record's value.
-- Validate and adjust values logically don't give random value.
-- use existing record and update the existing record according to the user wants and only change the field which user wants rest keep as it existing record.
-- for deduction field only make change if user wants to make change in the salary else keep it as 0.
-- deduction is only the amount that is deducted from the salary amount as per {user_input}.
-
-Specific Field Extraction:
-- currentCashAdvance: 
-  * Look for cash advance, advance, loan, cash award or financial support amounts.
-  * Make change only if there is mention any cash advance, advance, loan, or financial support amounts.
-  * don't take any unnecessary values into if unless cash advance or related term mentioned in the {user_input}
-  * take the value for the currentCashAdvance from the existing record if no cash advance is mentioned in the {user_input}
-
-- Monthly Repayment: Find planned monthly repayment amount
-- Bonus: Identify any bonus or additional payment
-  * Take the bonus amount from the existing record and then if the user asks to change the bonus amount then change it or if he wants to add more amount into bonus do the necessary steps from the {user_input}.
-
-- Attendance: 
-  * If attendance is mentioned in the {user_input} then return the value from the user input.
-  * If nothing related to attendance is specified in the {user_input} take the Attendance value from the existing record.
-  * If it is mentioned that the worker was on leave for let's say 7 days then take the attendance as {attendance_period} - 7.
-  * If user says worker was present for full month or present for all days or was not on leave or attendance is 100 percent or anything similar to this statemet then make attendance as {attendance_period}.
-  * it should not be 0 anytime.
-
-
-- For Repayment_Start_Month:
-  * If user mentions a specific month (e.g., "March", "June"):
-    - Set the value of Repayment_Start_Month to the value which user mentions and then return in the response.
-  * If user says next month then set the Repayment_Start_Month to the next month calculated from the {current_month}.
-  * If user does not mention the month in the {user_input} then take the Repayment_Start_Month from the existing record and return.
-
-- For Repayment_Start_Year:
-  * If the user mentions a specific year like (2025, 2026, "january 2025", "march 2026"):
-    - Set the value of Repayment_Start_Year to the value which the user mentions and then return in the response.
-  * If user does not mentions anythiing related to the year then set the value of Repayment_Start_Year to 0. 
-   
-- For detailsFlag:
-  * If the {user_input} is containing information which says mean that the details which are provided are correct then just make the detailsFlag to be 1 otherwise let it 0.
-  * for e.g., If {user_input} says "yes" or it says "yes, correct details" or it says "all details are correct" or it says "yes, all the provided details are correct." or similar stuff then make the detailsFlag to be 1 otherwise let it be 0 only. 
-  
-- For nameOfWorker:
-  * If user mentions a name then take it from the {user_input} but if not then take it from the existing record.
-  * for e.g. If user says that, please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma then extract the nameOfWorker as "utkarsh sharma".
-  * for e.g. If user says that, pay om a advance amount of 40000 to with a monthly repayment of 10000 then take nameOfWorker as "om".
-  * for e.g. If user says that, i want to give vrashali a bonus of 70000 and attendance of 25 then take the nameOfWorker as "vrashali".
-  * for e.g If user says that, Please change the salary of utkarsh to 12000 rupees, then take the nameOfWorker as "utkarsh".
-
-- For salary:
-  * If user mentions the salary then take the salary amount from the {user_input} and if not mentioned then take the salary amount from the existing record.
-  * It should never be 0.
-  * check if user has world similar to word salary or monthly payment or simailar.
-  
-- For Deduction:
-  * If user mentions the word deduction then take the value from the {user_input} and keep it in deduction field.
-  * The deduction is the amount that is deducted or changed from the salary amount.
-
-Key Processing Instructions:
-- Use integers for monetary and attendance values.
-- If no specific value mentioned, preserve existing record's value.
-
-- Ensure final values are reasonable and consistent
-- For partial updates, only modify mentioned fields
-- Always include all fields in the result for all cases.
-- don't make change in the Cash_Advance unless it is necessary change in the currentCashAdvance.
-
-Return ONLY a valid JSON focusing on fields mentioned or changed:
-{{
-    "currentCashAdvance": <cash advance amount as integer>
-    "monthlyRepayment": <monthly repayment amount as integer>,
-    "Bonus": <bonus amount as integer>,
-    "Attendance": <number of days present as integer>,
-    "Repayment_Start_Month": <start month as 'Month' in capitalized form>,
-    "Repayment_Start_Year": <integer in the form of yyyy>,
-    "detailsFlag" : <0 or 1 as an integer>,
-    "nameofWorker" : <name of the worker string always in lowercase.>,
-    "salary" : <salary amount as an integer>,
-    "deduction" : <deduction amount as an integer>
-}}
-
-
-examples:
-user input = "i wanted to change the repayment amount, wanted to add 500 to the repayment and add 2222 bonus."
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record + 500,
-    "Bonus": 2222,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": existing record,
-    "Repayment_Start_Year": existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "sampatti",
-    "salary" : existing record,
-    "deduction" : 0
-}}   
-
-user input = "Add 1000 bonus and worker was on leave for 7 days"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": 1000,
-    "Attendance": {attendance_period}-7,
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "sampatti",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-user input = "Worker needs 5000 cash advance and repayment monthly should be 1000."
-{{
-    "currentCashAdvance": 5000,
-    "Repayment_Monthly": 1000,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "sampatti",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-
-user input = "yes correct details"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 1,
-    "nameofWorker" : "sampatti",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-user input = "please pay a cash advance of 20000 with a monthly repayment of 5000 to utkarsh sharma"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "utkarsh sharma",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-user input = "i want to give vrashali a bonus of 70000 and attendance of 25"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "vrashali",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-user input = "pay om a advance amount of 40000 to with a monthly repayment of 10000"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "om",
-    "salary" : existing record,
-    "deduction" : 0
-}}
-
-user input = "the salary of utkarsh from this month is 15000"
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "utkarsh",
-    "salary" : 15000,
-    "deduction" : 0
-}}
-
-user input = I wanted to deduct 2000 from salary and wanted to give only 3500 instead of 5500 this month only.
-{{
-    "currentCashAdvance": take value from the existing record,
-    "Repayment_Monthly": take value from the existing record,
-    "Bonus": take value from the existing record,
-    "Attendance": {attendance_period}
-    "Repayment_Start_Month": take value from the existing record,
-    "Repayment_Start_Year": take value from the existing record,
-    "detailsFlag" : 0,
-    "nameofWorker" : "sampatti",
-    "salary" : 3500,
-    "deduction" : 2000
-}}
-
-Respond with the JSON ONLY. NO additional text!"""
-
-    return template
-
 
 def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
-    # Validate employer_number
     if not employer_number:
         raise ValueError("Employer number is required")
 
-    # Get or create employer record
-    llm = ChatOpenAI(
-        model="gpt-4o", 
-        temperature=0.7, 
-        api_key = openai_api_key
-    )
+    llm = OpenAI(api_key=openai_api_key)  # Using OpenAI client for direct API call
+    current_date = datetime.now()
     
-    current_date = datetime.now().date()
-    current_day = datetime.now().day
-    attendance_period = determine_attendance_period(current_day)
+    # Determine the correct attendance month based on the rule
+    if current_date.day <= 15:
+        attendance_month = (current_date.replace(day=1) - timedelta(days=1)).month  # Previous month
+        attendance_year = (current_date.replace(day=1) - timedelta(days=1)).year
+    else:
+        attendance_month = current_date.month  # Current month
+        attendance_year = current_date.year
 
-    template = llm_template()
+    # Get total days in the attendance month
+    total_days_in_month = calendar.monthrange(attendance_year, attendance_month)[1]
 
-    # Include context in the prompt
-    prompt_template = PromptTemplate(input_variables=["user_input", "current_date", "current_month", "current_year", "previous_month", "previous_year", "employer_number","attendance_period", "current_day", "context"],template=template)
+    # Repayment Start Month & Year Logic
+    user_provided_repayment_month = "Repayment_Start_Month" in user_input.lower()
+    context_repayment_month = context.get("Repayment_Start_Month", "").capitalize()
+    context_repayment_year = context.get("Repayment_Start_Year", current_date.year)
+
+    if user_provided_repayment_month:  
+        repayment_month = context_repayment_month  # User has provided the month, use it
+        repayment_start_year = context_repayment_year  
+
+
+    elif context_repayment_month:  
+        repayment_month = context_repayment_month  # Use context month if available
+        repayment_start_year = context_repayment_year  
+
+    else:  
+        # If not in user input & not in context, take next month from the current date
+        next_month_date = current_date.replace(day=1) + timedelta(days=32)  
+        repayment_month = next_month_date.strftime("%B")  
+        repayment_start_year = next_month_date.year   
+        
+         
+
+    # Ensure deduction remains unchanged if not mentioned in input
+    deduction = context.get("deduction", 0)
+
+    # Create LLM prompt
+    template = """
+    Given the user input and current context, update the necessary fields while keeping the rest unchanged.
+    - If the user mentions "leaves", deduct the leaves from the total days of the attendance month.
+    - Deduction is different from leaves. If deduction is not mentioned in input, keep it the same as in the context.
+    - Repayment month logic:
+        1. If the user provides a month, use it.
+        2. If not provided but exists in the context, use the context value.
+        3. If not in user input or context, set it to the next month from the current date.
+    
+    Context: {context}
+    User Input: {user_input}
+    Current Date: {current_date}
+    Attendance Month: {attendance_month_name}
+    Attendance Year: {attendance_year}
+    Total Days in Attendance Month: {total_days_in_month}
+
+    Return JSON in the following structure:
+    {{
+        "crrCashAdvance": <integer>,
+        "Repayment_Monthly": <integer>,
+        "Repayment_Start_Month": "<Capitalized Month>",
+        "Repayment_Start_Year": <YYYY>,
+        "Bonus": <integer>,
+        "Attendance": <integer>,
+        "nameofWorker" : workerName,
+        "salary": <integer>,
+        "deduction": <integer>,
+        "leaves": <integer>
+    }}
+    """
+
+    prompt_template = PromptTemplate(
+        input_variables=["user_input", "current_date", "context", "attendance_month_name", "attendance_year", "total_days_in_month"],
+        template=template
+    )
 
     prompt = prompt_template.format(
         user_input=user_input,
-        current_date=current_date,
-        current_month=current_month(),
-        current_year=current_year(),
-        previous_month=previous_month(),
-        previous_year=current_year(),
-        employer_number=employer_number,
-        attendance_period=attendance_period,
-        current_day=current_day,
-        context=json.dumps(context)  # Convert context to JSON string
+        current_date=current_date.strftime("%Y-%m-%d"),
+        context=json.dumps(context),
+        attendance_month_name=calendar.month_name[attendance_month],
+        attendance_year=attendance_year,
+        total_days_in_month=total_days_in_month
     )
-    
-    #print(f"the prompt is : {prompt}")
-    response = llm.invoke(prompt)  
-    response_text = response.content 
-    
+
+    response = llm.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": "You are an assistant that updates JSON fields accurately and always returns all fields."},
+                  {"role": "user", "content": prompt}],
+        temperature=0.5
+    )
+
+    response_text = response.choices[0].message.content.strip()
     cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
 
     print(f"The response from LLM is: {response}")
@@ -446,9 +268,10 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
-        print(f"Raw response: {response}")
-        print(f"Cleaned response: {cleaned_response}")
+        print(f"Raw response: {response_text}")
         return None
+    
+    
     
 def call_sarvam_api(file_path):
 

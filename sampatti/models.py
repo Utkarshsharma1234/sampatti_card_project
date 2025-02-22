@@ -90,6 +90,7 @@ class CashAdvanceManagement(Base):
     currentCashAdvance = Column(Integer, default=0)
     bonus = Column(Integer, default= 0)
     attendance = Column(Integer, default= 0)
+    deduction = Column(Integer, default = 0)
 
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"
