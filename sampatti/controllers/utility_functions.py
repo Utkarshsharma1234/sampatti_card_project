@@ -210,6 +210,7 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     - Deduction is different from leaves. If deduction is not mentioned in input, keep it the same as in the context.
     - Repayment month logic:
         1. If the user provides a month, use it.
+            - Set the year to the **next immediate occurrence** of that month from the current date.
         2. If not provided but exists in the context, use the context value.
         3. If not in user input or context, set it to the next month from the current date.
     
@@ -228,7 +229,7 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         "Repayment_Start_Year": <YYYY>,
         "Bonus": <integer>,
         "Attendance": <integer>,
-        "nameofWorker" : workerName,
+        "nameofWorker" : "<worker_name>",
         "salary": <integer>,
         "deduction": <integer>,
         "leaves": <integer>
