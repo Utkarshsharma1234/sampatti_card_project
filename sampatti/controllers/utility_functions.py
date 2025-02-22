@@ -207,7 +207,10 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     template = """
     Given the user input and current context, update the necessary fields while keeping the rest unchanged.
     - If the user mentions "leaves", deduct the leaves from the total days of the attendance month.
-    - Deduction is different from leaves. If deduction is not mentioned in input, keep it the same as in the context.
+    - Deduction is different from leaves:
+        1. If the user explicitly says something like "don't deduct anything this month", set deduction to **0**.
+        2. If deduction is mentioned with a value, use that value.
+        3. If deduction is NOT mentioned at all, keep it the same as in the context.
     - Repayment month logic:
         1. If the user provides a month, use it.
             - Set the year to the **next immediate occurrence** of that month from the current date.
