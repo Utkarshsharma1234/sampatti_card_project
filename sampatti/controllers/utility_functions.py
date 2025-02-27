@@ -216,6 +216,8 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
             - Set the year to the **next immediate occurrence** of that month from the current date.
         2. If not provided but exists in the context, use the context value.
         3. If not in user input or context, set it to the next month from the current date.
+    - Bonus :
+        1. If user says terms like "extra amount", "bonus" "extra this month" or any similar stuff then also consider it in the bonus only.
     
     Context: {context}
     User Input: {user_input}
