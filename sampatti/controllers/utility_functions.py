@@ -207,6 +207,13 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     template = """
     Given the user input and current context, update the necessary fields while keeping the rest unchanged.
     - If the user mentions "leaves", deduct the leaves from the total days of the attendance month.
+    - **Salary Adjustments**:
+        1. **Temporary Adjustments**:
+            - If the input specifies "only X rupees this month" or similar type of statement which correspond to this month only then calculate the difference from the standard salary.
+                - If X is less than the standard salary, calculate the difference as a deduction.
+                - If X is more than the standard salary, calculate the excess as a bonus.
+        2. **Permanent Adjustments**:
+            - If the input states "Change salary to X", update the standard salary to X and reset deductions and bonuses.
     - Deduction is different from leaves:
         1. If the user explicitly says something like "don't deduct anything this month", set deduction to **0**.
         2. If deduction is mentioned with a value, use that value.
