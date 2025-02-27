@@ -232,7 +232,3 @@ def mark_leave(employerNumber : int, workerName : str, leaves : int, db : Sessio
 @router.get("/calculate_salary_amount")
 def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int, workerName : str, db : Session = Depends(get_db)):
     return userControllers.calculate_salary_amount(leaves, deduction, employerNumber, workerName, db)
-
-@router.get("/existing_repayment")
-def check_existing_repayment(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
-    return userControllers.check_existing_repayment(employerNumber, workerName, db)

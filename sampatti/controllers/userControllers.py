@@ -802,26 +802,3 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
         "attendance" : attendanceReturn,
         "deduction" : deduction
     }
-
-
-def check_existing_repayment(employerNumber : int, workerName : str, db : Session):
-
-    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
-
-    workerId = worker_employer_relation.worker_id
-    employerId = worker_employer_relation.employer_id
-
-    existing_advance_entry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).first()
-
-    if existing_advance_entry is None:
-        return {
-            "cashAdvance" : 0,
-            "repayment" : 0
-        }
-    
-    else:
-        return {
-            "cashAdvance" : existing_advance_entry.cashAdvance,
-            "repayment" : existing_advance_entry.monthlyRepayment
-        }
-

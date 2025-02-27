@@ -382,6 +382,9 @@ def unsettled_balance(db : Session):
     total_records = db.query(models.worker_employer).all()
 
     for transaction in total_records:
+
+        if transaction.order_id is None:
+            continue
         order_info = check_order_status(transaction.order_id)
         totalAmount = order_info["order_amount"]
 
