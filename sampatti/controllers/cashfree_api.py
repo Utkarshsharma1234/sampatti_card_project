@@ -383,8 +383,9 @@ def unsettled_balance(db : Session):
 
     for transaction in total_records:
 
-        if transaction.order_id is None:
+        if transaction.order_id == "sample":
             continue
+        
         order_info = check_order_status(transaction.order_id)
         totalAmount = order_info["order_amount"]
 
