@@ -456,16 +456,13 @@ def salary_payment_reminder(db : Session):
 
     for item in transactions:
 
-        if item.status == "SENT":
-            continue
-        
         response_data = cashfree_api.check_order_status(order_id=item.order_id)
         order_status = response_data.get("order_status")
-        payment_session_id = response_data.get("payment_session_id")
 
         if order_status == "PAID":
             continue
         
+        payment_session_id = response_data.get("payment_session_id")
         whatsapp_message.send_whatsapp_message(item.employer_number, item.worker_name, f"{month} {year}", payment_session_id, "salary_reminder")
 
 
