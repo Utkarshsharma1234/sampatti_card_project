@@ -115,8 +115,8 @@ def generate_salary_slip(workerNumber, db:Session) :
         if order_id == "sample":
             continue
         order_info = check_order_status(order_id=order_id)
-        status = order_info.get('order_status')
-        order_amount = order_info.get["order_amount"]
+        status = order_info["order_status"]
+        order_amount = order_info["order_amount"]
         salary = transaction.salary_amount
         if status == "PAID":
 
