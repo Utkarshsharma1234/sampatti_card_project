@@ -578,7 +578,8 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
             "nameofWorker" : workerName,
             "salary" : worker_employer_relation.salary_amount,
             "deduction": existing_record.deduction if existing_record else 0,
-            "leaves": 0
+            "leaves": 0,
+            "ai_message": ""
         }
 
         # Pass the user input and context to the LLM for extraction
@@ -596,7 +597,8 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
             "Attendance" : extracted_info.get("Attendance"),
             "salary" : extracted_info.get("salary"),
             "deduction" : extracted_info.get("deduction"),
-            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance")
+            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance"),
+            "ai_message" : extracted_info.get("ai_message")
         }
 
         return response
