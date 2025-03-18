@@ -126,7 +126,6 @@ def current_year():
     return year
 
 def current_date():
-
     date = datetime.now().date()
     return date
 
@@ -298,6 +297,9 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         if extracted_info.get("crrCashAdvance")>0 and extracted_info.get("Repayment_Monthly")==0:
             extracted_info["ai_message"] = "Since you have not provided the monthly repayment details associated with it, kindly confirm if you wish to proceed with the cash advance only by selecting the 'Yes' option. If not, please select 'No' and provide your input regarding the bonus or any other adjustments."
 
+        if extracted_info.get("crrCashAdvance")==0 and extracted_info.get("Repayment_Monthly")>0:
+            extracted_info["ai_message"] = "As we have not detected any cash advance you have only give cash advance details, please give your input again by selecting the 'No' option and provide the cash advance details."
+        
         return extracted_info
 
     except json.JSONDecodeError as e:

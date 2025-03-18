@@ -126,3 +126,12 @@ class Responses(Base):
     questionId = Column(Integer, ForeignKey('QuestionBank.id'))
     surveyId = Column(Integer, ForeignKey('SurveyDetails.id'))
     timestamp = Column(String)
+    
+class AttendanceRecord(Base):
+    __tablename__ = "attendance_records"
+    uuid = Column(String, primary_key=True)
+    worker_id = Column(String, nullable=False)
+    employer_id = Column(String, nullable=False)
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+    date_of_leave = Column(Date, nullable=False)
