@@ -821,8 +821,17 @@ def fetch_attendance_records(db, employer_id, worker_id):
     attendance_data = [{"date_of_leave": str(record.date_of_leave)} for record in records]
     return attendance_data
 
-def process_attendance_with_llm(employer_id : str, worker_id : str, user_input : str, db : Session):
+
+def process_attendance_with_llm(employerNumber : int, workerName: str, user_input : str, db : Session):
     """Extracts existing records, sends them to LLM, and gets structured output."""
+    
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    if not worker_employer_relation:
+        raise ValueError("Worker not found with the given worker number.")
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
     
     # Fetch existing attendance records
     attendance_records = fetch_attendance_records(db, employer_id, worker_id)
@@ -951,3 +960,36 @@ def add_attendance_records(action: str, dates: list, worker_id: str, employer_id
 
     except Exception as e:
         return {"status": "error", "message": f"Unexpected error: {str(e)}"}
+
+
+
+def mark_leave(employerNumber : int, workerName : str, db: Session):
+    
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    if not worker_employer_relation:
+        raise ValueError("Worker not found with the given worker number.")
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+    
+    today = date.today()
+
+    # Create a new attendance record
+    attendance_entry = models.AttendanceRecord(
+        uuid=str(uuid.uuid4()),
+        worker_id=worker_id,
+        employer_id=employer_id,
+        month=today.month,
+        year=today.year,
+        date_of_leave=today
+    )
+
+    # Add to database
+    db.add(attendance_entry)
+    db.commit()
+    db.refresh(attendance_entry)
+
+    return {"message": "Leave marked successfully", "date": today}
+
+

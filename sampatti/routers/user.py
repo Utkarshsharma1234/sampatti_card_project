@@ -234,10 +234,13 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
     return userControllers.calculate_salary_amount(leaves, deduction, employerNumber, workerName, db)
 
 @router.post("/Attendance")
-def process_attendance_with_llm(employer_id : str, worker_id : str, user_input : str, db : Session = Depends(get_db)):
-    return userControllers.process_attendance_with_llm(employer_id, worker_id, user_input, db)
+def process_attendance_with_llm(employerNumber : int, workerName: str, user_input : str, db : Session = Depends(get_db)):
+    return userControllers.process_attendance_with_llm(user_input, employerNumber, workerName, db)
 
 @router.post("/attendance/")
 def add_attendance_records(action: str, dates: list[str], worker_id: str, employer_id: str, db: Session = Depends(get_db)):
     return userControllers.add_attendance_records(action, dates, worker_id, employer_id, db)
 
+@router.post("/todays_leave")
+def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get_db)):
+    return userControllers.mark_leave(employerNumber, workerName, db)   
