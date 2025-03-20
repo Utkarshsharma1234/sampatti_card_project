@@ -1,11 +1,15 @@
 import calendar
 import html
+from html import parser
 import json
 import math
 import tempfile, os, re, requests
+from typing import Any, Dict, List
+import uuid
 from fastapi import File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy import delete, func, insert,update
+from sqlalchemy import delete, func, insert, select, tuple_,update
+from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, calculate_year_for_month, question_language_audio
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
@@ -13,6 +17,14 @@ from sqlalchemy.orm import Session
 from fuzzywuzzy import fuzz
 from pydub import AudioSegment
 from datetime import datetime, date, timedelta
+from dotenv import load_dotenv
+from openai import OpenAI
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import HumanMessage
+from langchain.prompts import PromptTemplate
+
+load_dotenv()
+openai_api_key = os.environ.get('OPENAI_API_KEY')
 
 
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
@@ -578,7 +590,8 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
             "nameofWorker" : workerName,
             "salary" : worker_employer_relation.salary_amount,
             "deduction": existing_record.deduction if existing_record else 0,
-            "leaves": 0
+            "leaves": 0,
+            "ai_message": ""
         }
 
         # Pass the user input and context to the LLM for extraction
@@ -596,7 +609,8 @@ async def process_audio(user_input : str, user_language : str, employerNumber : 
             "Attendance" : extracted_info.get("Attendance"),
             "salary" : extracted_info.get("salary"),
             "deduction" : extracted_info.get("deduction"),
-            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance")
+            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance"),
+            "ai_message" : extracted_info.get("ai_message")
         }
 
         return response
@@ -799,3 +813,183 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
         "attendance" : attendanceReturn,
         "deduction" : deduction
     }
+
+
+def fetch_attendance_records(db, employer_id, worker_id):
+    """Fetch all attendance records of a worker for an employer."""
+    records = db.query(models.AttendanceRecord).filter_by(employer_id=employer_id, worker_id=worker_id).all()
+    attendance_data = [{"date_of_leave": str(record.date_of_leave)} for record in records]
+    return attendance_data
+
+
+def process_attendance_with_llm(employerNumber : int, workerName: str, user_input : str, db : Session):
+    """Extracts existing records, sends them to LLM, and gets structured output."""
+    
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    if not worker_employer_relation:
+        raise ValueError("Worker not found with the given worker number.")
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+    
+    # Fetch existing attendance records
+    attendance_records = fetch_attendance_records(db, employer_id, worker_id)
+    
+    llm = OpenAI(api_key=openai_api_key)
+    current_date = date.today().strftime("%Y-%m-%d")
+
+    # Construct the prompt for the LLM
+    prompt_template = f"""
+    You are an intelligent attendance manager. Given the following input, process the attendance record update:
+    
+    - Employer ID: {employer_id}
+    - Worker ID: {worker_id}
+    - Current Date: {current_date}
+    - Existing Attendance Records: {attendance_records}
+    - User Input: {user_input}
+
+    Based on the input, determine:
+    1. Action: ("view", "add", "delete")
+    2. Dates: List of dates in "YYYY-MM-DD" format.
+    3. AI Message: A natural response for the user.
+
+    Respond with a JSON object in the format:
+    {{
+        "action": "<view/add/delete>",
+        "dates": ["YYYY-MM-DD", ...],
+        "ai_message": "<response message>"
+    }}
+    """
+
+    # Call OpenAI GPT-4o API
+    response =  llm.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": prompt_template}],
+        temperature=0.5,
+    )
+
+    response_text = response.choices[0].message.content.strip()
+    cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
+
+    print(f"LLM Response Raw: {response_text}")
+    print(f"LLM Response Cleaned: {cleaned_response}")
+
+        # Try parsing JSON
+    extracted_info = json.loads(cleaned_response)
+    return extracted_info
+
+
+def add_attendance_records(action: str, dates: list, worker_id: str, employer_id: str, db: Session):
+    
+    try:
+        if action == "view":
+            # Retrieve attendance records for the worker
+            records = db.query(models.AttendanceRecord.date_of_leave).filter(
+                models.AttendanceRecord.worker_id == worker_id,
+                models.AttendanceRecord.employer_id == employer_id
+            ).all()
+
+            # Format output
+            attendance_dates = [record.date_of_leave.strftime("%Y-%m-%d") for record in records]
+            return {"status": "success", "data": attendance_dates}
+
+        elif action == "add":
+            # Convert date strings to date objects
+            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in dates]
+
+            # Extract year and month for filtering
+            year_month_tuples = {(d.year, d.month) for d in date_objects}
+
+            # Fetch existing records for given worker & employer
+            existing_records = db.query(models.AttendanceRecord.date_of_leave).filter(
+                models.AttendanceRecord.worker_id == worker_id,
+                models.AttendanceRecord.employer_id == employer_id,
+                models.AttendanceRecord.year.in_([y for y, m in year_month_tuples]),
+                models.AttendanceRecord.month.in_([m for y, m in year_month_tuples]),
+            ).all()
+
+            # Convert existing dates to a set for quick lookup
+            existing_dates = {record.date_of_leave for record in existing_records}
+
+            # Filter out duplicate dates
+            new_dates = [d for d in date_objects if d not in existing_dates]
+
+            if new_dates:
+                new_records = [
+                    models.AttendanceRecord(
+                        uuid=str(uuid.uuid4()),
+                        worker_id=worker_id,
+                        employer_id=employer_id,
+                        month=d.month,
+                        year=d.year,
+                        date_of_leave=d
+                    ) for d in new_dates
+                ]
+                db.add_all(new_records)
+                db.commit()
+                return {"status": "success", "message": f"Added {len(new_records)} new attendance records."}
+            else:
+                return {"status": "info", "message": "No new records to add (all dates already exist)."}
+
+        elif action == "delete":
+            # Convert date strings to date objects
+            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in dates]
+
+            # Find records to delete
+            records_to_delete = db.query(models.AttendanceRecord).filter(
+                models.AttendanceRecord.worker_id == worker_id,
+                models.AttendanceRecord.employer_id == employer_id,
+                models.AttendanceRecord.date_of_leave.in_(date_objects)
+            ).all()
+
+            if records_to_delete:
+                for record in records_to_delete:
+                    db.delete(record)
+                db.commit()
+                return {"status": "success", "message": f"Deleted {len(records_to_delete)} attendance records."}
+            else:
+                return {"status": "info", "message": "No matching records found for deletion."}
+
+        else:
+            return {"status": "error", "message": "Invalid action. Use 'view', 'add', or 'delete'."}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        return {"status": "error", "message": f"Database error: {str(e)}"}
+
+    except Exception as e:
+        return {"status": "error", "message": f"Unexpected error: {str(e)}"}
+
+
+
+def mark_leave(employerNumber : int, workerName : str, db: Session):
+    
+    worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
+
+    if not worker_employer_relation:
+        raise ValueError("Worker not found with the given worker number.")
+
+    employer_id = worker_employer_relation.employer_id
+    worker_id = worker_employer_relation.worker_id
+    
+    today = date.today()
+
+    # Create a new attendance record
+    attendance_entry = models.AttendanceRecord(
+        uuid=str(uuid.uuid4()),
+        worker_id=worker_id,
+        employer_id=employer_id,
+        month=today.month,
+        year=today.year,
+        date_of_leave=today
+    )
+
+    # Add to database
+    db.add(attendance_entry)
+    db.commit()
+    db.refresh(attendance_entry)
+
+    return {"message": "Leave marked successfully", "date": today}
+
+

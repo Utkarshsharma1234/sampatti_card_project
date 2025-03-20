@@ -126,7 +126,6 @@ def current_year():
     return year
 
 def current_date():
-
     date = datetime.now().date()
     return date
 
@@ -162,17 +161,18 @@ def determine_attendance_period(current_day):
 
 def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
     if not employer_number:
-        raise ValueError("Employer number is required")
+        raise ValueError("Employer number is required.")
 
-    llm = OpenAI(api_key=openai_api_key)  # Using OpenAI client for direct API call
+    llm = OpenAI(api_key=openai_api_key)  # Ensure API key is loaded correctly
     current_date = datetime.now()
-    
-    # Determine the correct attendance month based on the rule
+
+    # Determine attendance month logic
     if current_date.day <= 15:
-        attendance_month = (current_date.replace(day=1) - timedelta(days=1)).month  # Previous month
-        attendance_year = (current_date.replace(day=1) - timedelta(days=1)).year
+        prev_month_date = current_date.replace(day=1) - timedelta(days=1)
+        attendance_month = prev_month_date.month
+        attendance_year = prev_month_date.year
     else:
-        attendance_month = current_date.month  # Current month
+        attendance_month = current_date.month
         attendance_year = current_date.year
 
     # Get total days in the attendance month
@@ -183,49 +183,56 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
     context_repayment_month = context.get("Repayment_Start_Month", "").capitalize()
     context_repayment_year = context.get("Repayment_Start_Year", current_date.year)
 
-    if user_provided_repayment_month:  
-        repayment_month = context_repayment_month  # User has provided the month, use it
-        repayment_start_year = context_repayment_year  
-
-
-    elif context_repayment_month:  
-        repayment_month = context_repayment_month  # Use context month if available
-        repayment_start_year = context_repayment_year  
-
-    else:  
-        # If not in user input & not in context, take next month from the current date
-        next_month_date = current_date.replace(day=1) + timedelta(days=32)  
-        repayment_month = next_month_date.strftime("%B")  
-        repayment_start_year = next_month_date.year   
-        
-         
+    if user_provided_repayment_month:
+        repayment_month = context_repayment_month
+        repayment_start_year = context_repayment_year
+    elif context_repayment_month:
+        repayment_month = context_repayment_month
+        repayment_start_year = context_repayment_year
+    else:
+        # Default to next month
+        next_month_date = current_date.replace(day=1) + timedelta(days=32)
+        repayment_month = next_month_date.strftime("%B")
+        repayment_start_year = next_month_date.year
 
     # Ensure deduction remains unchanged if not mentioned in input
     deduction = context.get("deduction", 0)
 
-    # Create LLM prompt
+    # LLM Prompt Template
     template = """
     Given the user input and current context, update the necessary fields while keeping the rest unchanged.
-    - If the user mentions "leaves", deduct the leaves from the total days of the attendance month.
+    
+    - **Leave Adjustments**:
+        - If the user mentions "leaves", deduct them from the total days of the attendance month.
+
     - **Salary Adjustments**:
         1. **Temporary Adjustments**:
-            - If the input specifies "only X rupees this month" or similar type of statement which correspond to this month only then calculate the difference from the standard salary.
-                - If X is less than the standard salary, calculate the difference as a deduction.
-                - If X is more than the standard salary, calculate the excess as a bonus.
+            - If the input specifies "only X rupees this month", adjust the salary only for this month.
+            - If X is less than the standard salary, set the difference as a deduction.
+            - If X is more, consider the excess as a bonus.
         2. **Permanent Adjustments**:
-            - If the input states "Change salary to X", update the standard salary to X and reset deductions and bonuses.
-    - Deduction is different from leaves:
-        1. If the user explicitly says something like "don't deduct anything this month", set deduction to **0**.
-        2. If deduction is mentioned with a value, use that value.
-        3. If deduction is NOT mentioned at all, keep it the same as in the context.
-    - Repayment month logic:
-        1. If the user provides a month, use it.
-            - Set the year to the **next immediate occurrence** of that month from the current date.
-        2. If not provided but exists in the context, use the context value.
-        3. If not in user input or context, set it to the next month from the current date.
-    - Bonus :
-        1. If user says terms like "extra amount", "bonus" "extra this month" or any similar stuff then also consider it in the bonus only.
-    
+            - If input states "Change salary to X", update the standard salary permanently.
+
+    - **Deduction Handling**:
+        1. If the user explicitly states "Don't deduct anything", set the deduction to **0**.
+        2. If the user mentions a specific deduction amount, apply it.
+        3. If deduction is **not mentioned**, keep it the same as in the context.
+
+    - **Repayment Handling**:
+        1. If the user provides a **specific repayment month**, use it.
+        2. If **no repayment details are provided**, default to the **next available month**.
+        3. If **cash advance is provided but repayment details are missing**, AI should prompt for clarification.
+
+    - **Bonus Handling**:
+        - If the user mentions **"extra amount", "bonus", "extra this month"**, add it to the **Bonus** field.
+
+    - **AI Message Handling**:
+        - The **AI message** should:
+          1. **Summarize the user input** in a structured and natural way.
+          2. **Prompt for missing repayment details** when cash advance is provided but repayment is missing.
+          3. **Include relevant JSON attributes** mentioned in the user input.
+          
+        
     Context: {context}
     User Input: {user_input}
     Current Date: {current_date}
@@ -241,15 +248,21 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         "Repayment_Start_Year": <YYYY>,
         "Bonus": <integer>,
         "Attendance": <integer>,
-        "nameofWorker" : "<worker_name>",
+        "nameofWorker": "<worker_name>",
         "salary": <integer>,
         "deduction": <integer>,
-        "leaves": <integer>
+        "leaves": <integer>,
+        "ai_message": "<Generated AI message based on input>"
     }}
-    """
+    
+"""
+    
 
     prompt_template = PromptTemplate(
-        input_variables=["user_input", "current_date", "context", "attendance_month_name", "attendance_year", "total_days_in_month"],
+        input_variables=[
+            "user_input", "current_date", "context",
+            "attendance_month_name", "attendance_year", "total_days_in_month"
+        ],
         template=template
     )
 
@@ -262,28 +275,41 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
         total_days_in_month=total_days_in_month
     )
 
-    response = llm.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": "You are an assistant that updates JSON fields accurately and always returns all fields."},
-                  {"role": "user", "content": prompt}],
-        temperature=0.5
-    )
-
-    response_text = response.choices[0].message.content.strip()
-    cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
-
-    print(f"The response from LLM is: {response}")
-    print(f"The response from LLM is: {cleaned_response}")
-
     try:
+        response = llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are an assistant that updates JSON fields accurately."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5
+        )
+
+        response_text = response.choices[0].message.content.strip()
+        cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
+
+        print(f"LLM Response Raw: {response_text}")
+        print(f"LLM Response Cleaned: {cleaned_response}")
+
+        # Try parsing JSON
         extracted_info = json.loads(cleaned_response)
+        
+        if extracted_info.get("crrCashAdvance")>0 and extracted_info.get("Repayment_Monthly")==0:
+            extracted_info["ai_message"] = "Since you have not provided the monthly repayment details associated with it, kindly confirm if you wish to proceed with the cash advance only by selecting the 'Yes' option. If not, please select 'No' and provide your input regarding the bonus or any other adjustments."
+
+        if extracted_info.get("crrCashAdvance")==0 and extracted_info.get("Repayment_Monthly")>0:
+            extracted_info["ai_message"] = "As we have not detected any cash advance you have only give cash advance details, please give your input again by selecting the 'No' option and provide the cash advance details."
+        
         return extracted_info
-    
+
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
         print(f"Raw response: {response_text}")
         return None
-    
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
     
     
 def call_sarvam_api(file_path):
