@@ -173,8 +173,16 @@ def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdv
 
 
 @router.post("/cash_advance_record/create")
-def cash_advance_record(employerNumber : int, workerNumber : int, cashAdvance : int, bonus : int, db : Session = Depends(get_db)):
-    return userControllers.cash_advance_record(employerNumber, workerNumber, cashAdvance, bonus, db)
+def cash_advance_record(employerNumber : int, workerName : str, cashAdvance : int, repayment : int, repyaymentStartMonth : str, repyaymentStartYear : int, db : Session = Depends(get_db)):
+    return userControllers.cash_advance_record(employerNumber, workerName, cashAdvance, repayment, repyaymentStartMonth, repyaymentStartYear, db)
+
+@router.post("/salary_record/create")
+def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session = Depends(get_db)):
+    return userControllers.create_salary_record(employerNumber, workerName, currentSalary, modifiedSalary, db)
+
+# @router.post("/attendance_record/create")
+# def create_attendance_record(employerNumber : int, workerName : str, month : str, year : int, date : int, db : Session = Depends(get_db)):
+#     return userControllers.create_attendance_record(employerNumber, workerName, month, year, date, db)
 
 
 @router.get("/existing_advance_entry")

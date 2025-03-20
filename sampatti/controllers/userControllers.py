@@ -505,6 +505,46 @@ def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdv
         db.refresh(new_cash_advance_entry)
 
 
+def cash_advance_record(employerNumber : int, workerName : str, cashAdvance : int, repayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session):
+
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    workerId = worker_employer_relation.worker_id
+    employerId = worker_employer_relation.employer_id
+
+    day_only = current_date().day
+    month = current_month()
+    year = current_year()
+
+    dateIssuedOn = f"{day_only}_{month}_{year}"
+
+    new_cash_advance_entry = models.CashAdvanceRecords(id = generate_unique_id(), worker_id = workerId, employer_id = employerId, cashAdvance = cashAdvance, repayment = repayment, repaymentStart = f"{repaymentStartMonth}_{repaymentStartYear}", dateIssuedOn = dateIssuedOn)
+
+    db.add(new_cash_advance_entry)
+    db.commit()
+    db.refresh(new_cash_advance_entry)
+
+
+def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session):
+
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    workerId = worker_employer_relation.worker_id
+    employerId = worker_employer_relation.employer_id
+
+    day_only = current_date().day
+    month = current_month()
+    year = current_year()
+
+    dateIssuedOn = f"{day_only}_{month}_{year}"
+
+    new_salary_record = models.SalaryRecords(id = generate_unique_id(), worker_id = workerId, employer_id = employerId, currentSalary = currentSalary, modifiedSalary = modifiedSalary, dateIssuedOn = dateIssuedOn)
+
+    db.add(new_salary_record)
+    db.commit()
+    db.refresh(new_salary_record)
+
+
 async def get_transalated_text(file_url: str):
 
     if not file_url:

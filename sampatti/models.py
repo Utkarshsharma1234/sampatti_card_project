@@ -95,12 +95,33 @@ class CashAdvanceManagement(Base):
 class CashAdvanceRecords(Base):
     __tablename__ = "CashAdvanceRecords"
     id = Column(String, primary_key=True)
-    employerNumber = Column(Integer)
-    worker_id = Column(Integer, default=0)
+    worker_id = Column(String)
     employer_id = Column(String)
-    typeOfAmount = Column(String)
-    amount = Column(Integer)
+    cashAdvance = Column(Integer, default=0)
+    repayment = Column(Integer, default=0)
+    repaymentStart = Column(String)
     dateIssuedOn = Column(String)
+
+
+class SalaryRecords(Base):
+    __tablename__ = "SalaryRecords"
+    id = Column(String, primary_key=True)
+    worker_id = Column(String)
+    employer_id = Column(String)
+    currentSalary = Column(Integer, default=0)
+    modifiedSalary = Column(Integer, default=0)
+    dateIssuedOn = Column(String)
+
+
+class AttendanceRecords(Base):
+    __tablename__ = "AttendanceRecords"
+    id = Column(String, primary_key=True)
+    worker_id = Column(String)
+    employer_id = Column(String)
+    month = Column(String)
+    year = Column(Integer)
+    date_of_leave = Column(Integer)
+
 
 class Survey(Base):
     __tablename__ = "SurveyDetails"
