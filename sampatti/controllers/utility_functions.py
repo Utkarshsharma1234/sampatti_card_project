@@ -231,6 +231,9 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
           1. **Summarize the user input** in a structured and natural way.
           2. **Prompt for missing repayment details** when cash advance is provided but repayment is missing.
           3. **Include relevant JSON attributes** mentioned in the user input.
+          4. **,Are the above details correct?** add this sentance in the last of the message so that user can confirm it.
+          5. **If user only provide cash advance not repayment** then ask can we consider this as bonus as repaymnet is not given.
+          6. **If only repayment is given and not cash advance** then if already cash advanec present if present then give give message accordingly, if not then ask user to give cash advance as only repayment is given.
           
         
     Context: {context}
@@ -293,12 +296,6 @@ def extracted_info_from_llm(user_input: str, employer_number: str, context: dict
 
         # Try parsing JSON
         extracted_info = json.loads(cleaned_response)
-        
-        if extracted_info.get("crrCashAdvance")>0 and extracted_info.get("Repayment_Monthly")==0:
-            extracted_info["ai_message"] = "Since you have not provided the monthly repayment details associated with it, kindly confirm if you wish to proceed with the cash advance only by selecting the 'Yes' option. If not, please select 'No' and provide your input regarding the bonus or any other adjustments."
-
-        if extracted_info.get("crrCashAdvance")==0 and extracted_info.get("Repayment_Monthly")>0:
-            extracted_info["ai_message"] = "As we have not detected any cash advance you have only give cash advance details, please give your input again by selecting the 'No' option and provide the cash advance details."
         
         return extracted_info
 
