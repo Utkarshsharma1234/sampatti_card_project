@@ -4,7 +4,6 @@ from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 import requests
 from .. import schemas, models
-from typing import List
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
@@ -246,9 +245,9 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
 def process_attendance_with_llm(employerNumber : int, workerName: str, user_input : str, db : Session = Depends(get_db)):
     return userControllers.process_attendance_with_llm(employerNumber, workerName, user_input, db)
 
-# @router.post("/store_attendance_in_the_database")
-# def add_attendance_records(action: str, dates: list[str], worker_id: str, employer_id: str, db: Session = Depends(get_db)):
-#     return userControllers.add_attendance_records(action, dates, worker_id, employer_id, db)
+@router.post("/store_attendance_in_the_database")
+def add_attendance_records(action: str, dates: list[str], worker_id: str, employer_id: str, db: Session = Depends(get_db)):
+    return userControllers.add_attendance_records(action, dates, worker_id, employer_id, db)
 
 @router.post("/todays_leave")
 def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get_db)):
