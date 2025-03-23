@@ -243,7 +243,7 @@ def calculate_salary_amount(leaves : int, deduction : int, employerNumber : int,
 
 @router.get("/process_attendance_with_llm")
 def process_attendance_with_llm(employerNumber : int, workerName: str, user_input : str, db : Session = Depends(get_db)):
-    return userControllers.process_attendance_with_llm(user_input, employerNumber, workerName, db)
+    return userControllers.process_attendance_with_llm(employerNumber, workerName, user_input, db)
 
 @router.post("/store_attendance_in_the_database")
 def add_attendance_records(action: str, dates: list[str], worker_id: str, employer_id: str, db: Session = Depends(get_db)):
