@@ -324,6 +324,7 @@ def call_sarvam_api(file_path):
         response = requests.post(url, headers=headers, files=files)
 
 
+
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
     return response.json()
