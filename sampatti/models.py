@@ -149,7 +149,7 @@ class Responses(Base):
     timestamp = Column(String)
     
 class AttendanceRecord(Base):
-    __tablename__ = "attendance_records"
+    __tablename__ = "Attendance_Records"
     uuid = Column(String, primary_key=True)
     worker_id = Column(String, nullable=False)
     employer_id = Column(String, nullable=False)

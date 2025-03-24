@@ -892,12 +892,14 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
     1. Action: ("view", "add", "delete")
     2. Dates: List of dates in "YYYY-MM-DD" format.
     3. AI Message: A natural response for the user.
-
+    
     Respond with a JSON object in the format:
     {{
         "action": "<view/add/delete>",
         "dates": ["YYYY-MM-DD", ...],
         "ai_message": "<response message>"
+        "employer_id": "{employer_id}",
+        "worker_id": "{worker_id}"
     }}
     """
 
