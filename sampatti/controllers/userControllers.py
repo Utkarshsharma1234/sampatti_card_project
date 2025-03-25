@@ -891,12 +891,16 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
     Based on the input, determine:
     1. Action: ("view", "add", "delete")
     2. Dates: List of dates in "YYYY-MM-DD" format.
-    3. AI Message: A natural response for the user.
+    3. Dates: Provide me the dates in the strings format with coma separated values
+    4. AI Message: A natural response for the user.
+    5. AI Message: at the end ask user to confirm the action.
+    6. AI Message: also provide the total number of days worker was absent in present month previously without including present dates.
+    7. AI Message: after add/delete, if user ask question about the attendance of his worker, then give answer in ai_message.
     
     Respond with a JSON object in the format:
     {{
         "action": "<view/add/delete>",
-        "dates": ["YYYY-MM-DD", ...],
+        "dates": "<comma-separated list of dates>",
         "ai_message": "<response message>"
         "employer_id": "{employer_id}",
         "worker_id": "{worker_id}"
@@ -921,9 +925,15 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
     return extracted_info
 
 
-def add_attendance_records(action: str, dates: list, worker_id: str, employer_id: str, db: Session):
-    
+from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
+import uuid
+
+def add_attendance_records(action: str, dates: str, worker_id: str, employer_id: str, db: Session):
     try:
+        # Convert comma-separated string into list of trimmed date strings
+        date_list = [date.strip() for date in dates.split(",")] if dates else []
+
         if action == "view":
             # Retrieve attendance records for the worker
             records = db.query(models.AttendanceRecord.date_of_leave).filter(
@@ -937,7 +947,7 @@ def add_attendance_records(action: str, dates: list, worker_id: str, employer_id
 
         elif action == "add":
             # Convert date strings to date objects
-            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in dates]
+            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in date_list]
 
             # Extract year and month for filtering
             year_month_tuples = {(d.year, d.month) for d in date_objects}
@@ -975,7 +985,7 @@ def add_attendance_records(action: str, dates: list, worker_id: str, employer_id
 
         elif action == "delete":
             # Convert date strings to date objects
-            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in dates]
+            date_objects = [datetime.strptime(date, "%Y-%m-%d").date() for date in date_list]
 
             # Find records to delete
             records_to_delete = db.query(models.AttendanceRecord).filter(
@@ -1001,6 +1011,7 @@ def add_attendance_records(action: str, dates: list, worker_id: str, employer_id
 
     except Exception as e:
         return {"status": "error", "message": f"Unexpected error: {str(e)}"}
+
 
 
 
