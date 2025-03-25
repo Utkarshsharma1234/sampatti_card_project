@@ -6,12 +6,12 @@ import requests
 from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import userControllers
+from ..controllers import rag_funcs, userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file
 import whisper
-from ..controllers import utility_functions, salary_report_gen
+from ..controllers import utility_functions, salary_report_gen, rag_funcs
 
 
 router = APIRouter(
@@ -180,11 +180,6 @@ def cash_advance_record(employerNumber : int, workerName : str, cashAdvance : in
 def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session = Depends(get_db)):
     return userControllers.create_salary_record(employerNumber, workerName, currentSalary, modifiedSalary, db)
 
-# @router.post("/attendance_record/create")
-# def create_attendance_record(employerNumber : int, workerName : str, month : str, year : int, date : int, db : Session = Depends(get_db)):
-#     return userControllers.create_attendance_record(employerNumber, workerName, month, year, date, db)
-
-
 @router.get("/existing_advance_entry")
 def check_existing_cash_advance_entry(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.check_existing_cash_advance_entry(employerNumber, workerNumber, db)
@@ -252,3 +247,7 @@ def add_attendance_records(action: str, dates: str, worker_id: str, employer_id:
 @router.post("/todays_leave")
 def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get_db)):
     return userControllers.mark_leave(employerNumber, workerName, db)   
+
+@router.post("/rag_process_query")
+def rag_process_query(workerId : str, query : str):
+    return rag_funcs.get_response(workerId, query)

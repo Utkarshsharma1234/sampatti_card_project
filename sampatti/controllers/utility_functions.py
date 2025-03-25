@@ -2,16 +2,12 @@ import calendar
 import shutil
 from openai import OpenAI
 import json, os, uuid, random, string,  difflib, re, requests, base64
-from fastapi import File, HTTPException, BackgroundTasks
+from fastapi import File, HTTPException
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from fastapi.responses import FileResponse, JSONResponse
-from gtts import gTTS
-from langchain_groq import ChatGroq
-from langchain import LLMChain, PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnableSequence
+from fastapi.responses import JSONResponse
+from langchain import PromptTemplate
 from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
 from sqlalchemy.orm import Session
@@ -19,7 +15,6 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
 from .. import models
-from pydub import AudioSegment
 import subprocess
 
 load_dotenv()

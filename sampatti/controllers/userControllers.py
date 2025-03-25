@@ -1,26 +1,17 @@
-import calendar
-import html
+import html, tempfile, os, re, requests, math, uuid, json
 from html import parser
-import json
-import math
-import tempfile, os, re, requests
-import uuid
-from fastapi import File, HTTPException, BackgroundTasks
+from fastapi import File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy import delete, func, insert, select, tuple_,update
+from sqlalchemy import delete, insert, update
 from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, calculate_year_for_month, question_language_audio
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
-from fuzzywuzzy import fuzz
 from pydub import AudioSegment
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from dotenv import load_dotenv
 from openai import OpenAI
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage
-from langchain.prompts import PromptTemplate
 
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
@@ -1043,5 +1034,3 @@ def mark_leave(employerNumber : int, workerName : str, db: Session):
     db.refresh(attendance_entry)
 
     return {"message": "Leave marked successfully", "date": today}
-
-
