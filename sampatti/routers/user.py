@@ -248,10 +248,10 @@ def add_attendance_records(action: str, dates: str, worker_id: str, employer_id:
 def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get_db)):
     return userControllers.mark_leave(employerNumber, workerName, db)   
 
-@router.post("/rag_process_query")
-def rag_process_query(workerId : str, query : str):
-    return rag_funcs.get_response(workerId, query)
+# @router.post("/rag_process_query")
+# def rag_process_query(workerId : str, query : str):
+#     return rag_funcs.get_response(workerId, query)
 
-@router.get("/rag_conversation_history")
-def get_conversation_history(workerId : str):
-    return rag_funcs.get_conversation_history(workerId)
+# @router.get("/rag_conversation_history")
+# def get_conversation_history(workerId : str):
+#     return rag_funcs.get_conversation_history(workerId)
