@@ -9,5 +9,5 @@ credentials.json
 invoices
 audio_files
 questions
-chroma_db
+chromadb
 data
