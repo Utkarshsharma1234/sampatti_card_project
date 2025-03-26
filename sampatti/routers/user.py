@@ -251,3 +251,7 @@ def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get
 @router.post("/rag_process_query")
 def rag_process_query(workerId : str, query : str):
     return rag_funcs.get_response(workerId, query)
+
+@router.get("/rag_conversation_history")
+def get_conversation_history(workerId : str):
+    return rag_funcs.get_conversation_history(workerId)
