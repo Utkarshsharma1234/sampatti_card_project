@@ -195,3 +195,26 @@ def send_whatsapp_audio(audio_media_id : str, employerNumber : int):
 
     print(response.text)
 
+
+def send_whatsapp_video(employerNumber : int):
+
+    url = "https://waba-v2.360dialog.io/messages"
+
+    payload = json.dumps({
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": f"{employerNumber}",
+        "type": "video",
+        "video": {
+            "id" : "649712687672870"
+        }
+    })
+
+    headers = {
+    'D360-API-KEY': orai_api_key,
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.post(url, headers=headers, data=payload)
+
+    print(response.text)
