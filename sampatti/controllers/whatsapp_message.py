@@ -196,25 +196,45 @@ def send_whatsapp_audio(audio_media_id : str, employerNumber : int):
     print(response.text)
 
 
-def send_whatsapp_video(employerNumber : int):
+def send_intro_video(employerNumber,template_name):
 
-    url = "https://waba-v2.360dialog.io/messages"
-
-    payload = json.dumps({
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": f"{employerNumber}",
-        "type": "video",
-        "video": {
-            "id" : "649712687672870"
-        }
-    })
-
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
     headers = {
-    'D360-API-KEY': orai_api_key,
-    'Content-Type': 'application/json'
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
     }
 
-    response = requests.post(url, headers=headers, data=payload)
+    data = {
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template",
+        "template" : {
+            "namespace": orai_namespace,
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            },
+            "name": template_name,
+            "components" : [
 
-    print(response.text)
+                {
+                    "type" : "header",
+                    "parameters" : [
+                        {
+                            "type": "video",
+                            "video": {
+                                "link": "https://sampattifilstorage.sgp1.digitaloceanspaces.com/sampatti_card_video_reduced%20(1).mp4"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")

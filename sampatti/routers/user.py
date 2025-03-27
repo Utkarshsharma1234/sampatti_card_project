@@ -250,7 +250,7 @@ def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get
 
 @router.get("/introduction_video")
 def send_introduction_video(employerNumber : int):
-    return whatsapp_message.send_whatsapp_video(employerNumber)
+    return whatsapp_message.send_intro_video(employerNumber, "send_video_template")
 
 # @router.post("/rag_process_query")
 # def rag_process_query(workerId : str, query : str):
