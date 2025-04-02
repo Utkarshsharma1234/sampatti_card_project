@@ -252,10 +252,10 @@ def mark_leave(employerNumber : int, workerName : str, db: Session = Depends(get
 def send_introduction_video(employerNumber : int):
     return whatsapp_message.send_intro_video(employerNumber, "send_video_template")
 
-# @router.post("/rag_process_query")
-# def rag_process_query(workerId : str, query : str):
-#     return rag_funcs.get_response(workerId, query)
+@router.post("/rag_process_query")
+def rag_process_query(workerId : str, query : str):
+    return rag_funcs.get_response(workerId, query)
 
-# @router.get("/rag_conversation_history")
-# def get_conversation_history(workerId : str):
-#     return rag_funcs.get_conversation_history(workerId)
+@router.get("/rag_conversation_history")
+def get_conversation_history(workerId : str):
+    return rag_funcs.get_conversation_history(workerId)
