@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import userControllers, cashfree_api
-import asyncio
+from ..controllers import userControllers
 
 router = APIRouter(
     prefix="/webhook",

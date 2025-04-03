@@ -2,13 +2,12 @@ import calendar
 import shutil
 from openai import OpenAI
 import json, os, uuid, random, string,  difflib, re, requests, base64
-from fastapi import File, HTTPException
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from langchain import PromptTemplate
-from fastapi import BackgroundTasks
 from ..controllers import whatsapp_message
 from sqlalchemy.orm import Session
 from langchain.prompts import PromptTemplate

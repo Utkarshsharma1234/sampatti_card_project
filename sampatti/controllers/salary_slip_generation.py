@@ -1,12 +1,11 @@
 import os
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
 from textwrap import wrap
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 from .. import models
 from .cashfree_api import check_order_status, fetch_bank_ref
 from .utility_functions import current_date, current_month, previous_month, current_year, amount_to_words

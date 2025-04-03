@@ -1,9 +1,7 @@
 import os
 from reportlab.pdfgen import canvas
-from fastapi import HTTPException, status
 from reportlab.lib.pagesizes import A4
 from sqlalchemy.orm import Session
-
 from .. import models
 from .. import schemas
 from datetime import datetime

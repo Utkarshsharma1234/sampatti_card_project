@@ -1,6 +1,5 @@
 import chromadb, os, argparse
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chat_models import init_chat_model
 import textwrap
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings

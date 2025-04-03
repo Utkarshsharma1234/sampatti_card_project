@@ -1,8 +1,6 @@
 import os
-import tempfile
-from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
-import requests
+from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
 from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
@@ -10,8 +8,7 @@ from ..controllers import rag_funcs, userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file
-import whisper
-from ..controllers import utility_functions, salary_report_gen, rag_funcs
+from ..controllers import utility_functions, rag_funcs
 
 
 router = APIRouter(
@@ -19,8 +16,6 @@ router = APIRouter(
     tags=['users']
 )
 
-
-model = whisper.load_model("base")
 current_date = datetime.now().date()
 first_day_of_current_month = datetime.now().replace(day=1)
 last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)

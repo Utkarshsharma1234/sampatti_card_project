@@ -1,5 +1,4 @@
 import html, tempfile, os, re, requests, math, uuid, json
-from html import parser
 from fastapi import File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert, update

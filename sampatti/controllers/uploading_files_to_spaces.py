@@ -1,5 +1,4 @@
 import boto3, os
-from botocore.client import Config
 from dotenv import load_dotenv
 
 

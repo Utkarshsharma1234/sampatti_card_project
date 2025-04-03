@@ -1,11 +1,9 @@
 import os
-from fastapi import HTTPException
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 from .. import models
 from .cashfree_api import fetch_bank_ref
 from .utility_functions import current_year, current_date, current_month, previous_month
