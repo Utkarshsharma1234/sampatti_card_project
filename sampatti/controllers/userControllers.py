@@ -11,9 +11,14 @@ from pydub import AudioSegment
 from datetime import datetime, date
 from dotenv import load_dotenv
 from openai import OpenAI
+import google.generativeai as genai
+from PIL import Image
+from io import BytesIO
+import json
 
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
+google_api_key = os.environ.get('GOOGLE_API_KEY')
 
 
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
@@ -861,6 +866,7 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
 
     employer_id = worker_employer_relation.employer_id
     worker_id = worker_employer_relation.worker_id
+    worker_name = worker_employer_relation.worker_name
     
     # Fetch existing attendance records
     attendance_records = fetch_attendance_records(db, employer_id, worker_id)
@@ -876,16 +882,20 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
     - Worker ID: {worker_id}
     - Current Date: {current_date}
     - Existing Attendance Records: {attendance_records}
+    - Worker Name: {worker_name}
     - User Input: {user_input}
 
     Based on the input, determine:
     1. Action: ("view", "add", "delete")
     2. Dates: List of dates in "YYYY-MM-DD" format.
     3. Dates: Provide me the dates in the strings format with coma separated values
-    4. AI Message: A natural response for the user.
-    5. AI Message: at the end ask user to confirm the action.
-    6. AI Message: also provide the total number of days worker was absent in present month previously without including present dates.
-    7. AI Message: after add/delete, if user ask question about the attendance of his worker, then give answer in ai_message.
+    4. AI Message: A natural response for the user, with Worker Name in a readable format and correct format.
+    5. AI Message: also provide the total number of days worker was absent in present month previously without including present dates.
+    6. AI Message: after add/delete, if user ask question about the attendance of his worker, then give answer in ai_message.
+    7. AI Message: if user select view, then given dates which are readble format for example 1st of January 2024, 2nd of January 2024, etc.
+    8. AI Message: Make it in more readable format for the user to understand.
+    9. AI Message: use worker worker_name in the message with more readable format.
+    10. AI Message: if the user is viewing at the end, add If you have any further questions or need to make changes, feel free to let me know.
     
     Respond with a JSON object in the format:
     {{
@@ -1033,3 +1043,89 @@ def mark_leave(employerNumber : int, workerName : str, db: Session):
     db.refresh(attendance_entry)
 
     return {"message": "Leave marked successfully", "date": today}
+
+
+def extract_pan_card_details(image_url):
+    try:
+        # Download image from URL
+        response = requests.get(image_url)
+        image = Image.open(BytesIO(response.content))
+
+        genai.configure(api_key=google_api_key)
+        
+        # Load Gemini Vision Pro model
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        # Prompt to extract PAN details
+        prompt = """
+        This is an Indian PAN card. Extract the following details and return in JSON format:
+        - Name
+        - Father's Name
+        - Date of Birth (DOB)
+        - PAN Number
+
+        Example format:
+        {
+            "name": "RAHUL SHARMA",
+            "pan_number": "ABCDE1234F",
+            "dob": "12/12/1990",
+            "father_name": "RAJESH SHARMA"
+        }
+        """
+
+        # Send the image and prompt to Gemini
+        result = model.generate_content([prompt, image], stream=False)
+        raw_output = result.text
+
+        # Try to parse JSON from the model's output
+        json_start = raw_output.find("{")
+        json_end = raw_output.rfind("}") + 1
+        extracted_json = raw_output[json_start:json_end]
+
+        return json.loads(extracted_json)
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+def extract_passbook_details(image_url):
+    try:
+        # Download image from URL
+        response = requests.get(image_url)
+        image = Image.open(BytesIO(response.content))
+
+        genai.configure(api_key=google_api_key)
+        
+        # Load Gemini Vision model
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        # Prompt to extract passbook details
+        prompt = """
+        This is an image of an Indian bank passbook. Extract the following details and return in proper JSON format:
+        - Name
+        - Account Number
+        - IFSC Code
+        - Bank Name
+
+        Example format:
+        {
+            "name": "RAVI KUMAR",
+            "account_number": "123456789012",
+            "ifsc_code": "SBIN0001234",
+            "bank_name": "State Bank of India"
+        }
+        """
+
+        # Send the image and prompt to Gemini
+        result = model.generate_content([prompt, image], stream=False)
+        raw_output = result.text
+
+        # Extract JSON from the model's response
+        json_start = raw_output.find("{")
+        json_end = raw_output.rfind("}") + 1
+        extracted_json = raw_output[json_start:json_end]
+
+        return json.loads(extracted_json)
+
+    except Exception as e:
+        return {"error": str(e)}

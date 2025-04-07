@@ -254,3 +254,11 @@ def rag_process_query(workerId : str, query : str):
 @router.get("/rag_conversation_history")
 def get_conversation_history(workerId : str):
     return rag_funcs.get_conversation_history(workerId)
+
+@router.get("/extract_pan_card")
+def extract_pan_card_details(image_url):
+    return userControllers.extract_pan_card_details(image_url)
+
+@router.get("/extract_passbook_details")
+def extract_passbook_details(image_url):
+    return userControllers.extract_passbook_details(image_url)
