@@ -163,13 +163,13 @@ def create_salary_details(employerNumber : int, orderId : str, db : Session = De
     return userControllers.update_salary_details(employerNumber, orderId, db)
 
 @router.post("/cash_advance_entry/create")
-def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, bonus : int, attendance : int, deduction : int, db : Session = Depends(get_db)):
-    return userControllers.create_cash_advance_entry(employerNumber, workerName, crrCashAdvance, monthlyRepayment, startMonth, startYear, bonus, attendance, deduction, db)
+def create_cash_advance_entry(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session = Depends(get_db)):
+    return userControllers.create_cash_advance_entry(employerNumber, workerName, cash_advance, repayment_amount, repayment_start_month, repayment_start_year, frequency,  bonus, deduction, db)
 
 
 @router.post("/cash_advance_record/create")
-def cash_advance_record(employerNumber : int, workerName : str, cashAdvance : int, repayment : int, repyaymentStartMonth : str, repyaymentStartYear : int, db : Session = Depends(get_db)):
-    return userControllers.cash_advance_record(employerNumber, workerName, cashAdvance, repayment, repyaymentStartMonth, repyaymentStartYear, db)
+def cash_advance_record(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session = Depends(get_db)):
+    return userControllers.cash_advance_record(employerNumber, workerName, cash_advance, repayment_amount, repayment_start_month, repayment_start_year, frequency, bonus, deduction, db)
 
 @router.post("/salary_record/create")
 def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session = Depends(get_db)):
@@ -192,8 +192,8 @@ def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
     return userControllers.find_all_workers(employerNumber, db)
 
 @router.post('/process_audio')
-async def process_audio(user_input : str, user_language : str, employerNumber : int, workerName: str, db : Session = Depends(get_db)):
-    return await userControllers.process_audio(user_input, user_language, employerNumber, workerName, db)
+def process_audio(user_input : str, user_language : str, employerNumber : int, workerName: str, db : Session = Depends(get_db)):
+    return userControllers.process_audio(user_input, user_language, employerNumber, workerName, db)
 
 @router.post('/extract_name')
 async def extract_name(file_url: str, employerNumber : int):

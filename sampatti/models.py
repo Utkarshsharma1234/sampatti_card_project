@@ -65,7 +65,7 @@ class SalaryDetails(Base):
     __tablename__ = "SalaryDetails"
     id = Column(String, primary_key=True)   
     employerNumber = Column(Integer)
-    worker_id = Column(Integer, default=0)
+    worker_id = Column(String)
     employer_id = Column(String)
     totalAmount = Column(Integer)
     salary = Column(Integer)
@@ -76,31 +76,6 @@ class SalaryDetails(Base):
     month = Column(String)
     year = Column(Integer)
     order_id=Column(String)
-
-class CashAdvanceManagement(Base):
-    __tablename__ = "CashAdvanceManagement"
-    id = Column(String, primary_key=True)   
-    employerNumber = Column(Integer)
-    worker_id = Column(Integer, default=0)
-    employer_id = Column(String)
-    cashAdvance = Column(Integer, default = 0)
-    monthlyRepayment = Column(Integer, default=0)
-    repaymentStartMonth = Column(String)
-    repaymentStartYear = Column(Integer,default=0)
-    currentCashAdvance = Column(Integer, default=0)
-    bonus = Column(Integer, default= 0)
-    attendance = Column(Integer, default= 0)
-    deduction = Column(Integer, default = 0)
-
-class CashAdvanceRecords(Base):
-    __tablename__ = "CashAdvanceRecords"
-    id = Column(String, primary_key=True)
-    worker_id = Column(String)
-    employer_id = Column(String)
-    cashAdvance = Column(Integer, default=0)
-    repayment = Column(Integer, default=0)
-    repaymentStart = Column(String)
-    dateIssuedOn = Column(String)
 
 
 class SalaryRecords(Base):
@@ -156,3 +131,42 @@ class AttendanceRecord(Base):
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
     date_of_leave = Column(Date, nullable=False)
+    
+    
+class cashAdvance(Base):
+    __tablename__ = "CashAdvanceRecord"
+    advance_id = Column(String, primary_key=True)
+    worker_id = Column(String, ForeignKey("Domestic_Worker.id"))
+    employer_id = Column(String, ForeignKey("Employer.id"))
+    monthly_salary = Column(Integer)
+    cash_advance = Column(Integer)
+    repayment_amount = Column(Integer)
+    repayment_start_month = Column(Integer)
+    repayment_start_year = Column(Integer)
+    current_date = Column(String)  # <--- PROBABLY THIS
+    frequency = Column(Integer)
+    bonus = Column(Integer)
+    deduction = Column(Integer)
+
+
+    repayments = relationship("CashAdvanceRepaymentLog", back_populates="advance")
+
+
+class CashAdvanceRepaymentLog(Base):
+    __tablename__ = "CashAdvanceRepaymentLog"    #managment
+    id = Column(String, primary_key=True, index=True)
+    advance_id = Column(String, ForeignKey('CashAdvanceRecord.advance_id'), nullable=False)  # Fixed here
+    worker_id = Column(String)
+    employer_id = Column(String)
+    repayment_start_month = Column(Integer)
+    repayment_start_year = Column(Integer)
+    repayment_month = Column(Integer)
+    repayment_year = Column(Integer)
+    scheduled_repayment_amount = Column(Integer)
+    actual_repayment_amount = Column(Integer)
+    remaining_advance = Column(Integer)
+    payment_status = Column(String, default='Pending')
+    frequency = Column(Integer, default=1)  # 1, 2, 3, 6, or -1 #add this
+
+    advance = relationship("cashAdvance", back_populates="repayments")
+
