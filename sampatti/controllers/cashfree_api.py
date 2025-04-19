@@ -99,7 +99,7 @@ def fetch_multiple_vpa(workerNumber : int):
 
 # adding a vendor to the cashfree dashboard.
 
-def add_a_vendor(request : schemas.Vendor, db: Session):
+def add_a_vendor(request : schemas.Vendor):
 
     if request.vpa == "None":
         request.vpa = None
@@ -173,12 +173,8 @@ def check_vendor_status(vendorId):
 
     response = requests.get(url, headers=headers, json=payload)
     response_data = json.loads(response.text)
-    status = response_data.get('status')
     print(response_data)
-    return {
-        "STATUS" : status,
-        "VENDOR_ID" : vendorId
-    }
+    return response_data
 
 
 # fetching the UTR No.
@@ -407,3 +403,25 @@ def unsettled_balance(db : Session):
     return {
         "message" : "Splits created."
     }
+
+
+def bank_account_verification(account_number : str, ifsc_code : str):
+
+    url = "https://api.cashfree.com/verification/bank-account/sync"
+
+    payload = {
+        "bank_account": f"{account_number}",
+        "ifsc": f"{ifsc_code}"
+    }
+
+    headers = {
+        "x-client-id": verification_id,
+        "x-client-secret": verification_secret,
+        "Content-Type": "application/json"
+    }
+
+    response = requests.request("POST", url, json=payload, headers=headers)
+
+    print(response.text)
+    response_data = json.loads(response.text)
+    return response_data
