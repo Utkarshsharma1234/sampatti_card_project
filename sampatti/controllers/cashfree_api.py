@@ -4,7 +4,7 @@ from fastapi import HTTPException
 import json, uuid, requests, os
 from cashfree_pg.api_client import Cashfree
 from cashfree_verification.api_client import Cashfree as Cashfree_Verification
-from cashfree_verification.models.upi_mobile_request_schema import UpiMobileRequestSchema
+#from cashfree_verification.models.upi_mobile_request_schema import UpiMobileRequestSchema
 from cashfree_verification.models.pan_advance_request_schema import PanAdvanceRequestSchema
 from cashfree_pg.models.create_order_request import CreateOrderRequest
 from cashfree_pg.api_client import Cashfree
@@ -36,11 +36,11 @@ def fetch_vpa(workerNumber : int):
     Cashfree_Verification.XEnvironment = Cashfree_Verification.XProduction
     uuid_value = uuid.uuid4().hex
     
-    user_info = UpiMobileRequestSchema(mobile_number= f"{workerNumber}", verification_id = uuid_value)
+    #user_info = UpiMobileRequestSchema(mobile_number= f"{workerNumber}", verification_id = uuid_value)
 
     api_response = None
     try:
-        api_response = Cashfree_Verification().vrs_upi_mobile_verification(user_info, None)
+        #api_response = Cashfree_Verification().vrs_upi_mobile_verification(user_info, None)
         if not api_response or not api_response.data:
             raise HTTPException(status_code=400, detail="Bad request: No response from API")
         
@@ -403,6 +403,28 @@ def unsettled_balance(db : Session):
     return {
         "message" : "Splits created."
     }
+    
+    
+def bank_account_verification(account_number : str, ifsc_code : str):
+ 
+     url = "https://api.cashfree.com/verification/bank-account/sync"
+ 
+     payload = {
+         "bank_account": f"{account_number}",
+         "ifsc": f"{ifsc_code}"
+     }
+ 
+     headers = {
+         "x-client-id": verification_id,
+         "x-client-secret": verification_secret,
+         "Content-Type": "application/json"
+     }
+ 
+     response = requests.request("POST", url, json=payload, headers=headers)
+ 
+     print(response.text)
+     response_data = json.loads(response.text)
+     return response_data
 
 
 def bank_account_verification(account_number : str, ifsc_code : str):
