@@ -56,6 +56,17 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
     if existing_worker :
         return existing_worker
     
+
+
+    elif request.accountNumber == "None":
+        request.accountNumber = None
+        request.ifsc = None
+
+    existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
+
+    if existing_worker :
+        return existing_worker
+
     unique_id = generate_unique_id()
     new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc, vendorId = request.vendorId)
     db.add(new_worker)
@@ -1124,4 +1135,3 @@ def extract_passbook_details(image_url):
 
     except Exception as e:
         return {"error": str(e)}
-        

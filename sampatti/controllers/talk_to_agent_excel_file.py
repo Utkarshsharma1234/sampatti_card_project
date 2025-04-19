@@ -379,3 +379,4 @@ def bank_account_validation_status():
             name_at_bank = bank_response.get("name_at_bank")
             update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
             update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
+

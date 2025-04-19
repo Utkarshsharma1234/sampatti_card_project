@@ -262,7 +262,7 @@ def extract_pan_card_details(image_url):
 @router.get("/extract_passbook_details")
 def extract_passbook_details(image_url):
     return userControllers.extract_passbook_details(image_url)
- 
+
 @router.post("/onboarding_worker_sheet/create")
 def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str):
     return talk_to_agent_excel_file.create_worker_details_onboarding(worker_number, employer_number, UPI, bank_account_number, ifsc_code, pan_number, bank_passbook_image, pan_card_image)

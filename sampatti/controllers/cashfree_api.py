@@ -425,3 +425,25 @@ def bank_account_verification(account_number : str, ifsc_code : str):
      print(response.text)
      response_data = json.loads(response.text)
      return response_data
+
+
+def bank_account_verification(account_number : str, ifsc_code : str):
+
+    url = "https://api.cashfree.com/verification/bank-account/sync"
+
+    payload = {
+        "bank_account": f"{account_number}",
+        "ifsc": f"{ifsc_code}"
+    }
+
+    headers = {
+        "x-client-id": verification_id,
+        "x-client-secret": verification_secret,
+        "Content-Type": "application/json"
+    }
+
+    response = requests.request("POST", url, json=payload, headers=headers)
+
+    print(response.text)
+    response_data = json.loads(response.text)
+    return response_data
