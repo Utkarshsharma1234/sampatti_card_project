@@ -163,7 +163,7 @@ def extracted_info_from_llm(user_input: str, worker_id: str, employer_id: str, c
         template = """
         You are an intelligent assistant that helps employers manage cash advances and repayments for their workers.
 
-        The system provides you with the following context from the database (this includes current and past cash advances and repayments between the worker and employer):
+        The system provides you with the following context from the database which is the cash advance entry for the worker make changes in that accordingly:
         {context}
 
         Now the employer has sent the following message:
@@ -173,37 +173,37 @@ def extracted_info_from_llm(user_input: str, worker_id: str, employer_id: str, c
         employer_id: {employer_id}
         current date: {current_date}
         
-        Your task is to extract and update the following structured information as JSON. If any values are missing or unclear, set them to null and generate an AI message asking for the missing parts.
+        Your task is to extract and update the following structured information as JSON. If any values are missing or unclear, set them to null for strings and 0 for integers, and generate an AI message asking for the missing parts. If context contains existing cash advance records, use those values as defaults and update only the fields specified in user_input.
 
         Return a JSON object with the following fields:
-            - cash_advance: The new cash advance amount, if mentioned or store it as 0.
-            - repayment_amount: The fixed amount to deduct for repayment each time.
-            - repayment_start_month: Integer (1-12), when repayments should begin.
-            - repayment_start_year: take the current dates year and if current month is december and repayment start month is next month then in that case take repayment start year as next year.
-            - frequency: Integer. 1 for monthly, 2 for every 2 months, 3 for every 3 months, 6 for every 6 months, 0 for random months.
-            - bonus: If the user mentions **"extra amount", "bonus", "extra this month"**, add it to the **Bonus** field.
-            - deduction: If employer wants to deduct only this months salary then store the value here.
-            - monthly_salary: The worker's monthly salary, it is the monthly salary of worker-employer.
-            - ai_message: A short, natural-sounding message confirming or asking for the missing details.
-            - ai_message: it is the type of message that the AI will send to the user if any information is correct and can we proceed with the following information.
+            - cash_advance: The new cash advance amount, if mentioned, or from context if available, else 0.
+            - repayment_amount: The fixed amount to deduct for repayment each time, update if mentioned in user_input, else from context or 0.
+            - repayment_start_month: Integer (1-12), when repayments should begin, update if mentioned, else from context or next month.
+            - repayment_start_year: Integer, take current year or next year if month is December and repayment starts next month, update if mentioned, else from context.
+            - frequency: Integer (1 for monthly, 2 for every 2 months, 3 for every 3 months, 6 for every 6 months, 0 for random), update if mentioned, else from context or 1.
+            - bonus: Integer, if user mentions "extra amount", "bonus", "extra this month", else from context or 0.
+            - deduction: Integer, if employer wants to deduct only this month's salary, else from context or 0.
+            - monthly_salary: The worker's monthly salary from context (worker_employer table or CashAdvanceRecord), fixed for worker-employer, else 0.
+            - ai_message: A short, natural-sounding message and giving the user information about the changes made, or confirming the changes made by the user.
+            - ai_message: give summary of the changes made in the JSON object and in the human readable format.
 
-        Remember:
-            - Only update values if they are clearly provided in user_input.
-            - If information is missing, return null for string and 0 for the integer for that field and explain in ai_message.
-            - Do NOT hallucinate values. Use only what is available in user_input or context.
-            - The monthly_salary is fixed for worker and employer.
-            - If repayment_start_month, repayment_start_year, or frequency is not mentioned in the user input, use the next month as repayment_start_month, the corresponding year as repayment_start_year, and 1 as frequency.
-            - if repayment amount given and repayment start month is not given then take the repayment start month as next month and repayment start year as corresponding year to the next month and set frequency as 1.
-            - if repayment amount is not given then take frequency as 0 and repayment start month and repayment start year set to 0.
-            - if user comes again and wanted to add the repayment amount only then check for the cash advance in the context and give that it in response.
+        Rules:
+            - If context has CashAdvanceRecord data, use it as the baseline and update only fields mentioned in user_input (e.g., if user says "change repayment to 2000", keep cash_advance and other fields from context).
+            - If no context data exists, create a response based solely on user_input, setting defaults as specified.
+            - If repayment_amount is provided but repayment_start_month/year or frequency is not, set repayment_start_month to next month, repayment_start_year to corresponding year, and frequency to 1.
+            - If repayment_amount is not provided, set frequency to 0, repayment_start_month to 0, repayment_start_year to 0.
+            - If user_input only updates repayment_amount and context has a cash advance, include the existing cash_advance in the response.
+            - Do NOT hallucinate values. Use only user_input or context.
+            - If user_input is unclear, return null/0 for unclear fields and explain in ai_message.
+
         Respond ONLY with the JSON object:
         {{
             "cash_advance": <integer>,
             "repayment_amount": <integer>,
             "repayment_start_month": <integer>,
             "repayment_start_year": <integer>,
-            "frequency": <1 to 12 or 0>,
-            "bonus": <integer> if not mentioned, set to 0,
+            "frequency": <integer>,
+            "bonus": <integer>,
             "deduction": <integer>,
             "monthly_salary": <integer>,
             "ai_message": "<response message>"

@@ -614,7 +614,7 @@ def process_audio(user_input: str, user_language: str, employerNumber: int, work
         worker_id = worker_employer_relation.worker_id
         
         
-        existing_record = db.query(models.cashAdvance).where(models.AttendanceRecord.worker_id == worker_id, models.cashAdvance.employer_id == employer_id).order_by(models.cashAdvance.current_date.desc()).first()
+        existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == worker_id, models.cashAdvance.employer_id == employer_id).order_by(models.cashAdvance.current_date.desc()).first()
         print(f"Existing Record: {existing_record}")
         
         context = {
