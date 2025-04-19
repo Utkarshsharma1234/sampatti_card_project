@@ -20,12 +20,9 @@ import logging
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
 google_api_key = os.environ.get('GOOGLE_API_KEY')
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
-# creating the employer
+
+
 def create_employer(request : schemas.Employer, db: Session):
 
     employerNumber = request.employerNumber
@@ -47,8 +44,20 @@ def create_employer(request : schemas.Employer, db: Session):
 # creating a domestic worker
 def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
 
+    if request.upi_id == "None":
+        request.upi_id = None
+ 
+    elif request.accountNumber == "None":
+        request.accountNumber = None
+        request.ifsc = None
+ 
+    existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
+ 
+    if existing_worker :
+        return existing_worker
+    
     unique_id = generate_unique_id()
-    new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = None, ifsc = None, vendorId = None)
+    new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc, vendorId = request.vendorId)
     db.add(new_worker)
     db.commit()
     db.refresh(new_worker)
@@ -504,12 +513,12 @@ def create_cash_advance_entry(employerNumber : int, workerName : str, cash_advan
 
     existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
     
-    if existing_record is not None:
+    if existing_record is not None and existing_record.payment_status == "Pending":
         update_statement = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, frequency = frequency, bonus = bonus, deduction = deduction, current_date = datee)
         db.execute(update_statement)
         db.commit()
     else:
-        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction)
+        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Pending")
         db.add(new_cash_advance_entry)
         db.commit()
         db.refresh(new_cash_advance_entry)

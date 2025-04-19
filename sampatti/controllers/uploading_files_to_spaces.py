@@ -1,5 +1,7 @@
+from io import BytesIO
 import boto3, os
 from dotenv import load_dotenv
+import requests
 
 
 load_dotenv()
@@ -42,4 +44,31 @@ def upload_file_to_spaces(filePath, object_name, bucket_name=SPACE_NAME):
     
     except Exception as e:
         print(f"Error uploading file: {e}")
+        return None
+    
+
+def upload_image_from_url(image_url: str, object_name: str, bucket_name=SPACE_NAME):
+    try:
+        # Step 1: Download image from URL
+        response = requests.get(image_url)
+        response.raise_for_status()  # Raise error if download fails
+
+        # Step 2: Upload to DigitalOcean Spaces
+        client.upload_fileobj(
+            Fileobj=BytesIO(response.content),
+            Bucket=bucket_name,
+            Key=object_name,
+            ExtraArgs={'ACL': 'public-read', 'ContentType': response.headers.get('Content-Type', 'image/jpeg')}
+        )
+
+        print(f"Image uploaded successfully to: {object_name}")
+        set_file_public(bucket_name, object_name)
+        public_url = f"https://{bucket_name}.{REGION_NAME}.digitaloceanspaces.com/{object_name}"
+        print(f"Public URL: {public_url}")
+        return {
+            "image_url" : public_url
+        }
+
+    except Exception as e:
+        print(f"Error uploading image: {e}")
         return None

@@ -1,9 +1,14 @@
 import os
 import sqlite3
+from fastapi import Depends
 import pandas as pd
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from ..controllers import utility_functions, cashfree_api, whatsapp_message, userControllers
+from ..database import get_db
+from sqlalchemy.orm import Session
+from .. import models, schemas
 
 # Load environment variables from .env file
 load_dotenv()
@@ -55,3 +60,322 @@ def upload_data_to_google_sheets():
     sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
     print(f"Data uploaded to Google Sheets successfully. Shareable link: {sheet.url}")
+
+
+all_columns = [
+    "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary"
+]
+
+def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str):
+
+    # Input row dictionary
+    input_data = {
+        "id": utility_functions.generate_unique_id(length=16),
+        "worker_number": worker_number,
+        "employer_number" : employer_number,
+        "UPI": UPI,
+        "bank_account_number": bank_account_number,
+        "ifsc_code": ifsc_code,
+        "PAN_number": pan_number,
+        "bank_passbook_image": bank_passbook_image,
+        "pan_card_image": pan_card_image
+    }
+
+    # Setup Google Sheets credentials
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    sheet_title = "WorkerOnboardingDetails"
+    team_emails = ['utkarsh@sampatticard.in']
+
+    try:
+        spreadsheet = client.open(sheet_title)
+        sheet = spreadsheet.sheet1
+        print("Sheet exists. Checking headers...")
+
+        existing_headers = sheet.row_values(1)
+
+        if existing_headers == all_columns:
+            # Exact match: append new row
+            row = [input_data.get(col, "") for col in all_columns]
+            sheet.append_row(row)
+            print("Exact column match. Row appended.")
+        else:
+            print("Column mismatch. Adjusting headers and restoring data...")
+
+            # Fetch existing data
+            all_data = sheet.get_all_values()
+            existing_data = all_data[1:]  # Exclude headers
+
+            # Map old column positions
+            old_columns = existing_headers
+            old_data_dicts = []
+            for row in existing_data:
+                data_dict = {col: row[i] if i < len(row) else "" for i, col in enumerate(old_columns)}
+                old_data_dicts.append(data_dict)
+
+            # Backup old rows into new structure
+            padded_data = []
+            for data_dict in old_data_dicts:
+                padded_row = [data_dict.get(col, "") for col in all_columns]
+                padded_data.append(padded_row)
+
+            # Add the new row too
+            new_row = [input_data.get(col, "") for col in all_columns]
+            padded_data.append(new_row)
+
+            # Clear and rewrite everything
+            sheet.clear()
+            sheet.update([all_columns] + padded_data)
+
+            print("Headers updated. Previous and new data restored.")
+
+    except gspread.SpreadsheetNotFound:
+        print("Sheet not found. Creating new sheet...")
+        spreadsheet = client.create(sheet_title)
+        sheet = spreadsheet.sheet1
+        sheet.update([all_columns])
+        row = [input_data.get(col, "") for col in all_columns]
+        sheet.append_row(row)
+        for email in team_emails:
+            spreadsheet.share(email, perm_type='user', role='writer')
+        print("Sheet created and first row added.")
+
+    print(f"Sheet URL: {spreadsheet.url}")
+    return spreadsheet.url
+
+
+# Define columns for reference
+
+def add_vendor_to_cashfree():
+    # Define the scope and credentials
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    # Open the spreadsheet and get data
+    sheet = client.open("WorkerOnboardingDetails").sheet1
+    records = sheet.get_all_records()
+
+    # Iterate over each record starting from row 2 (1-indexed)
+    for idx, row in enumerate(records, start=2):
+        vendor_id = row.get("vendorId", "").strip()
+
+        # Skip if vendorId already exists
+        if vendor_id:
+            continue
+
+        # Extract data
+        vpa = row.get("UPI", "").strip()
+        worker_number = row.get("worker_number", "")
+        employer_number = row.get("employer_number", "")
+        worker_name = row.get("bank_account_name_cashfree", "").strip()
+        pan_number = row.get("PAN_number", "").strip()
+        account_number = row.get("bank_account_number", "")
+        ifsc_code = row.get("ifsc_code", "").strip()
+        bank_account_validation = row.get("bank_account_validation", "").strip()
+        pan_card_validation = row.get("pan_card_validation", "").strip()
+
+        # Validate essential fields
+        if not pan_number:
+            print(f"Skipping row {idx}: Missing PAN")
+            continue
+
+        if not (account_number or vpa):
+            print(f"Skipping row {idx}: Missing both account number and VPA")
+            continue
+        
+        if pan_card_validation != "VALID":
+            continue
+
+        if not vpa and bank_account_validation != "VALID":
+            continue
+        
+        vendor = schemas.Vendor(
+            vpa = vpa if not account_number else "None",
+            workerNumber=int(worker_number),
+            name=worker_name,
+            pan=pan_number,
+            accountNumber=f"{account_number}" if account_number else "None",
+            ifsc=ifsc_code if account_number else "None",
+            employerNumber=int(employer_number)
+        )
+
+        print(vendor)
+        response = cashfree_api.add_a_vendor(vendor)
+        new_vendor_id = response.get("VENDOR_ID")
+        if new_vendor_id:
+            sheet.update_cell(idx, get_column_index(sheet, "vendorId"), new_vendor_id)
+            print(f"Updated row {idx} with vendorId: {new_vendor_id}")
+        else:
+            print(f"Failed to get vendorId for row {idx}")
+
+
+def get_column_index(sheet, column_name):
+    """Helper to get column index (1-indexed) for a given column name."""
+    header = sheet.row_values(1)
+    try:
+        return header.index(column_name) + 1
+    except ValueError:
+        raise ValueError(f"Column '{column_name}' not found in sheet header.")
+    
+
+def process_vendor_status(db : Session = Depends(get_db)):
+    # Setup
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+    
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    # Sheets
+    onboarding_sheet = client.open("WorkerOnboardingDetails").sheet1
+
+    records = onboarding_sheet.get_all_records()
+    header = onboarding_sheet.row_values(1)
+    
+    for idx, row in enumerate(records, start=2):  # start=2 for actual sheet row (header is at 1)
+        vendorId = row.get("vendorId", "").strip()
+        employer_number = row.get("employer_number", "")
+        worker_name = row.get("worker_name", "").strip()
+        worker_number = row.get("worker_number", "")
+        PAN_number = row.get("PAN_number", "").strip()
+        upi_id = row.get("UPI", "").strip()
+        bank_account_number = row.get("bank_account_number", "")
+        ifsc_code = row.get("ifsc_code", "").strip()
+        salary = row.get("salary", "")
+
+        if not vendorId:
+            print(f"[{idx}] No vendorId found")
+            continue
+
+        try:
+            status_response = cashfree_api.check_vendor_status(vendorId)
+            pan_remarks = status_response["related_docs"][1]["remarks"]
+            remarks = status_response["remarks"]
+
+            final_remarks = f"{remarks} || {pan_remarks}"
+            print(final_remarks)
+            vendor_status = status_response["status"].upper()
+
+            if vendor_status == "ACTIVE":
+                
+                confirmation_message = row.get("confirmation_message", "").strip()
+                if confirmation_message == "SENT":
+                    continue
+
+                else:
+
+                    # send whatsapp message of confirmed onboarding
+                    whatsapp_message.send_vendor_confirmation_message(employer_number, worker_name, template_name="worker_addition_successful_message")
+
+                    update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
+                    update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
+
+                    # make entry in the db.
+
+                    worker = {
+                        "name" : worker_name,
+                        "email" : "sample@sample.com",
+                        "workerNumber" : worker_number,
+                        "employerNumber" : employer_number,
+                        "panNumber" : PAN_number,
+                        "upi_id" : upi_id,
+                        "accountNumber" : f"{bank_account_number}",
+                        "ifsc" : ifsc_code,
+                        "vendorId" : vendorId
+                    }
+
+                    if not upi_id :
+                        worker["upi_id"] = "None"
+
+                    elif not bank_account_number:
+                        worker["accountNumber"] = "None"
+
+                
+                    userControllers.create_domestic_worker(worker, db)
+
+                    employer_id = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first().id
+
+                    worker_id = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == worker_number).first().id
+                    
+                    relation = {
+                        "workerNumber" : worker_number,
+                        "employerNumber" : employer_number,
+                        "salary" : salary,
+                        "vendorId" : vendorId,
+                        "worker_name" : worker_name,
+                        "employer_id" : employer_id,
+                        "worker_id" : worker_id,
+                    }
+                    userControllers.create_relation(relation, db)
+
+            else:
+
+                print(f"[{idx}] Vendor {vendorId} status = {vendor_status}. Updating status in sheet and logging failure.")
+                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", final_remarks)
+
+        except Exception as e:
+            print(f"[{idx}] Error checking status for vendorId {vendorId}: {e}")
+
+ 
+def update_sheet_cell(sheet, row_index, column_name, new_value):
+
+    """Helper to update a cell by column name."""
+    header = sheet.row_values(1)
+    try:
+        col_index = header.index(column_name) + 1
+        sheet.update_cell(row_index, col_index, new_value)
+    except ValueError:
+        print(f"Column '{column_name}' not found in sheet.")
+
+
+def bank_account_validation_status():
+
+    # Setup Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    # Access the sheet
+    sheet = client.open("WorkerOnboardingDetails").sheet1
+    header = sheet.row_values(1)
+    records = sheet.get_all_records()
+
+    for idx, row in enumerate(records, start=2):
+        account_number = row.get("bank_account_number", "")
+        ifsc_code = row.get("ifsc_code", "").strip()
+        pan_number = row.get("PAN_number", "").strip()
+
+        # Skip if missing critical info
+
+        if pan_number:
+
+            print(pan_number)
+            pan_response = cashfree_api.pan_verification(pan_number, "sample")
+            pan_status = pan_response.get("status")
+            name_pan_card = pan_response.get("name_pan_card")
+            update_sheet_cell(sheet, idx, "pan_card_validation", pan_status)
+            update_sheet_cell(sheet, idx, "pan_card_name_cashfree", name_pan_card)
+
+        if account_number:
+            print(account_number)
+            bank_response = cashfree_api.bank_account_verification(account_number, ifsc_code)
+            bank_status = bank_response.get("account_status")
+            name_at_bank = bank_response.get("name_at_bank")
+            update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
+            update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)

@@ -43,13 +43,18 @@ async def check_vendor_status(vendorId : str):
     return cashfree_api.check_vendor_status(vendorId)
 
 @router.post("/add_a_vendor")
-def add_a_vendor(request : schemas.Vendor, db : Session = Depends(get_db)):
-    return cashfree_api.add_a_vendor(request, db)
+def add_a_vendor(request : schemas.Vendor):
+    return cashfree_api.add_a_vendor(request)
 
 @router.get("/pan_verification")
 def pan_verification(pan : str, name : str):
     return cashfree_api.pan_verification(pan, name)
 
+
+@router.get("/bank_account_verification")
+def bank_account_verification(account_number : str, ifsc_code : str):
+    return cashfree_api.bank_account_verification(account_number, ifsc_code)
+    
 
 @router.get("/unsettled_balance")
 def unsettled_balance(db : Session = Depends(get_db)):

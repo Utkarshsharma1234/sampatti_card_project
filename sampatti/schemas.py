@@ -10,6 +10,7 @@ class Domestic_Worker(BaseModel):
     upi_id : str
     accountNumber : str
     ifsc : str
+    vendorId : str
     class Config:
         from_attributes = True
 
