@@ -284,3 +284,4 @@ def send_vendor_confirmation_message(employerNumber: int, worker_name : str, tem
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
