@@ -167,7 +167,7 @@ class CashAdvanceRepaymentLog(Base):
     actual_repayment_amount = Column(Integer)
     remaining_advance = Column(Integer)
     payment_status = Column(String, default='Pending')
-    frequency = Column(Integer, default=1)  # 1, 2, 3, 6, or -1 #add this
+    frequency = Column(Integer, default=1)  # 1, 2, 3, 6, or 0 #add this
 
     advance = relationship("cashAdvance", back_populates="repayments")
 

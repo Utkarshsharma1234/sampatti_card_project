@@ -547,11 +547,15 @@ def cash_advance_record(employerNumber : int, workerName : str, cash_advance : i
     month = current_month()
     year = current_year()
 
-    new_cash_advance_entry = models.CashAdvanceRepaymentLog(id = generate_unique_id(), advance_id = advance_id, worker_id = workerId, employer_id = employerId, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, repayment_month = repayment_start_month, repayment_year = repayment_start_year, scheduled_repayment_amount = repayment_amount, actual_repayment_amount = 0, remaining_advance = cash_advance, payment_status = "Pending", frequency = frequency)
+    if cash_advance_record.cash_advance > 0:
+        new_cash_advance_entry = models.CashAdvanceRepaymentLog(id = generate_unique_id(), advance_id = advance_id, worker_id = workerId, employer_id = employerId, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, repayment_month = repayment_start_month, repayment_year = repayment_start_year, scheduled_repayment_amount = repayment_amount, actual_repayment_amount = 0, remaining_advance = cash_advance, payment_status = "Pending", frequency = frequency)
 
-    db.add(new_cash_advance_entry)
-    db.commit()
-    db.refresh(new_cash_advance_entry)
+        db.add(new_cash_advance_entry)
+        db.commit()
+        db.refresh(new_cash_advance_entry)
+    else:
+        return "There may be only bonus or deduction present so we have not created any cash advance entry in the database"
+        
     print("new entry created", new_cash_advance_entry)
 
 
