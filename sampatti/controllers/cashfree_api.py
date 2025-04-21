@@ -4,7 +4,7 @@ from fastapi import HTTPException
 import json, uuid, requests, os
 from cashfree_pg.api_client import Cashfree
 from cashfree_verification.api_client import Cashfree as Cashfree_Verification
-#from cashfree_verification.models.upi_mobile_request_schema import UpiMobileRequestSchema
+from cashfree_verification.models.upi_mobile_request_schema import UpiMobileRequestSchema
 from cashfree_verification.models.pan_advance_request_schema import PanAdvanceRequestSchema
 from cashfree_pg.models.create_order_request import CreateOrderRequest
 from cashfree_pg.api_client import Cashfree
@@ -36,11 +36,11 @@ def fetch_vpa(workerNumber : int):
     Cashfree_Verification.XEnvironment = Cashfree_Verification.XProduction
     uuid_value = uuid.uuid4().hex
     
-    #user_info = UpiMobileRequestSchema(mobile_number= f"{workerNumber}", verification_id = uuid_value)
+    user_info = UpiMobileRequestSchema(mobile_number= f"{workerNumber}", verification_id = uuid_value)
 
     api_response = None
     try:
-        #api_response = Cashfree_Verification().vrs_upi_mobile_verification(user_info, None)
+        api_response = Cashfree_Verification().vrs_upi_mobile_verification(user_info, None)
         if not api_response or not api_response.data:
             raise HTTPException(status_code=400, detail="Bad request: No response from API")
         
@@ -447,3 +447,51 @@ def bank_account_verification(account_number : str, ifsc_code : str):
     print(response.text)
     response_data = json.loads(response.text)
     return response_data
+
+def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
+
+    Cashfree.XClientId = pg_id
+    Cashfree.XClientSecret = pg_secret
+    Cashfree.XEnvironment = Cashfree.XProduction
+    x_api_version = "2023-08-01"
+
+    cr_month = current_month()
+    cr_year = current_year()
+
+    total_salary = cash_advance + bonus + monthly_salary - repayment_amount - deduction
+
+    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    workerId = item.worker_id
+    employerId = item.employer_id
+
+    note = {'monthly_salary' : monthly_salary, 'cash_advance' : cash_advance, 'bonus' : bonus, 'repayment_amount' : repayment_amount, 'deduction' : deduction}
+
+    note_string = json.dumps(note)
+    actual_number = int(str(employerNumber)[2:])
+
+    customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
+    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+    try:
+        api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
+        # print(api_response.data)
+    except Exception as e:
+        print(e)
+
+    response = dict(api_response.data)
+    payment_session_id = response["payment_session_id"]
+
+    send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+
+    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
+    db.execute(update_statement)
+    db.commit()
+    
+    advance_record = db.query(models.cashAdvance).filter(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Pending").first()
+    advance_id = advance_record.advance_id
+    
+    create_repayment_log = models.CashAdvanceRepaymentLog(id=generate_unique_id(), advance_id=advance_id, worker_id=workerId, employer_id=employerId, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, repayment_month=0, repayment_year=0, scheduled_repayment_amount=repayment_amount, actual_repayment_amount=0, remaining_advance=cash_advance, payment_status="Pending", frequency=frequency)
+    db.add(create_repayment_log)
+    db.execute(create_repayment_log)
+    db.commit()
+    

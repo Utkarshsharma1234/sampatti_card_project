@@ -197,6 +197,7 @@ Return a JSON object with the following fields:
   - Always end with a question like, "Does this look correct? If not, please let me know what to update!" unless confirmation is 1.
   - Vary the tone slightly to keep it natural (e.g., "Awesome, here's what I’ve got..." or "Alright, let’s go over this...").
   - Keep the message concise (2-4 sentences) but warm and engaging.
+  - if cash advance and repayment only provided, then set frequency to 1 and repayment_start_month to next month and repayment_start_year to corresponding year and ask for confirmation.
 
 Rules:
 
@@ -228,7 +229,7 @@ Rules:
             "ai_message": "<response message>"
             "confirmation": <integer>,
         }}
-        """
+"""
 
         prompt_template = PromptTemplate(
             input_variables=["user_input", "current_date", "context", "worker_id", "employer_id"],
