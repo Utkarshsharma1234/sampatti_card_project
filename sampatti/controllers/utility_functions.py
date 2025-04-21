@@ -15,6 +15,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
 from .. import models
 import subprocess
+import re
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
@@ -153,156 +154,126 @@ def determine_attendance_period(current_day):
 
 
 
-def extracted_info_from_llm(user_input: str, employer_number: str, context: dict):
-    if not employer_number:
-        raise ValueError("Employer number is required.")
-
-    llm = OpenAI(api_key=openai_api_key)  # Ensure API key is loaded correctly
-    current_date = datetime.now()
-
-    # Determine attendance month logic
-    if current_date.day <= 15:
-        prev_month_date = current_date.replace(day=1) - timedelta(days=1)
-        attendance_month = prev_month_date.month
-        attendance_year = prev_month_date.year
-    else:
-        attendance_month = current_date.month
-        attendance_year = current_date.year
-
-    # Get total days in the attendance month
-    total_days_in_month = calendar.monthrange(attendance_year, attendance_month)[1]
-
-    # Repayment Start Month & Year Logic
-    user_provided_repayment_month = "Repayment_Start_Month" in user_input.lower()
-    context_repayment_month = context.get("Repayment_Start_Month", "").capitalize()
-    context_repayment_year = context.get("Repayment_Start_Year", current_date.year)
-
-    if user_provided_repayment_month:
-        repayment_month = context_repayment_month
-        repayment_start_year = context_repayment_year
-    elif context_repayment_month:
-        repayment_month = context_repayment_month
-        repayment_start_year = context_repayment_year
-    else:
-        # Default to next month
-        next_month_date = current_date.replace(day=1) + timedelta(days=32)
-        repayment_month = next_month_date.strftime("%B")
-        repayment_start_year = next_month_date.year
-
-    # Ensure deduction remains unchanged if not mentioned in input
-    deduction = context.get("deduction", 0)
-
-    # LLM Prompt Template
-    template = """
-    Given the user input and current context, update the necessary fields while keeping the rest unchanged.
-    
-    - **Leave Adjustments**:
-        - If the user mentions "leaves", deduct them from the total days of the attendance month.
-
-    - **Salary Adjustments**:
-        1. **Temporary Adjustments**:
-            - If the input specifies "only X rupees this month", adjust the salary only for this month.
-            - If X is less than the standard salary, set the difference as a deduction.
-            - If X is more, consider the excess as a bonus.
-        2. **Permanent Adjustments**:
-            - If input states "Change salary to X", update the standard salary permanently.
-
-    - **Deduction Handling**:
-        1. If the user explicitly states "Don't deduct anything", set the deduction to **0**.
-        2. If the user mentions a specific deduction amount, apply it.
-        3. If deduction is **not mentioned**, keep it the same as in the context.
-
-    - **Repayment Handling**:
-        1. If the user provides a **specific repayment month**, use it.
-        2. If **no repayment details are provided**, default to the **next available month**.
-        3. If **cash advance is provided but repayment details are missing**, AI should prompt for clarification.
-
-    - **Bonus Handling**:
-        - If the user mentions **"extra amount", "bonus", "extra this month"**, add it to the **Bonus** field.
-
-    - **AI Message Handling**:
-        - The **AI message** should:
-          1. **Summarize the user input** in a structured and natural way.
-          2. **Prompt for missing repayment details** when cash advance is provided but repayment is missing.
-          3. **Include relevant JSON attributes** mentioned in the user input.
-          4. **,Are the above details correct?** add this sentance in the last of the message so that user can confirm it.
-          5. **If user only provide cash advance not repayment** then ask can we consider this as bonus as repaymnet is not given.
-          6. **If only repayment is given and not cash advance** then if already cash advanec present if present then give give message accordingly, if not then ask user to give cash advance as only repayment is given.
-          
-        
-    Context: {context}
-    User Input: {user_input}
-    Current Date: {current_date}
-    Attendance Month: {attendance_month_name}
-    Attendance Year: {attendance_year}
-    Total Days in Attendance Month: {total_days_in_month}
-
-    Return JSON in the following structure:
-    {{
-        "crrCashAdvance": <integer>,
-        "Repayment_Monthly": <integer>,
-        "Repayment_Start_Month": "<Capitalized Month>",
-        "Repayment_Start_Year": <YYYY>,
-        "Bonus": <integer>,
-        "Attendance": <integer>,
-        "nameofWorker": "<worker_name>",
-        "salary": <integer>,
-        "deduction": <integer>,
-        "leaves": <integer>,
-        "ai_message": "<Generated AI message based on input>"
-    }}
-    
-"""
-    
-
-    prompt_template = PromptTemplate(
-        input_variables=[
-            "user_input", "current_date", "context",
-            "attendance_month_name", "attendance_year", "total_days_in_month"
-        ],
-        template=template
-    )
-
-    prompt = prompt_template.format(
-        user_input=user_input,
-        current_date=current_date.strftime("%Y-%m-%d"),
-        context=json.dumps(context),
-        attendance_month_name=calendar.month_name[attendance_month],
-        attendance_year=attendance_year,
-        total_days_in_month=total_days_in_month
-    )
-
+def extracted_info_from_llm(user_input: str, worker_id: str, employer_id: str, context: dict):
     try:
+        llm = OpenAI(api_key=openai_api_key)  # Ensure API key is loaded correctly
+        current_date = datetime.now()
+        print(f"Current Date: {current_date}")
+
+        template = """
+        You are a warm, professional, and engaging assistant helping employers manage cash advances and repayments for their workers in a human-like, conversational manner.
+
+The system provides the following context from the database, which is the cash advance entry for the worker. Use this as the baseline and update it based on the employer's input: {context}
+
+The employer has sent the following message: "{user_input}"
+
+Additional information:
+
+- worker_id: {worker_id}
+- employer_id: {employer_id}
+- current date: {current_date}
+
+Your task is to extract and update the following structured information as JSON based on the user_input and context. If any values are missing or unclear, set them to null for strings and 0 for integers, and include a friendly, human-like question in the ai_message asking for clarification. If context contains existing CashAdvanceRecord data, use those values as defaults and update only the fields specified in user_input.
+
+Return a JSON object with the following fields:
+
+- cash_advance: The new cash advance amount, if mentioned in user_input, or from context if available, else 0.
+- repayment_amount: The fixed amount to deduct for repayment each time, update if mentioned in user_input, else from context or 0.
+- repayment_start_month: Integer (1-12), when repayments should begin, update if mentioned, else from context or next month based on current_date.
+- repayment_start_year: Integer, take current year or next year if repayment_start_month is earlier than current month, update if mentioned, else from context or based on repayment_start_month.
+- frequency: Integer (1 for monthly, 2 for every 2 months, 3 for every 3 months, 6 for every 6 months, 0 for random), update if mentioned, else from context or 1 if repayment_amount is provided, else 0.
+- bonus: Integer, if user mentions "extra amount", "bonus", or "extra this month", else from context or 0.
+- deduction: Integer, if employer wants to deduct only this month's salary, else from context or 0.
+- monthly_salary: The worker's monthly salary from context (worker_employer table or CashAdvanceRecord), fixed for worker-employer, else 0.
+- confirmation: Integer, set to 1 if user_input clearly indicates full confirmation with phrases like "yes", "correct", "looks good", "all set", "confirmed", "everything is right", or similar affirmative responses (case-insensitive, allowing for minor variations). Set to 0 if user_input is not a clear confirmation, includes partial confirmation (e.g., "yes, but change the repayment"), or contains new updates or questions.
+- ai_message: A friendly, human-like message summarizing the changes made, confirming the extracted details, and asking for missing information or confirmation. Follow these guidelines for ai_message:
+  - Always reflect the details extracted from user_input in a clear, conversational way (e.g., "Got it! I've noted a cash advance of 5000.").
+  - If only cash_advance is provided, mention the cash_advance and ask if they want to specify a repayment plan (e.g., "Would you like to set up a repayment plan for this advance?").
+  - If bonus, deduction, or monthly_salary is mentioned, summarize those changes and ask if the provided values are correct (e.g., "I've recorded a 200 bonus. Is that correct?").
+  - If both cash_advance and repayment_amount are provided, summarize cash_advance, repayment_amount, frequency (default to 1 if not specified), repayment_start_month (default to next month), and repayment_start_year (based on current_date) (e.g., "I've set a 5000 advance with 1000 monthly repayments starting next month.").
+  - If user_input is unclear or incomplete, politely explain what’s missing and ask for clarification (e.g., "I’m not sure about the repayment amount. Could you clarify?").
+  - If confirmation is 1, include a thank-you note (e.g., "Thanks for confirming! Let me know if you need any more changes.").
+  - If user_input suggests partial confirmation (e.g., "yes, but change the repayment to 1500"), set confirmation to 0, update the relevant fields, and ask for final confirmation (e.g., "I've updated the repayment to 1500. Does everything look good now?").
+  - Always end with a question like, "Does this look correct? If not, please let me know what to update!" unless confirmation is 1.
+  - Vary the tone slightly to keep it natural (e.g., "Awesome, here's what I’ve got..." or "Alright, let’s go over this...").
+  - Keep the message concise (2-4 sentences) but warm and engaging.
+  - if cash advance and repayment only provided, then set frequency to 1 and repayment_start_month to next month and repayment_start_year to corresponding year and ask for confirmation.
+
+Rules:
+
+- If context has CashAdvanceRecord data, use it as the baseline and update only fields mentioned in user_input (e.g., if user says "change repayment to 2000", keep cash_advance and other fields from context).
+- If no context data exists, create a response based solely on user_input, setting defaults as specified.
+- If repayment_amount is provided but repayment_start_month/year or frequency is not, set repayment_start_month to next month, repayment_start_year to corresponding year, and frequency to 1.
+- If repayment_amount is not provided, set frequency to 0, repayment_start_month to 0, repayment_start_year to 0.
+- If user_input only updates repayment_amount and context has a cash advance, include the existing cash_advance in the response.
+- If user_input includes terms like "next month", calculate repayment_start_month and repayment_start_year relative to current_date.
+- If user_input mentions frequency in words (e.g., "every two months"), map to the appropriate integer (e.g., 2).
+- Do NOT hallucinate values. Use only user_input or context.
+- If user_input contains conflicting information (e.g., "set repayment to 1000 and no repayment"), set unclear fields to 0 and ask for clarification in ai_message.
+- If user_input is a positive confirmation, set confirmation to 1, keep other fields unchanged from context or previous state, and return a simple ai_message thanking the user.
+- If user_input is ambiguous (e.g., "looks okay but maybe change something"), set confirmation to 0 and ask for specific updates in ai_message.
+- Ensure ai_message feels like a natural conversation with a helpful colleague.
+
+
+
+        Respond ONLY with the JSON object:
+        {{
+            "cash_advance": <integer>,
+            "repayment_amount": <integer>,
+            "repayment_start_month": <integer>,
+            "repayment_start_year": <integer>,
+            "frequency": <integer>,
+            "bonus": <integer>,
+            "deduction": <integer>,
+            "monthly_salary": <integer>,
+            "ai_message": "<response message>"
+            "confirmation": <integer>,
+        }}
+"""
+
+        prompt_template = PromptTemplate(
+            input_variables=["user_input", "current_date", "context", "worker_id", "employer_id"],
+            template=template
+        )
+
+        prompt = prompt_template.format(
+            user_input=user_input,
+            current_date=current_date,
+            context=context,
+            worker_id=worker_id,
+            employer_id=employer_id
+        )
+
+        # Send prompt to LLM
         response = llm.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an assistant that updates JSON fields accurately."},
+                {"role": "system", "content": "You are a cash advance and repayment management system assistant that updates JSON fields accurately."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5
         )
 
         response_text = response.choices[0].message.content.strip()
-        cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
-
         print(f"LLM Response Raw: {response_text}")
-        print(f"LLM Response Cleaned: {cleaned_response}")
 
-        # Try parsing JSON
-        extracted_info = json.loads(cleaned_response)
+        cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
+        print(f"LLM Response Cleaned: {cleaned_response}")
         
+        # Parse JSON
+        extracted_info = json.loads(cleaned_response)
+
         return extracted_info
 
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
         print(f"Raw response: {response_text}")
-        return None
+        return JSONResponse(content={"error": f"Invalid JSON response from LLM: {str(e)}"}, status_code=500)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-    
-    
+     
 def call_sarvam_api(file_path):
 
     url = "https://api.sarvam.ai/speech-to-text-translate"
@@ -633,3 +604,6 @@ def convert_mp3_to_ogg(input_file : str, output_file : str):
         print(f"Error during conversion: {e}")
     except Exception as e:
         print(f"Error: {e}")
+        
+        
+    

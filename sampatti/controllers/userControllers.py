@@ -15,14 +15,14 @@ import google.generativeai as genai
 from PIL import Image
 from io import BytesIO
 import json
+import logging
 
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
 google_api_key = os.environ.get('GOOGLE_API_KEY')
-
-
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
-# creating the employer
+
+
 def create_employer(request : schemas.Employer, db: Session):
 
     employerNumber = request.employerNumber
@@ -46,6 +46,17 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
 
     if request.upi_id == "None":
         request.upi_id = None
+ 
+    elif request.accountNumber == "None":
+        request.accountNumber = None
+        request.ifsc = None
+ 
+    existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
+ 
+    if existing_worker :
+        return existing_worker
+    
+
 
     elif request.accountNumber == "None":
         request.accountNumber = None
@@ -501,46 +512,51 @@ def find_all_workers(employerNumber : int, db : Session):
     }
 
 
-def create_cash_advance_entry(employerNumber : int, workerName : str, crrCashAdvance : int, monthlyRepayment : int, startMonth : str, startYear : int, bonus : int, attendance : int, deduction : int, db : Session):
+def create_cash_advance_entry(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session):
 
     worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
 
-    employerId = worker_employer_relation.employer_id
     workerId = worker_employer_relation.worker_id
+    employerId = worker_employer_relation.employer_id
+    monthly_salary = worker_employer_relation.salary_amount
 
-    existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == workerId, models.CashAdvanceManagement.employer_id == employerId).first()
+    datee = date.today().strftime('%Y-%m-%d')
 
-    if existing_record is not None:
-
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.employer_id == employerId, models.CashAdvanceManagement.worker_id == workerId).values(monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance, bonus = bonus, attendance = attendance, deduction = deduction)
+    existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
+    
+    if existing_record is not None and existing_record.payment_status == "Pending":
+        update_statement = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, frequency = frequency, bonus = bonus, deduction = deduction, current_date = datee)
         db.execute(update_statement)
         db.commit()
-
-    else: 
-        new_cash_advance_entry = models.CashAdvanceManagement(id = generate_unique_id(), employerNumber = employerNumber, worker_id = workerId, employer_id = employerId, cashAdvance = 0, monthlyRepayment = monthlyRepayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear, currentCashAdvance = crrCashAdvance, bonus = bonus, attendance = attendance, deduction = deduction)
+    else:
+        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Pending")
         db.add(new_cash_advance_entry)
         db.commit()
         db.refresh(new_cash_advance_entry)
 
-
-def cash_advance_record(employerNumber : int, workerName : str, cashAdvance : int, repayment : int, repaymentStartMonth : str, repaymentStartYear : int, db : Session):
+def cash_advance_record(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session):
 
     worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
 
     workerId = worker_employer_relation.worker_id
     employerId = worker_employer_relation.employer_id
-
-    day_only = current_date().day
+    
+    cash_advance_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
+    advance_id = cash_advance_record.advance_id
+    
     month = current_month()
     year = current_year()
 
-    dateIssuedOn = f"{day_only}_{month}_{year}"
+    if cash_advance_record.cash_advance > 0:
+        new_cash_advance_entry = models.CashAdvanceRepaymentLog(id = generate_unique_id(), advance_id = advance_id, worker_id = workerId, employer_id = employerId, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, repayment_month = repayment_start_month, repayment_year = repayment_start_year, scheduled_repayment_amount = repayment_amount, actual_repayment_amount = 0, remaining_advance = cash_advance, payment_status = "Pending", frequency = frequency)
 
-    new_cash_advance_entry = models.CashAdvanceRecords(id = generate_unique_id(), worker_id = workerId, employer_id = employerId, cashAdvance = cashAdvance, repayment = repayment, repaymentStart = f"{repaymentStartMonth}_{repaymentStartYear}", dateIssuedOn = dateIssuedOn)
-
-    db.add(new_cash_advance_entry)
-    db.commit()
-    db.refresh(new_cash_advance_entry)
+        db.add(new_cash_advance_entry)
+        db.commit()
+        db.refresh(new_cash_advance_entry)
+    else:
+        return "There may be only bonus or deduction present so we have not created any cash advance entry in the database"
+        
+    print("new entry created", new_cash_advance_entry)
 
 
 def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session):
@@ -607,59 +623,45 @@ async def get_transalated_text(file_url: str):
             os.remove(temp_wav_path)
 
 
-async def process_audio(user_input : str, user_language : str, employerNumber : int, workerName: str, db : Session):
-    
+def process_audio(user_input: str, user_language: str, employerNumber: int, workerName: str, db: Session):
     try:
         # Check if there is an existing record for the employer
-        worker_employer_relation = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name== workerName).first()
-
+        worker_employer_relation = db.query(models.worker_employer).where(
+            models.worker_employer.c.employer_number == employerNumber,
+            models.worker_employer.c.worker_name == workerName
+        ).first()
+        
         if not worker_employer_relation:
             raise ValueError("Worker not found with the given worker number.")
 
         employer_id = worker_employer_relation.employer_id
         worker_id = worker_employer_relation.worker_id
-
-        existing_record = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == worker_id, models.CashAdvanceManagement.employer_id == employer_id).first()
         
-        attend = determine_attendance_period(current_date().day)
-        if existing_record is not None:
-            if existing_record.attendance is not None:
-                attend = existing_record.attendance
+        
+        existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == worker_id, models.cashAdvance.employer_id == employer_id).order_by(models.cashAdvance.current_date.desc()).first()
+        print(f"Existing Record: {existing_record}")
         
         context = {
-            "currentCashAdvance": existing_record.currentCashAdvance if existing_record else 0,
-            "monthlyRepayment": existing_record.monthlyRepayment if existing_record else 0,
-            "Repayment_Start_Month": existing_record.repaymentStartMonth if existing_record else "sampatti",
-            "Repayment_Start_Year": existing_record.repaymentStartMonth if existing_record else 0,
-            "Bonus": existing_record.bonus if existing_record else 0,
-            "Attendance": attend,
-            "nameofWorker" : workerName,
-            "salary" : worker_employer_relation.salary_amount,
+            "cash_advance": existing_record.cash_advance if existing_record else 0,
+            "repayment_amount": existing_record.repayment_amount if existing_record else 0,
+            "repayment_start_month": existing_record.repayment_start_month if existing_record else 0,
+            "repayment_start_year": existing_record.repayment_start_year if existing_record else 0,
+            "frequency": existing_record.frequency if existing_record else 0,
+            "bonus": existing_record.bonus if existing_record else 0,
             "deduction": existing_record.deduction if existing_record else 0,
-            "leaves": 0,
-            "ai_message": ""
+            "monthly_salary": existing_record.monthly_salary if existing_record else 0,
         }
-
-        # Pass the user input and context to the LLM for extraction
-        extracted_info = extracted_info_from_llm(user_input, employerNumber, context)
-        print(f"usercontrollers : {extracted_info}")
-        print(f"the context is : {context}")
         
+        
+        # Pass the user input and context to the LLM for extraction
+        extracted_info = extracted_info_from_llm(user_input, worker_id, employer_id, context)
+        
+        if isinstance(extracted_info, JSONResponse):
+            return extracted_info
 
-        response = {
-            "crrCashAdvance" : extracted_info.get("crrCashAdvance"),
-            "Repayment_Monthly" : extracted_info.get("Repayment_Monthly"),
-            "Repayment_Start_Month" : extracted_info.get("Repayment_Start_Month"),
-            "Repayment_Start_Year" : extracted_info.get("Repayment_Start_Year"),
-            "Bonus" : extracted_info.get("Bonus"),
-            "Attendance" : extracted_info.get("Attendance"),
-            "salary" : extracted_info.get("salary"),
-            "deduction" : extracted_info.get("deduction"),
-            "leaves" : determine_attendance_period(current_date().day) - extracted_info.get("Attendance"),
-            "ai_message" : extracted_info.get("ai_message")
-        }
-
-        return response
+        print(f"usercontrollers: {extracted_info}")
+        
+        return extracted_info
 
     except PermissionError as e:
         return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
@@ -937,10 +939,6 @@ def process_attendance_with_llm(employerNumber : int, workerName: str, user_inpu
     return extracted_info
 
 
-from datetime import datetime
-from sqlalchemy.exc import SQLAlchemyError
-import uuid
-
 def add_attendance_records(action: str, dates: str, worker_id: str, employer_id: str, db: Session):
     try:
         # Convert comma-separated string into list of trimmed date strings
@@ -1141,4 +1139,3 @@ def extract_passbook_details(image_url):
 
     except Exception as e:
         return {"error": str(e)}
-
