@@ -227,16 +227,14 @@ def pan_verification(pan : str, name : str):
 
     pan_schema = PanAdvanceRequestSchema(pan=pan, verification_id=uuid_val, name=name)
 
-    api_response = None
     try:
         api_response = Cashfree_Verification().vrs_pan_advance_verification(pan_schema, None)
         # print(api_response.data)
+        response = dict(api_response.data)
+        return response
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=400, detail=f"Bad request: No response from API")
-    
-    response = dict(api_response.data)
-    return response
+        pass
 
 
 # payment link generation

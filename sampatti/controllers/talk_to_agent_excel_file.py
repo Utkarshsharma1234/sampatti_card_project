@@ -89,7 +89,7 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
     creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
     client = gspread.authorize(creds)
 
-    sheet_title = "WorkerOnboardingDetails"
+    sheet_title = "WorkerOnboardingDetailsOpsTeam"
     team_emails = ['utkarsh@sampatticard.in']
 
     try:
@@ -162,7 +162,7 @@ def add_vendor_to_cashfree():
     client = gspread.authorize(creds)
 
     # Open the spreadsheet and get data
-    sheet = client.open("WorkerOnboardingDetails").sheet1
+    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     records = sheet.get_all_records()
 
     # Iterate over each record starting from row 2 (1-indexed)
@@ -239,7 +239,8 @@ def process_vendor_status(db : Session = Depends(get_db)):
     client = gspread.authorize(creds)
 
     # Sheets
-    onboarding_sheet = client.open("WorkerOnboardingDetails").sheet1
+    onboarding_sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    worker_details_main_sheet = client.open("WorkerOnboardingDetails").sheet1
 
     records = onboarding_sheet.get_all_records()
     header = onboarding_sheet.row_values(1)
@@ -247,7 +248,7 @@ def process_vendor_status(db : Session = Depends(get_db)):
     for idx, row in enumerate(records, start=2):  # start=2 for actual sheet row (header is at 1)
         vendorId = row.get("vendorId", "").strip()
         employer_number = row.get("employer_number", "")
-        worker_name = row.get("worker_name", "").strip()
+        worker_name = row.get("bank_account_name_cashfree", "").strip()
         worker_number = row.get("worker_number", "")
         PAN_number = row.get("PAN_number", "").strip()
         upi_id = row.get("UPI", "").strip()
@@ -281,27 +282,24 @@ def process_vendor_status(db : Session = Depends(get_db)):
 
                     update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
                     update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
+                    row_values = onboarding_sheet.row_values(idx)
+                    worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
 
+                    # Print the main sheet URL
+                    main_sheet_url = worker_details_main_sheet.url
                     # make entry in the db.
 
-                    worker = {
-                        "name" : worker_name,
-                        "email" : "sample@sample.com",
-                        "workerNumber" : worker_number,
-                        "employerNumber" : employer_number,
-                        "panNumber" : PAN_number,
-                        "upi_id" : upi_id,
-                        "accountNumber" : f"{bank_account_number}",
-                        "ifsc" : ifsc_code,
-                        "vendorId" : vendorId
-                    }
-
-                    if not upi_id :
-                        worker["upi_id"] = "None"
-
-                    elif not bank_account_number:
-                        worker["accountNumber"] = "None"
-
+                    worker = schemas.Domestic_Worker(
+                        name = worker_name,
+                        email = "sample@sample.com",
+                        workerNumber=worker_number,
+                        employerNumber = employer_number,
+                        panNumber = PAN_number,
+                        upi_id = upi_id if upi_id else "None",
+                        accountNumber = bank_account_number if bank_account_number else "None",
+                        ifsc = ifsc_code if bank_account_number else "None",
+                        vendorId = vendorId
+                    )
                 
                     userControllers.create_domestic_worker(worker, db)
 
@@ -309,20 +307,22 @@ def process_vendor_status(db : Session = Depends(get_db)):
 
                     worker_id = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == worker_number).first().id
                     
-                    relation = {
-                        "workerNumber" : worker_number,
-                        "employerNumber" : employer_number,
-                        "salary" : salary,
-                        "vendorId" : vendorId,
-                        "worker_name" : worker_name,
-                        "employer_id" : employer_id,
-                        "worker_id" : worker_id,
-                    }
-                    userControllers.create_relation(relation, db)
+                    relation = schemas.Worker_Employer(
+                        workerNumber = worker_number,
+                        employerNumber = employer_number,
+                        salary = salary,
+                        vendorId = vendorId,
+                        worker_name = worker_name,
+                        employer_id = employer_id,
+                        worker_id = worker_id
+                    )
 
+                    userControllers.create_relation(relation, db)
+                    print(main_sheet_url)
             else:
 
                 print(f"[{idx}] Vendor {vendorId} status = {vendor_status}. Updating status in sheet and logging failure.")
+                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "NOT ACTIVE")
                 update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", final_remarks)
 
         except Exception as e:
@@ -352,7 +352,7 @@ def bank_account_validation_status():
     client = gspread.authorize(creds)
 
     # Access the sheet
-    sheet = client.open("WorkerOnboardingDetails").sheet1
+    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     header = sheet.row_values(1)
     records = sheet.get_all_records()
 
@@ -367,16 +367,28 @@ def bank_account_validation_status():
 
             print(pan_number)
             pan_response = cashfree_api.pan_verification(pan_number, "sample")
-            pan_status = pan_response.get("status")
-            name_pan_card = pan_response.get("name_pan_card")
-            update_sheet_cell(sheet, idx, "pan_card_validation", pan_status)
-            update_sheet_cell(sheet, idx, "pan_card_name_cashfree", name_pan_card)
+
+            if not pan_response:
+                update_sheet_cell(sheet, idx, "pan_card_validation", "NOT FETCHED")
+                update_sheet_cell(sheet, idx, "pan_card_name_cashfree", "NOT FETCHED")
+            else:
+                pan_status = pan_response.get("status")
+                name_pan_card = pan_response.get("name_pan_card")
+                update_sheet_cell(sheet, idx, "pan_card_validation", pan_status)
+                update_sheet_cell(sheet, idx, "pan_card_name_cashfree", name_pan_card)
 
         if account_number:
+
             print(account_number)
             bank_response = cashfree_api.bank_account_verification(account_number, ifsc_code)
-            bank_status = bank_response.get("account_status")
-            name_at_bank = bank_response.get("name_at_bank")
-            update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
-            update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
+            
+            if not bank_response:
+                update_sheet_cell(sheet, idx, "bank_account_validation", "NOT FETCHED")
+                update_sheet_cell(sheet, idx, "bank_account_name_cashfree", "NOT FETCHED")
+                continue
+            else:
+                bank_status = bank_response.get("account_status")
+                name_at_bank = bank_response.get("name_at_bank")
+                update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
+                update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
 

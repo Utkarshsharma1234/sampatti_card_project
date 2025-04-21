@@ -276,3 +276,8 @@ def upload_image_from_url(image_url: str, object_name: str):
 @router.post("/test")
 def test_func():
     return talk_to_agent_excel_file.process_vendor_status()
+
+
+@router.get("/send_confirmation")
+def send_vendor_confirmation_message(employerNumber: int, worker_name : str, template_name : str):
+    return whatsapp_message.send_vendor_confirmation_message(employerNumber, worker_name, template_name)
