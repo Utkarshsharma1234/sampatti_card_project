@@ -492,6 +492,6 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
     
     create_repayment_log = models.CashAdvanceRepaymentLog(id=generate_unique_id(), advance_id=advance_id, worker_id=workerId, employer_id=employerId, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, repayment_month=0, repayment_year=0, scheduled_repayment_amount=repayment_amount, actual_repayment_amount=0, remaining_advance=cash_advance, payment_status="Pending", frequency=frequency)
     db.add(create_repayment_log)
-    db.execute(create_repayment_log)
-    db.commit()
+    db.commit(create_repayment_log)
+    db.refresh()
     
