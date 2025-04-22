@@ -448,7 +448,7 @@ def bank_account_verification(account_number : str, ifsc_code : str):
     response_data = json.loads(response.text)
     return response_data
 
-def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
+def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
