@@ -147,7 +147,7 @@ class cashAdvance(Base):
     frequency = Column(Integer)
     bonus = Column(Integer)
     deduction = Column(Integer)
-    payment_status = Column(String, default='Pending')
+    payment_status = Column(String, default='Started')  # 'Created', 'Completed', 'Pending'
 
 
     repayments = relationship("CashAdvanceRepaymentLog", back_populates="advance")
