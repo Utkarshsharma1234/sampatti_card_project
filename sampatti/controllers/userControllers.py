@@ -524,12 +524,12 @@ def create_cash_advance_entry(employerNumber : int, workerName : str, cash_advan
 
     existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
     
-    if existing_record is not None and existing_record.payment_status == "Pending":
+    if existing_record is not None and existing_record.payment_status == "Created":
         update_statement = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, frequency = frequency, bonus = bonus, deduction = deduction, current_date = datee)
         db.execute(update_statement)
         db.commit()
     else:
-        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Pending")
+        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Created")
         db.add(new_cash_advance_entry)
         db.commit()
         db.refresh(new_cash_advance_entry)
@@ -541,12 +541,11 @@ def cash_advance_record(employerNumber : int, workerName : str, cash_advance : i
     workerId = worker_employer_relation.worker_id
     employerId = worker_employer_relation.employer_id
     
-    cash_advance_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
-    advance_id = cash_advance_record.advance_id
-    
-    month = current_month()
-    year = current_year()
+    cash_advance_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Created").first()
+    salary = cash_advance_record.monthly_salary
+    datee = date.today().strftime('%Y-%m-%d')
 
+    """
     if cash_advance_record.cash_advance > 0:
         new_cash_advance_entry = models.CashAdvanceRepaymentLog(id = generate_unique_id(), advance_id = advance_id, worker_id = workerId, employer_id = employerId, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, repayment_month = repayment_start_month, repayment_year = repayment_start_year, scheduled_repayment_amount = repayment_amount, actual_repayment_amount = 0, remaining_advance = cash_advance, payment_status = "Pending", frequency = frequency)
 
@@ -555,9 +554,11 @@ def cash_advance_record(employerNumber : int, workerName : str, cash_advance : i
         db.refresh(new_cash_advance_entry)
     else:
         return "There may be only bonus or deduction present so we have not created any cash advance entry in the database"
-        
-    print("new entry created", new_cash_advance_entry)
-
+    """
+    
+    update_cash_advance_record = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(worker_id = workerId, employer_id = employerId, monthly_salary = salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Pending")
+    db.execute(update_cash_advance_record)
+    db.commit()
 
 def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session):
 
