@@ -179,10 +179,16 @@ Additional information:
 
 Extract and return the following structured information as a JSON object. Follow these rules strictly:
 
-### 1. **cash_advance**:
-- The cash advance amount the employer wants to give.
-- If not mentioned in user_input, use the value from context if available.
-- Else, set to 0.
+- **cash_advance**:
+  - This should reflect the **remaining cash advance balance** after calculating repayments based on:
+    - `repayment_amount`
+    - `repayment_start_month` and `repayment_start_year`
+    - `frequency`
+  - Calculate how many repayments should have occurred up to the current month.
+  - Multiply **repayment_amount x number of repayment cycles** to get total repaid.
+  - Remaining balance = total cash advance - total repaid.
+  - Ensure repayments do not exceed the advance amount (balance should not go negative).
+  - If any repayment detail is missing, **do not allow confirmation** and clearly ask the employer to provide the missing information.
 
 ### 2. **repayment_amount**:
 - The fixed repayment amount per cycle.
@@ -257,6 +263,17 @@ Extract and return the following structured information as a JSON object. Follow
 - Always end with a friendly question:
     - "Does this look correct? If not, please let me know what to update!"
 - Keep the tone warm, natural, and helpful (avoid robotic language).
+
+- If **all repayment details are provided**:
+  - Summarize cash advance, repayment amount, frequency, start month, repayments done so far, and remaining balance.
+  - Example:  
+    - "You've given a cash advance of 50000 starting from December 2024, with repayments of 2000 every alternate month. Up to now, 4 repayments have been scheduled, totaling 8000. The remaining balance is 42000. Please confirm if these details are correct, or let me know if you'd like to update any detail."
+
+- **If repayment details are missing (amount, frequency, or start date):**
+  - Do NOT allow confirmation.
+  - Ask specific, clear questions like:
+    - "You have provided a cash advance of 50000, but the repayment amount, frequency, or start month is missing. Could you please specify how you would like the repayment to be scheduled?"
+  - Make sure the employer provides these details **explicitly** — avoid any yes/no type response acceptance.
 
 ---
 
