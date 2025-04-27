@@ -103,7 +103,7 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
 
 def get_worker_id(workerNumber : int, db : Session):
 
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first(16)
 
     if worker:
         return {
