@@ -393,3 +393,69 @@ def bank_account_validation_status():
                 update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
                 update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
 
+
+def fetch_bank_details_from_image():
+
+    # Setup Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    # Access the sheet
+    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    header = sheet.row_values(1)
+    records = sheet.get_all_records()
+
+    for idx, row in enumerate(records, start=2):
+        bank_passbook_image = row.get("bank_passbook_image", "").strip()
+
+        # Skip if missing critical info
+
+        if bank_passbook_image:
+
+            bank_response = userControllers.extract_passbook_details(bank_passbook_image)
+
+            if not bank_response:
+                update_sheet_cell(sheet, idx, "bank_account_number", "Refer Image")
+                update_sheet_cell(sheet, idx, "ifsc_code", "Refer Image")
+            else:
+                account_number = bank_response.get("account_number")
+                ifsc_code = bank_response.get("ifsc_code")
+                update_sheet_cell(sheet, idx, "bank_account_number", account_number)
+                update_sheet_cell(sheet, idx, "ifsc_code", ifsc_code)
+
+
+def fetch_pan_details_from_image():
+
+    # Setup Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+
+    # Access the sheet
+    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    header = sheet.row_values(1)
+    records = sheet.get_all_records()
+
+    for idx, row in enumerate(records, start=2):
+        pan_card_image = row.get("pan_card_image", "").strip()
+
+        # Skip if missing critical info
+
+        if pan_card_image:
+
+            pan_response = userControllers.extract_pan_card_details(pan_card_image)
+
+            if not pan_response:
+                update_sheet_cell(sheet, idx, "PAN_number", "Refer Image")
+            else:
+                PAN_number = pan_response.get("pan_number")
+                update_sheet_cell(sheet, idx, "PAN_number", PAN_number)
