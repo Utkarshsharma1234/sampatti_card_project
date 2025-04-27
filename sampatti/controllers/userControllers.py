@@ -103,7 +103,7 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
 
 def get_worker_id(workerNumber : int, db : Session):
 
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first(16)
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
 
     if worker:
         return {
@@ -112,7 +112,7 @@ def get_worker_id(workerNumber : int, db : Session):
     
     else:
         return {
-            "workerId" : f"{generate_unique_id()}"
+            "workerId" : f"{generate_unique_id(16)}"
         }
 
 # assigning the vendor id to the worker in the domestic worker table.
