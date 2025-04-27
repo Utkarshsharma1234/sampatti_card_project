@@ -66,7 +66,7 @@ all_columns = [
     "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary"
 ]
 
-def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str):
+def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str, salary : int):
 
     # Input row dictionary
     input_data = {
@@ -78,7 +78,8 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
         "ifsc_code": ifsc_code,
         "PAN_number": pan_number,
         "bank_passbook_image": bank_passbook_image,
-        "pan_card_image": pan_card_image
+        "pan_card_image": pan_card_image,
+        "salary" : salary
     }
 
     # Setup Google Sheets credentials

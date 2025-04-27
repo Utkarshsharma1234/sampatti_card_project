@@ -90,7 +90,7 @@ def get_relevant_documents(query):
     doc_collection = get_doc_collection()
     results = doc_collection.query(
         query_embeddings=[query_embedding],
-        n_results=5
+        n_results=20
     )
 
     # Flatten the list of lists
@@ -104,7 +104,19 @@ def get_response(worker_id, query):
     conversation_history = get_conversation_history(worker_id)
     relevant_docs = get_relevant_documents(query)
     
-    context = f"Past Conversations:\n{conversation_history}\n\nDocuments:\n{relevant_docs}\n\nUser Query: {query}"
+    context = f"""
+You are a helpful assistant. 
+Given the past conversation and related documents, answer the user query clearly and concisely in 3 lines, using around 60 to 70 words. 
+Avoid repeating content and focus only on what's most relevant. Be suitable for voice-based output.
+
+Past Conversations:
+{conversation_history}
+
+Documents:
+{relevant_docs}
+
+User Query: {query}
+"""
 
     response = llm.predict(context)  # Call LLM for response
     store_conversation(worker_id, f"User: {query}\nSystem: {response}")
