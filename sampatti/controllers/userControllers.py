@@ -511,54 +511,63 @@ def find_all_workers(employerNumber : int, db : Session):
         "worker_array" : multiple_workers
     }
 
-
-def create_cash_advance_entry(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session):
-
-    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
-
-    workerId = worker_employer_relation.worker_id
-    employerId = worker_employer_relation.employer_id
-    monthly_salary = worker_employer_relation.salary_amount
-
-    datee = date.today().strftime('%Y-%m-%d')
-
-    existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).order_by(models.cashAdvance.current_date.desc()).first()
-    
-    if existing_record is not None and existing_record.payment_status == "Created":
-        update_statement = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, frequency = frequency, bonus = bonus, deduction = deduction, current_date = datee)
-        db.execute(update_statement)
-        db.commit()
-    else:
-        new_cash_advance_entry = models.cashAdvance(advance_id = generate_unique_id(), worker_id = workerId, employer_id = employerId, monthly_salary = monthly_salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Created")
-        db.add(new_cash_advance_entry)
-        db.commit()
-        db.refresh(new_cash_advance_entry)
-
-def cash_advance_record(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, frequency : int,  bonus : int, deduction : int, db : Session):
+def create_cash_advance_entry(employerNumber: int, workerName: str, cash_advance: int, repayment_amount: int, repayment_start_month: int, repayment_start_year: int, frequency: int, monthly_salary: int, bonus: int, deduction: int, db: Session):
 
     worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
 
+    if not worker_employer_relation:
+        raise ValueError("No worker-employer relation found.")
+
     workerId = worker_employer_relation.worker_id
     employerId = worker_employer_relation.employer_id
-    
-    cash_advance_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Created").first()
-    salary = cash_advance_record.monthly_salary
     datee = date.today().strftime('%Y-%m-%d')
 
-    """
-    if cash_advance_record.cash_advance > 0:
-        new_cash_advance_entry = models.CashAdvanceRepaymentLog(id = generate_unique_id(), advance_id = advance_id, worker_id = workerId, employer_id = employerId, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, repayment_month = repayment_start_month, repayment_year = repayment_start_year, scheduled_repayment_amount = repayment_amount, actual_repayment_amount = 0, remaining_advance = cash_advance, payment_status = "Pending", frequency = frequency)
+    # Check for existing record
+    existing_record = db.query(models.cashAdvance).filter(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Created").first()
 
-        db.add(new_cash_advance_entry)
-        db.commit()
-        db.refresh(new_cash_advance_entry)
+    if existing_record and existing_record.payment_status == "Created":
+        update_stmt = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(cash_advance=cash_advance, repayment_amount=repayment_amount, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, current_date=datee, frequency=frequency, bonus=bonus, deduction=deduction)
+        db.execute(update_stmt)
     else:
-        return "There may be only bonus or deduction present so we have not created any cash advance entry in the database"
-    """
-    
-    update_cash_advance_record = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId).values(worker_id = workerId, employer_id = employerId, monthly_salary = salary, cash_advance = cash_advance, repayment_amount = repayment_amount, repayment_start_month = repayment_start_month, repayment_start_year = repayment_start_year, current_date = datee, frequency = frequency, bonus = bonus, deduction = deduction, payment_status = "Pending")
-    db.execute(update_cash_advance_record)
+        new_entry = models.cashAdvance(advance_id=generate_unique_id(), worker_id=workerId, employer_id=employerId, monthly_salary=monthly_salary, cash_advance=cash_advance, repayment_amount=repayment_amount, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, current_date=datee, frequency=frequency, bonus=bonus, deduction=deduction, payment_status="Created")
+        db.add(new_entry)
+
     db.commit()
+
+
+# Function to finalize and update cash advance entry (set as "Pending")
+def cash_advance_record(employerNumber: int, workerName: str, cash_advance: int, repayment_amount: int, repayment_start_month: int, repayment_start_year: int, frequency: int, monthly_salary: int, bonus: int, deduction: int, db: Session):
+
+    worker_employer_relation = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+
+    if not worker_employer_relation:
+        raise ValueError("No worker-employer relation found.")
+
+    workerId = worker_employer_relation.worker_id
+    employerId = worker_employer_relation.employer_id
+
+    cash_advance_record = db.query(models.cashAdvance).filter(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Created").first()
+
+    if not cash_advance_record:
+        raise ValueError("No cash advance record found with status 'Created'.")
+
+    datee = date.today().strftime('%Y-%m-%d')
+
+    update_stmt = update(models.cashAdvance).where(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Created").values(
+        monthly_salary=monthly_salary,
+        cash_advance=cash_advance,
+        repayment_amount=repayment_amount,
+        repayment_start_month=repayment_start_month,
+        repayment_start_year=repayment_start_year,
+        current_date=datee,
+        frequency=frequency,
+        bonus=bonus,
+        deduction=deduction,
+        payment_status="Pending"
+    )
+    db.execute(update_stmt)
+    db.commit()
+
 
 def create_salary_record(employerNumber : int, workerName : str, currentSalary : int, modifiedSalary : int, db : Session):
 
@@ -637,9 +646,10 @@ def process_audio(user_input: str, user_language: str, employerNumber: int, work
 
         employer_id = worker_employer_relation.employer_id
         worker_id = worker_employer_relation.worker_id
+        monthly_salary = worker_employer_relation.salary_amount
         
         
-        existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == worker_id, models.cashAdvance.employer_id == employer_id).order_by(models.cashAdvance.current_date.desc()).first()
+        existing_record = db.query(models.cashAdvance).where(models.cashAdvance.worker_id == worker_id, models.cashAdvance.employer_id == employer_id, models.cashAdvance.payment_status == "Created").first()
         print(f"Existing Record: {existing_record}")
         
         context = {
@@ -650,7 +660,8 @@ def process_audio(user_input: str, user_language: str, employerNumber: int, work
             "frequency": existing_record.frequency if existing_record else 0,
             "bonus": existing_record.bonus if existing_record else 0,
             "deduction": existing_record.deduction if existing_record else 0,
-            "monthly_salary": existing_record.monthly_salary if existing_record else 0,
+            "monthly_salary": existing_record.monthly_salary if existing_record else worker_employer_relation.salary_amount,
+            "payment_status": existing_record.payment_status if existing_record else "Created",
         }
         
         
