@@ -179,16 +179,19 @@ Additional information:
 
 Extract and return the following structured information as a JSON object. Follow these rules strictly:
 
-- **cash_advance**:
-  - This should reflect the **remaining cash advance balance** after calculating repayments based on:
+### 1. **cash_advance**:
+- This should reflect the **remaining cash advance balance** after calculating repayments based on:
     - `repayment_amount`
     - `repayment_start_month` and `repayment_start_year`
     - `frequency`
-  - Calculate how many repayments should have occurred up to the current month.
-  - Multiply **repayment_amount x number of repayment cycles** to get total repaid.
-  - Remaining balance = total cash advance - total repaid.
-  - Ensure repayments do not exceed the advance amount (balance should not go negative).
-  - If any repayment detail is missing, **do not allow confirmation** and clearly ask the employer to provide the missing information.
+- Calculation logic:
+    - make sure frequency if provided in the input, then use that.
+    - Total repaid = repayment_amount x frequency occurred up to the current month.
+    - Remaining balance = total cash advance - total repaid.
+    - Balance should **never be negative** — if repayments exceed the advance, cap the remaining balance at 0.
+- If the employer mentions only the cash advance but does **not** provide repayment details (amount, frequency, or start date):
+    - Do **not** allow confirmation.
+    - Clearly ask the employer if they would like to set up a repayment plan or proceed without one.
 
 ### 2. **repayment_amount**:
 - The fixed repayment amount per cycle.
@@ -211,20 +214,19 @@ Extract and return the following structured information as a JSON object. Follow
     - "alternate month," "every other month," "every two months" → 2
     - "every three months," "quarterly" → 3
     - "every six months," "half-yearly" → 6
+    - "evry n months" → n (where n is the number of months)
     - "random," "unscheduled," or if not specified → 0
 - If repayment_amount is provided but frequency is not mentioned, default frequency to 1 (monthly).
 
-### 5. **bonus**:
-- Any extra amount the employer wants to give (e.g., "extra amount," "bonus," "extra this month").
-- If not mentioned, use context if available, else 0.
-
-### 6. **deduction**:
-- Any one-time deduction amount for this month only.
-- If not mentioned, use context if available, else 0.
-
-### 7. **monthly_salary**:
-- Always take from context (worker_employer relation or previous cash advance record).
-- If not available, set to 0.
+### 5,6,7. **bonus and deduction logic (salary adjustment rules):**
+- Always use `monthly_salary` from context unless explicitly told to change permanently.
+- **If employer provides a different salary for 'this month only':**
+  - If given salary < context salary → **deduction = context salary - given salary**.
+  - If given salary > context salary → **bonus = given salary - context salary**.
+  - Keep the permanent monthly salary unchanged.
+- **If employer says "permanently change salary":**
+  - Update `monthly_salary` to the new value.
+  - Set bonus and deduction to 0.
 
 ### 8. **confirmation**:
 - Set to 1 if user_input clearly confirms the details with phrases like:
@@ -243,22 +245,30 @@ Extract and return the following structured information as a JSON object. Follow
 - If conflicting or unclear instructions are given (like "set repayment to 2000 but no repayment"), set unclear fields to 0 and politely ask for clarification.
 - If they use timing phrases like "next month," calculate the correct month and year based on current_date.
 - If the user mentions only "bonus" or "deduction" without a cash advance, still return those fields properly.
+- if user only provide bonus or deduction or monthly salary, then set don't mention the cash advance and repayment unless mentioned by user.
 
 ---
 
 ## AI MESSAGE RULES (`ai_message`):
 
-- Summarize the extracted data clearly and conversationally.
+- Summarize the extracted data clearly and conversationally and include all the details that is present in the context and give summary of the context and the user input.
+
 - Reflect what was provided:
-    - Example: "Got it! I've recorded a 50000 advance with 2000 repayments every alternate month starting from December 2024."
+    - Example: "I've recorded a 50000 advance with 2000 repayments every alternate month starting from May 2025"
+
 - If cash advance is provided but repayment details are missing:
     - Ask: "we have only recorded the cash advance. Please provide repayment details and if you want to set up a repayment plan or if you want to proceed with the cash advance only please confirm."
+
 - If bonus or deduction is provided:
     - Example: "I've noted a bonus of 3000 this month. Is that correct?"
+    
 - If confirmation is 1:
-    - Include a thank-you note, like: "Thanks for confirming! Let me know if you need any more changes."
+    - Include a thank-you note and don't ask for confirmation question just summarize the whole context and say thank you for confirming.
+    - Summarize all the details with clearness and warmth and say "Thank you for confirming!"
+    
 - If partial confirmation (e.g., "yes, but..."), reflect the update and ask again for final confirmation:
-    - Example: "I've updated the repayment to 1500. Does everything look good now?"
+    - Example: "I've updated the repayment to 1500 and include all the details. Does this look correct?"
+    
 - If any key info is unclear (like repayment year), explain what’s missing and ask politely for clarification.
 - Always end with a friendly question:
     - "Does this look correct? If not, please let me know what to update!"
@@ -293,6 +303,7 @@ Return ONLY the following JSON object:
     "confirmation": <integer>
 }}
 """
+
 
 
         prompt_template = PromptTemplate(
