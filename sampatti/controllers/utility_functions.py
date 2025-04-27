@@ -424,9 +424,10 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
         base64_string = response_data["audios"][0] 
 
         os.makedirs(output_directory, exist_ok=True)
+        id = generate_unique_id()
 
-        mp3_file_path = os.path.join(os.getcwd(), output_directory, "output.mp3")
-        ogg_file_path = os.path.join(os.getcwd(), output_directory, "output.ogg")
+        mp3_file_path = os.path.join(os.getcwd(), output_directory, f"output_{id}.mp3")
+        ogg_file_path = os.path.join(os.getcwd(), output_directory, f"output_{id}.ogg")
 
              # Decode the Base64 string to binary data
         audio_data = base64.b64decode(base64_string)
@@ -440,9 +441,17 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
 
         
         convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
-        mediaIdObj = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
+        mediaIdObj = whatsapp_message.generate_audio_media_id(f"output_{id}.ogg", output_directory)
         audioMediaId = mediaIdObj["id"]
         whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+
+        try:
+            os.remove(mp3_file_path)
+            os.remove(ogg_file_path)
+            print(f"Deleted files: {mp3_file_path} and {ogg_file_path}")
+        except Exception as delete_error:
+            print(f"Error deleting files: {delete_error}")
+
         return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
 
     except requests.exceptions.RequestException as e:

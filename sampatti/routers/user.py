@@ -184,8 +184,8 @@ def extract_date(date_str : str):
     return utility_functions.extract_date(date_str)
 
 @router.post("/send_audio_message")
-def send_audio_message(employer_id : str, worker_id : str, user_language : str, employerNumber : int, db : Session = Depends(get_db)):
-    return userControllers.send_audio_message(employer_id, worker_id, user_language, employerNumber, db)
+def send_audio_message(text : str, user_language : str, employerNumber : int):
+    return userControllers.send_audio_message(text, user_language, employerNumber)
 
 @router.get("/get_all_workers")
 def find_all_workers(employerNumber : int, db : Session = Depends(get_db)):
@@ -275,7 +275,7 @@ def upload_image_from_url(image_url: str, object_name: str):
 
 @router.post("/test")
 def test_func():
-    return talk_to_agent_excel_file.process_vendor_status()
+    return talk_to_agent_excel_file.bank_account_validation_status()
 
 
 @router.get("/send_confirmation")

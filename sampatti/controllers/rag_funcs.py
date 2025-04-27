@@ -106,7 +106,7 @@ def get_response(worker_id, query):
     
     context = f"""
 You are a helpful assistant. 
-Given the past conversation and related documents, answer the user query clearly and concisely in 3 lines, using around 60 to 70 words. 
+Given the past conversation and related documents, answer the user query clearly and concisely,in 3 lines using around 60 to 70 words. Don't include "\n" in the response. 
 Avoid repeating content and focus only on what's most relevant. Be suitable for voice-based output.
 
 Past Conversations:
@@ -121,7 +121,11 @@ User Query: {query}
     response = llm.predict(context)  # Call LLM for response
     store_conversation(worker_id, f"User: {query}\nSystem: {response}")
 
-    return {"response" : textwrap.fill(response, width=100)}
+    if response.startswith("System:"):
+        response = response[len("System:"):].lstrip()
+
+    response = response.replace("\n", " ").strip()
+    return {"response": response}
 
 
 def main(data_path):

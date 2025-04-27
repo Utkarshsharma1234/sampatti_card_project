@@ -62,6 +62,17 @@ def upload_data_to_google_sheets():
     print(f"Data uploaded to Google Sheets successfully. Shareable link: {sheet.url}")
 
 
+def get_client():
+
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+    return client
+
 all_columns = [
     "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary"
 ]
@@ -83,13 +94,7 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
     }
 
     # Setup Google Sheets credentials
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
-
+    client = get_client()
     sheet_title = "WorkerOnboardingDetailsOpsTeam"
     team_emails = ['utkarsh@sampatticard.in']
 
@@ -154,15 +159,8 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
 
 def add_vendor_to_cashfree():
     # Define the scope and credentials
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
 
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
-
-    # Open the spreadsheet and get data
+    client = get_client()
     sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     records = sheet.get_all_records()
 
@@ -231,15 +229,8 @@ def get_column_index(sheet, column_name):
 
 def process_vendor_status(db : Session = Depends(get_db)):
     # Setup
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-    
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
 
-    # Sheets
+    client = get_client()
     onboarding_sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     worker_details_main_sheet = client.open("WorkerOnboardingDetails").sheet1
 
@@ -343,16 +334,8 @@ def update_sheet_cell(sheet, row_index, column_name, new_value):
 
 def bank_account_validation_status():
 
-    # Setup Google Sheets API
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
-
     # Access the sheet
+    client = get_client()
     sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     header = sheet.row_values(1)
     records = sheet.get_all_records()
@@ -394,32 +377,29 @@ def bank_account_validation_status():
                 update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
 
 
-def fetch_bank_details_from_image():
-
-    # Setup Google Sheets API
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
+def fetch_pan_bank_details_from_image():
 
     # Access the sheet
+    client = get_client()
     sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
     header = sheet.row_values(1)
     records = sheet.get_all_records()
 
     for idx, row in enumerate(records, start=2):
-        bank_passbook_image = row.get("bank_passbook_image", "").strip()
 
-        # Skip if missing critical info
+        bank_passbook_image = row.get("bank_passbook_image", "").strip()
+        account_number = row.get("bank_account_number", "")
+        pan_card_image = row.get("pan_card_image", "").strip()
+        pan_number = row.get("PAN_number", "").strip()
 
         if bank_passbook_image:
 
-            bank_response = userControllers.extract_passbook_details(bank_passbook_image)
+            if account_number:
+                continue
 
-            if not bank_response:
+            bank_response = userControllers.extract_passbook_details(bank_passbook_image)
+            response_error = bank_response.get("error")
+            if response_error:
                 update_sheet_cell(sheet, idx, "bank_account_number", "Refer Image")
                 update_sheet_cell(sheet, idx, "ifsc_code", "Refer Image")
             else:
@@ -428,34 +408,16 @@ def fetch_bank_details_from_image():
                 update_sheet_cell(sheet, idx, "bank_account_number", account_number)
                 update_sheet_cell(sheet, idx, "ifsc_code", ifsc_code)
 
-
-def fetch_pan_details_from_image():
-
-    # Setup Google Sheets API
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
-
-    # Access the sheet
-    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
-    header = sheet.row_values(1)
-    records = sheet.get_all_records()
-
-    for idx, row in enumerate(records, start=2):
-        pan_card_image = row.get("pan_card_image", "").strip()
-
-        # Skip if missing critical info
-
         if pan_card_image:
 
+            if pan_number: 
+                continue
+            
             pan_response = userControllers.extract_pan_card_details(pan_card_image)
-
-            if not pan_response:
+            response_error = pan_response.get("error")
+            if response_error:
                 update_sheet_cell(sheet, idx, "PAN_number", "Refer Image")
             else:
                 PAN_number = pan_response.get("pan_number")
                 update_sheet_cell(sheet, idx, "PAN_number", PAN_number)
+        
