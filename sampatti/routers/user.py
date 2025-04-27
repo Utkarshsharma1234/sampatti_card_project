@@ -59,6 +59,10 @@ def check_existence(employerNumber : int, workerNumber : int, db : Session = Dep
 def check_names(pan_name : str, vpa_name : str):
     return userControllers.check_names(pan_name, vpa_name)
 
+@router.get("/worker_details")
+def get_worker_id(workerNumber : int, db : Session = Depends(get_db)):
+    return userControllers.get_worker_id(workerNumber, db)
+
 @router.get("/check_worker")
 def check_worker(workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.check_worker(workerNumber, db)
@@ -74,10 +78,6 @@ def extract_salary(salary_amount : str):
 @router.post('/talk_to_agent/create')
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db : Session = Depends(get_db)):
     return userControllers.create_talk_to_agent_employer(request, db)
-
-@router.post('/explain_worker/create')
-def explain_worker(employerNumber : int, workerNumber : int , db : Session = Depends(get_db)):
-    return userControllers.explain_worker(db, workerNumber, employerNumber)
 
 @router.post('/message_log/create')
 def create_message_log(request : schemas.Message_log_Schema, db : Session = Depends(get_db)):

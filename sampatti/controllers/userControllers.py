@@ -101,6 +101,20 @@ def create_worker_account_number(request : schemas.Domestic_Worker, db: Session)
         return {"message" : "WORKER_ALREADY_ONBOARDED"}
     
 
+def get_worker_id(workerNumber : int, db : Session):
+
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+
+    if worker:
+        return {
+            "workerId" : f"{worker.id}"
+        }
+    
+    else:
+        return {
+            "workerId" : f"{generate_unique_id()}"
+        }
+
 # assigning the vendor id to the worker in the domestic worker table.
 def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
 
