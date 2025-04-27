@@ -446,7 +446,7 @@ def bank_account_verification(account_number : str, ifsc_code : str):
     response_data = json.loads(response.text)
     return response_data
 
-def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
+def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -488,8 +488,10 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
     advance_record = db.query(models.cashAdvance).filter(models.cashAdvance.worker_id == workerId, models.cashAdvance.employer_id == employerId, models.cashAdvance.payment_status == "Pending").first()
     advance_id = advance_record.advance_id
     
-    create_repayment_log = models.CashAdvanceRepaymentLog(id=generate_unique_id(), advance_id=advance_id, worker_id=workerId, employer_id=employerId, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, repayment_month=0, repayment_year=0, scheduled_repayment_amount=repayment_amount, actual_repayment_amount=0, remaining_advance=cash_advance, payment_status="Pending", frequency=frequency)
-    db.add(create_repayment_log)
-    db.execute(create_repayment_log)
-    db.commit()
+    if advance_record.cash_advance>0 and advance_record.payment_status == "Pending":
+        create_repayment_log = models.CashAdvanceRepaymentLog(id=generate_unique_id(), advance_id=advance_id, worker_id=workerId, employer_id=employerId, repayment_start_month=repayment_start_month, repayment_start_year=repayment_start_year, repayment_month=0, repayment_year=0, scheduled_repayment_amount=repayment_amount, actual_repayment_amount=0, remaining_advance=cash_advance, payment_status="Pending", frequency=frequency)
+        db.add(create_repayment_log)
+        db.commit()
+    else:
+        return "Bonus or Deduction added"
     
