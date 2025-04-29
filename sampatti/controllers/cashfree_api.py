@@ -268,20 +268,10 @@ def payment_link_generation(db : Session):
             
             customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
 
-            cashAdvanceEntry = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
-
-            repayment = 0
-
-            if cashAdvanceEntry is not None:
-
-                if month_to_number[cr_month] >= month_to_number[cashAdvanceEntry.repaymentStartMonth] and cr_year >= cashAdvanceEntry.repaymentStartYear :
-                    if cashAdvanceEntry.cashAdvance > 0:
-                        repayment = min(cashAdvanceEntry.cashAdvance, cashAdvanceEntry.monthlyRepayment)
-
-            total_salary = item.salary_amount - repayment
+            total_salary = item.salary_amount
             number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
 
-            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : repayment, 'attendance' : number_of_month_days}
+            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'attendance' : number_of_month_days}
 
             note_string = json.dumps(note)
             createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)

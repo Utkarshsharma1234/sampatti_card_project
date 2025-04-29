@@ -34,7 +34,7 @@ def check_order_status(orderId : str):
 
 @router.get('/fetch_utr')
 def fetch_utr(orderId : str):
-    return cashfree_api.fetch_utr(orderId)
+    return cashfree_api.fetch_bank_ref(orderId)
 
 @router.get('/vendor_status')
 async def check_vendor_status(vendorId : str):
