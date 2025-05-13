@@ -1151,3 +1151,257 @@ def extract_passbook_details(image_url):
 
     except Exception as e:
         return {"error": str(e)}
+
+
+def generate_user_id() -> str:
+    return str(uuid.uuid4())
+
+PROMPT_TEMPLATE = """
+You are a smart assistant helping to fill a survey based on user responses in natural language (e.g., WhatsApp messages).
+
+There are 28 questions in the survey.
+
+Your goal:
+1. Extract answers from the user input and match them with existing questions.
+2. Apply logic rules to handle dependent questions (see rules below).
+3. don't include user name in the question and answer.
+4. Return ALL questions — if not answered or not applicable, set response = null.
+
+---
+
+## Dependency Rules:
+
+1. If Q6 = "Yes":
+   - Q7 must be answered.
+   - Q8 = "User has a bank account."
+2. If Q6 = "No":
+   - Q7 = null
+   - Answer Q8
+
+3. If Q10 = "Yes":
+   - Q11 must be answered.
+4. If Q10 = "No":
+   - Q11 = null
+
+5. If Q12 ≠ "None":
+   - Q13 and Q14 must be answered.
+6. If Q12 = "None":
+   - Q13 and Q14 = null
+
+7. If Q15 = "Yes":
+   - Answer Q16, Q17, Q18, Q20
+8. If Q15 = "No":
+   - Q16, Q17, Q20 = null
+
+9. If Q18 = "Yes":
+   - Answer Q19
+10. If Q18 = "No":
+    - Q19 = null
+
+11. If Q21 = "Yes":
+    - Answer Q22, Q23, Q24
+12. If Q21 = "No":
+    - Q22, Q23, Q24 = null
+
+13. If Q25 = "Yes":
+    - Answer Q26, Q27 = null
+14. If Q25 = "No":
+    - Q26 = null, Answer Q27
+
+---
+
+## Output Format (JSON only):
+
+[
+  {{
+    "question_id": "6",
+    "question_text": "Do you have a bank account?",
+    "response": "Yes"
+  }},
+  {{
+    "question_id": "7",
+    "question_text": "If Yes, which bank?",
+    "response": "State Bank of India"
+  }},
+  {{
+    "question_id": "8",
+    "question_text": "If No, why don't you have a bank account?",
+    "response": "User has a bank account."
+  }},
+  ...
+]
+
+---
+
+## Notes:
+- If the user gives additional information not tied to a known question, create an entry with `"question_id": "extra_1"` and an appropriate `"question_text"`.
+- Return exactly 28 questions with responses (or nulls) + any extras.
+- Output only valid JSON. No explanation. No extra text. No markdown.
+
+---
+
+## Questions:
+{question_context}
+
+## Existing Answers:
+{existing_answers}
+
+## User Message:
+"{user_input}"
+
+---
+"""
+
+
+def process_survey_input(user_name: str, worker_number: str, user_input: str, survey_id: int, db: Session):
+    existing_entry = db.query(models.SurveyResponse).filter_by(
+        user_name=user_name,
+        worker_number=worker_number,
+        survey_id=survey_id
+    ).first()
+
+    if existing_entry:
+        user_id = existing_entry.user_id  # reuse existing
+    else:
+        user_id = generate_user_id()  
+
+    llm = OpenAI(api_key=openai_api_key)
+
+    # Load survey
+    survey = db.query(models.Survey).filter_by(id=survey_id).first()
+    if not survey:
+        return{
+            "error": f"Survey with id {survey_id} not found."
+        }
+
+    # Load all questions for this survey
+    questions = db.query(models.QuestionBank).filter_by(surveyId=survey_id).all()
+    question_map = {str(q.id): q.questionText for q in questions}
+    question_context = "\n".join([f"- ({qid}) {qtext}" for qid, qtext in question_map.items()])
+    print(question_context)
+
+    # Load previous responses
+    previous_responses = db.query(models.SurveyResponse).filter_by(
+        user_id=user_id,
+        survey_id=survey_id
+    ).all()
+    previous_map = {str(r.question_id): r.response for r in previous_responses}
+    existing_answers = "\n".join([
+        f"- ({qid}) {question_map.get(qid, 'Unknown')} = {resp}"
+        for qid, resp in previous_map.items()
+    ]) or "None yet"
+
+    # Build LLM prompt
+    prompt = PROMPT_TEMPLATE.format(
+        survey_id=survey_id,
+        user_id=user_id,
+        user_name=user_name,
+        worker_number=worker_number,
+        question_context=question_context,
+        existing_answers=existing_answers,
+        user_input=user_input
+    )
+
+    try:
+        response = llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": prompt}],
+            temperature=0.2
+        )
+
+        response_text = response.choices[0].message.content.strip()
+        cleaned_response = response_text.replace('```json', '').replace('```', '').strip()
+
+        structured_data = json.loads(cleaned_response)
+    except Exception as e:
+        return {"error": f"LLM failed or returned bad JSON: {str(e)}"}
+
+    answers_received = {}
+    clarification_needed = None
+
+    for item in structured_data:
+        qid = item.get("question_id")
+        qtext = item.get("question_text")
+        answer = item.get("response")
+
+        if not qid or not qtext:
+            continue
+
+        # Handle clarification
+        if answer is None and "clarification_needed" in item:
+            clarification_needed = item["clarification_needed"]
+            continue
+
+        # Handle extra questions
+        if qid.startswith("extra_"):
+            new_question = models.QuestionBank(questionText=qtext, surveyId=survey_id, questionType="text")
+            db.add(new_question)
+            db.commit()
+            qid = str(new_question.id)
+            question_map[qid] = qtext
+
+        question_id = int(qid)
+
+        # Update or insert response
+        existing = db.query(models.SurveyResponse).filter_by(
+            user_id=user_id,
+            survey_id=survey_id,
+            question_id=question_id
+        ).first()
+
+        if existing:
+            existing.response = answer
+            existing.timestamp = str(datetime.now())
+        else:
+            db.add(models.SurveyResponse(
+                response_id=str(uuid.uuid4()),
+                survey_id=survey_id,
+                question_id=question_id,
+                user_id=user_id,
+                user_name=user_name,
+                worker_number=worker_number,
+                response=answer,
+                timestamp=str(datetime.now())
+            ))
+
+        answers_received[str(question_id)] = answer
+
+    db.commit()
+
+    # Build full response list
+    output = []
+    for qid, qtext in question_map.items():
+        output.append({
+            "question_id": qid,
+            "question_text": qtext,
+            "response": answers_received.get(qid) or previous_map.get(qid) or None
+        })
+
+    return {
+        "status": "success",
+        "user_id": user_id,
+        "worker_number": worker_number,
+        "responses": output,
+        "clarification_needed": clarification_needed
+    }
+
+
+def generate_formatted_survey_summary(responses : dict):
+    if "error" in responses:
+        return f"❗ Error: {response['error']}"
+
+    if not responses:
+        return "No survey responses found."
+
+    summary_lines = ["📋 *Survey Summary:*", ""]
+
+    for item in responses:
+        qid = item.get("question_id", "N/A")
+        qtext = item.get("question_text", "").strip()
+        ans = item.get("response")
+
+        # Format each question and response
+        line = f"*Q{qid}.* {qtext}\n➡️ {ans if ans else '❌ Not Answered'}"
+        summary_lines.append(line)
+
+    return "\n\n".join(summary_lines)

@@ -276,3 +276,7 @@ def upload_image_from_url(image_url: str, object_name: str):
 @router.post("/test")
 def test_func():
     return talk_to_agent_excel_file.process_vendor_status()
+
+@router.get("/survey_model")
+def process_survey_input(user_name: str, worker_number: str, user_input: str, survey_id: int, db: Session = Depends(get_db)):
+    return userControllers.process_survey_input(user_name, worker_number, user_input, survey_id, db)
