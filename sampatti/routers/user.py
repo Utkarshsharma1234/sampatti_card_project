@@ -281,3 +281,8 @@ def test_func():
 @router.get("/send_confirmation")
 def send_vendor_confirmation_message(employerNumber: int, worker_name : str, template_name : str):
     return whatsapp_message.send_vendor_confirmation_message(employerNumber, worker_name, template_name)
+    return talk_to_agent_excel_file.process_vendor_status()
+
+@router.get("/survey_model")
+def process_survey_input(user_name: str, worker_number: str, user_input: str, survey_id: int, db: Session = Depends(get_db)):
+    return userControllers.process_survey_input(user_name, worker_number, user_input, survey_id, db)
