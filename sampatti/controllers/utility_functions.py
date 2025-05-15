@@ -691,5 +691,26 @@ def convert_mp3_to_ogg(input_file : str, output_file : str):
         print(f"Error during conversion: {e}")
     except Exception as e:
         print(f"Error: {e}")
+
+
+
+def systemattic_survey_message(worker_number: str, user_name: str, survey_id: int, db: Session) -> dict:
+    total_survey_messages = db.query(models.SurveyResponse).filter(
+        models.SurveyResponse.worker_number == worker_number,
+        models.SurveyResponse.user_name == user_name,
+        models.SurveyResponse.survey_id == survey_id
+    ).all()
+
+    message = "Here are the answers you provided:\n\n"
+
+    for i, response in enumerate(total_survey_messages, start=1):
+
+        question = db.query(models.QuestionBank).filter(models.QuestionBank.id == response.question_id).first()
+        
+        if question:
+            message += f"{i}. {question.questionText}\n   Answer {i}: {response.response}\n\n"
+
+    return {"confirmation_message": message.strip()}
+
         
         

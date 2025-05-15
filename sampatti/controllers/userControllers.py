@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert, update
 from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
@@ -1353,31 +1353,15 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
             "response": answers_received.get(qid) or previous_map.get(qid) or None
         })
 
+    formatted_summary = systemattic_survey_message(worker_number, user_name, survey_id, db)
+
     return {
         "status": "success",
         "user_id": user_id,
         "worker_number": worker_number,
         "responses": output,
+        "formatted_summary": formatted_summary,
         "clarification_needed": clarification_needed
     }
 
 
-def generate_formatted_survey_summary(responses : dict):
-    if "error" in responses:
-        return f"❗ Error: {response['error']}"
-
-    if not responses:
-        return "No survey responses found."
-
-    summary_lines = ["📋 *Survey Summary:*", ""]
-
-    for item in responses:
-        qid = item.get("question_id", "N/A")
-        qtext = item.get("question_text", "").strip()
-        ans = item.get("response")
-
-        # Format each question and response
-        line = f"*Q{qid}.* {qtext}\n➡️ {ans if ans else '❌ Not Answered'}"
-        summary_lines.append(line)
-
-    return "\n\n".join(summary_lines)
