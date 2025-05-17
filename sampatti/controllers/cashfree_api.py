@@ -161,21 +161,25 @@ def add_a_vendor(request : schemas.Vendor):
 
 def check_vendor_status(vendorId):
 
-    url = f"https://api.cashfree.com/pg/easy-split/vendors/{vendorId}"
+    try:
 
-    payload = {}
-    headers = {
-        'x-client-id': pg_id,
-        'x-client-secret': pg_secret,
-        'x-api-version': '2022-09-01',
-        'Content-Type': 'application/json'
-    }
+        url = f"https://api.cashfree.com/pg/easy-split/vendors/{vendorId}"
 
-    response = requests.get(url, headers=headers, json=payload)
-    response_data = json.loads(response.text)
-    print(response_data)
-    return response_data
+        payload = {}
+        headers = {
+            'x-client-id': pg_id,
+            'x-client-secret': pg_secret,
+            'x-api-version': '2022-09-01',
+            'Content-Type': 'application/json'
+        }
 
+        response = requests.get(url, headers=headers, json=payload)
+        response_data = json.loads(response.text)
+        print(response_data)
+        return response_data
+    
+    except Exception as e:
+        print(f"Error adding vendor : {e}")
 
 # fetching the UTR No.
 
@@ -391,29 +395,6 @@ def unsettled_balance(db : Session):
     return {
         "message" : "Splits created."
     }
-    
-    
-def bank_account_verification(account_number : str, ifsc_code : str):
- 
-     url = "https://api.cashfree.com/verification/bank-account/sync"
- 
-     payload = {
-         "bank_account": f"{account_number}",
-         "ifsc": f"{ifsc_code}"
-     }
- 
-     headers = {
-         "x-client-id": verification_id,
-         "x-client-secret": verification_secret,
-         "Content-Type": "application/json"
-     }
- 
-     response = requests.request("POST", url, json=payload, headers=headers)
- 
-     print(response.text)
-     response_data = json.loads(response.text)
-     return response_data
-
 
 def bank_account_verification(account_number : str, ifsc_code : str):
 
@@ -436,6 +417,7 @@ def bank_account_verification(account_number : str, ifsc_code : str):
     response_data = json.loads(response.text)
     return response_data
 
+
 def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, repayment_start_month : int, repayment_start_year : int, monthly_salary : int, bonus : int, frequency : int, deduction : int, db : Session):
 
     Cashfree.XClientId = pg_id
@@ -453,7 +435,7 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
     workerId = item.worker_id
     employerId = item.employer_id
 
-    note = {'monthly_salary' : monthly_salary, 'cash_advance' : cash_advance, 'bonus' : bonus, 'repayment_amount' : repayment_amount, 'deduction' : deduction}
+    note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'attendance' : 30}
 
     note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])

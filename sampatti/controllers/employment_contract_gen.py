@@ -45,7 +45,7 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     c.setFont("Helvetica-Bold", 14)
     c.drawString(x, y, "Whatsapp Chat:")
 
-    if(request.upi == "None"):
+    if not request.upi:
         request.upi = "N/A"
 
     else :

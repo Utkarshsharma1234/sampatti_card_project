@@ -1,14 +1,12 @@
 import os
 import sqlite3
-from fastapi import Depends
 import pandas as pd
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from ..controllers import utility_functions, cashfree_api, whatsapp_message, userControllers
-from ..database import get_db
+from ..controllers import utility_functions, cashfree_api, userControllers
 from sqlalchemy.orm import Session
-from .. import models, schemas
+from .. import schemas
 
 # Load environment variables from .env file
 load_dotenv()
@@ -154,9 +152,6 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
     print(f"Sheet URL: {spreadsheet.url}")
     return spreadsheet.url
 
-
-# Define columns for reference
-
 def add_vendor_to_cashfree():
     # Define the scope and credentials
 
@@ -176,7 +171,8 @@ def add_vendor_to_cashfree():
         vpa = row.get("UPI", "").strip()
         worker_number = row.get("worker_number", "")
         employer_number = row.get("employer_number", "")
-        worker_name = row.get("bank_account_name_cashfree", "").strip()
+        bank_worker_name = row.get("bank_account_name_cashfree", "").strip()
+        pan_worker_name = row.get("pan_card_name_cashfree", "").strip()
         pan_number = row.get("PAN_number", "").strip()
         account_number = row.get("bank_account_number", "")
         ifsc_code = row.get("ifsc_code", "").strip()
@@ -198,10 +194,13 @@ def add_vendor_to_cashfree():
         if not vpa and bank_account_validation != "VALID":
             continue
         
+        if not bank_worker_name:
+            bank_worker_name = pan_worker_name
+
         vendor = schemas.Vendor(
             vpa = vpa if not account_number else "None",
             workerNumber=int(worker_number),
-            name=worker_name,
+            name=bank_worker_name,
             pan=pan_number,
             accountNumber=f"{account_number}" if account_number else "None",
             ifsc=ifsc_code if account_number else "None",
@@ -217,17 +216,7 @@ def add_vendor_to_cashfree():
         else:
             print(f"Failed to get vendorId for row {idx}")
 
-
-def get_column_index(sheet, column_name):
-    """Helper to get column index (1-indexed) for a given column name."""
-    header = sheet.row_values(1)
-    try:
-        return header.index(column_name) + 1
-    except ValueError:
-        raise ValueError(f"Column '{column_name}' not found in sheet header.")
-    
-
-def process_vendor_status(db : Session = Depends(get_db)):
+def process_vendor_status(db : Session):
     # Setup
 
     client = get_client()
@@ -247,90 +236,101 @@ def process_vendor_status(db : Session = Depends(get_db)):
         bank_account_number = row.get("bank_account_number", "")
         ifsc_code = row.get("ifsc_code", "").strip()
         salary = row.get("salary", "")
+        confirmation_message = row.get("confirmation_message", "").strip()
 
         if not vendorId:
             print(f"[{idx}] No vendorId found")
             continue
 
         try:
+
+            if confirmation_message == "SENT":
+                continue
+
             status_response = cashfree_api.check_vendor_status(vendorId)
             pan_remarks = status_response["related_docs"][1]["remarks"]
             remarks = status_response["remarks"]
-
             final_remarks = f"{remarks} || {pan_remarks}"
             print(final_remarks)
+
             vendor_status = status_response["status"].upper()
 
             if vendor_status == "ACTIVE":
                 
-                confirmation_message = row.get("confirmation_message", "").strip()
-                if confirmation_message == "SENT":
-                    continue
+                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
+                row_values = onboarding_sheet.row_values(idx)
+                worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
 
-                else:
+                # Print the main sheet URL
+                main_sheet_url = worker_details_main_sheet.url
+                # make entry in the db.
 
-                    # send whatsapp message of confirmed onboarding
-                    whatsapp_message.send_vendor_confirmation_message(employer_number, worker_name, template_name="worker_addition_successful_message")
+                worker = schemas.Domestic_Worker(
+                    name = worker_name,
+                    email = "sample@sample.com",
+                    workerNumber=worker_number,
+                    employerNumber = employer_number,
+                    panNumber = PAN_number,
+                    upi_id = upi_id if upi_id else "None",
+                    accountNumber = bank_account_number if bank_account_number else "None",
+                    ifsc = ifsc_code if bank_account_number else "None",
+                    vendorId = vendorId
+                )
+            
+                userControllers.create_domestic_worker(worker, db)
 
-                    update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
-                    update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
-                    row_values = onboarding_sheet.row_values(idx)
-                    worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
-
-                    # Print the main sheet URL
-                    main_sheet_url = worker_details_main_sheet.url
-                    # make entry in the db.
-
-                    worker = schemas.Domestic_Worker(
-                        name = worker_name,
-                        email = "sample@sample.com",
-                        workerNumber=worker_number,
-                        employerNumber = employer_number,
-                        panNumber = PAN_number,
-                        upi_id = upi_id if upi_id else "None",
-                        accountNumber = bank_account_number if bank_account_number else "None",
-                        ifsc = ifsc_code if bank_account_number else "None",
-                        vendorId = vendorId
-                    )
-                
-                    userControllers.create_domestic_worker(worker, db)
-
-                    employer_id = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first().id
-
-                    worker_id = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == worker_number).first().id
-                    
-                    relation = schemas.Worker_Employer(
-                        workerNumber = worker_number,
-                        employerNumber = employer_number,
-                        salary = salary,
-                        vendorId = vendorId,
-                        worker_name = worker_name,
-                        employer_id = employer_id,
-                        worker_id = worker_id
-                    )
-
-                    userControllers.create_relation(relation, db)
-                    print(main_sheet_url)
             else:
-
                 print(f"[{idx}] Vendor {vendorId} status = {vendor_status}. Updating status in sheet and logging failure.")
-                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "NOT ACTIVE")
-                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", final_remarks)
+                update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", f"NOT ACTIVE - {final_remarks}")
 
         except Exception as e:
             print(f"[{idx}] Error checking status for vendorId {vendorId}: {e}")
 
- 
-def update_sheet_cell(sheet, row_index, column_name, new_value):
+def create_relations_in_db(db : Session):
 
-    """Helper to update a cell by column name."""
-    header = sheet.row_values(1)
-    try:
-        col_index = header.index(column_name) + 1
-        sheet.update_cell(row_index, col_index, new_value)
-    except ValueError:
-        print(f"Column '{column_name}' not found in sheet.")
+    client = get_client()
+    onboarding_sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
 
+    records = onboarding_sheet.get_all_records()
+    header = onboarding_sheet.row_values(1)
+    
+    for idx, row in enumerate(records, start=2):  # start=2 for actual sheet row (header is at 1)
+        vendorId = row.get("vendorId", "").strip()
+        employer_number = row.get("employer_number", "")
+        worker_name = row.get("bank_account_name_cashfree", "").strip()
+        worker_number = row.get("worker_number", "")
+        salary = row.get("salary", "")
+        vendor_status = row.get("cashfree_vendor_add_status", "")
+        upi_id = row.get("UPI", "").strip()
+        bank_account_number = row.get("bank_account_number", "")
+        ifsc_code = row.get("ifsc_code", "").strip()
+        confirmation_message = row.get("confirmation_message", "").strip()
+
+        if confirmation_message == "SENT":
+            continue
+
+        if vendor_status == "ACTIVE":
+
+            try:
+                relation = schemas.Worker_Employer(
+                    workerNumber = worker_number,
+                    employerNumber = employer_number,
+                    salary = salary,
+                    vendorId = vendorId,
+                    worker_name = worker_name,
+                    employer_id = "employer_id",
+                    worker_id = "worker_id"
+                )
+
+                userControllers.create_relation(relation, db)
+                userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, worker_name, salary, db)
+                update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
+                
+            except Exception as e:
+                print(f"Error creating worker employer relation in db : {e}")
+        
+        else:
+            continue
 
 def bank_account_validation_status():
 
@@ -344,10 +344,11 @@ def bank_account_validation_status():
         account_number = row.get("bank_account_number", "")
         ifsc_code = row.get("ifsc_code", "").strip()
         pan_number = row.get("PAN_number", "").strip()
+        pan_validation = row.get("pan_card_validation", "").strip()
+        bank_account_validation = row.get("bank_account_validation", "").strip()
 
         # Skip if missing critical info
-
-        if pan_number:
+        if pan_validation != "VALID" and pan_number:
 
             print(pan_number)
             pan_response = cashfree_api.pan_verification(pan_number, "sample")
@@ -361,7 +362,7 @@ def bank_account_validation_status():
                 update_sheet_cell(sheet, idx, "pan_card_validation", pan_status)
                 update_sheet_cell(sheet, idx, "pan_card_name_cashfree", name_pan_card)
 
-        if account_number:
+        if bank_account_validation != "VALID" and account_number:
 
             print(account_number)
             bank_response = cashfree_api.bank_account_verification(account_number, ifsc_code)
@@ -375,7 +376,6 @@ def bank_account_validation_status():
                 name_at_bank = bank_response.get("name_at_bank")
                 update_sheet_cell(sheet, idx, "bank_account_validation", bank_status)
                 update_sheet_cell(sheet, idx, "bank_account_name_cashfree", name_at_bank)
-
 
 def fetch_pan_bank_details_from_image():
 
@@ -391,10 +391,11 @@ def fetch_pan_bank_details_from_image():
         account_number = row.get("bank_account_number", "")
         pan_card_image = row.get("pan_card_image", "").strip()
         pan_number = row.get("PAN_number", "").strip()
+        ifsc_code = row.get("ifsc_code", "").strip()
 
         if bank_passbook_image:
 
-            if account_number:
+            if account_number and ifsc_code:
                 continue
 
             bank_response = userControllers.extract_passbook_details(bank_passbook_image)
@@ -420,4 +421,24 @@ def fetch_pan_bank_details_from_image():
             else:
                 PAN_number = pan_response.get("pan_number")
                 update_sheet_cell(sheet, idx, "PAN_number", PAN_number)
-        
+ 
+
+
+def update_sheet_cell(sheet, row_index, column_name, new_value):
+
+    """Helper to update a cell by column name."""
+    header = sheet.row_values(1)
+    try:
+        col_index = header.index(column_name) + 1
+        sheet.update_cell(row_index, col_index, new_value)
+    except ValueError:
+        print(f"Column '{column_name}' not found in sheet.")
+
+def get_column_index(sheet, column_name):
+    """Helper to get column index (1-indexed) for a given column name."""
+    header = sheet.row_values(1)
+    try:
+        return header.index(column_name) + 1
+    except ValueError:
+        raise ValueError(f"Column '{column_name}' not found in sheet header.")
+    

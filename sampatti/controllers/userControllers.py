@@ -1,11 +1,12 @@
 import html, tempfile, os, re, requests, math, uuid, json
-from fastapi import File, HTTPException
+from fastapi import File, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import delete, insert, update
 from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
+from ..database import get_db
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio
-from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
+from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation, employment_contract_gen
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
 from datetime import datetime, date
@@ -52,20 +53,10 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session):
         request.ifsc = None
  
     existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
- 
-    if existing_worker :
-        return existing_worker
-    
-
-
-    elif request.accountNumber == "None":
-        request.accountNumber = None
-        request.ifsc = None
-
-    existing_worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first()
 
     if existing_worker :
-        return existing_worker
+        print("worker already exists")
+        pass
 
     unique_id = generate_unique_id()
     new_worker = models.Domestic_Worker(id=unique_id, name = request.name, email = request.email, workerNumber = request.workerNumber, panNumber = request.panNumber, upi_id = request.upi_id, accountNumber = request.accountNumber, ifsc = request.ifsc, vendorId = request.vendorId)
@@ -127,6 +118,11 @@ def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
 def create_relation(request : schemas.Worker_Employer, db: Session):
 
     unique_id = generate_unique_id()
+
+    employer_id = db.query(models.Employer).filter(models.Employer.employerNumber == request.employerNumber).first().id
+
+    worker_id = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == request.workerNumber).first().id
+
     worker_employer_relation = insert(models.worker_employer).values(
         id=unique_id,
         worker_number=request.workerNumber,
@@ -134,12 +130,12 @@ def create_relation(request : schemas.Worker_Employer, db: Session):
         vendor_id=request.vendorId,
         salary_amount=request.salary,
         worker_name=request.worker_name,
-        employer_id=request.employer_id,
-        worker_id = request.worker_id
+        employer_id=employer_id,
+        worker_id = worker_id
     )
 
-    with db.begin():
-        db.execute(worker_employer_relation)
+    db.execute(worker_employer_relation)
+    db.commit()
     return {
         "MESSAGE" : "SUCCESSFUL"
     }
@@ -228,30 +224,13 @@ def check_existence(employerNumber : int, workerNumber : int, db : Session):
 
 def check_worker(workerNumber : int, db : Session):
 
-    field = db.query(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == workerNumber).first()
+    worker = db.query(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == workerNumber).first()
 
-    if not field :
+    if not worker :
         return {"message" : "INVALID"}
 
     else:
-        if field.accountNumber is None:
-            return {
-                "id" : field.id,
-                "VPA" : field.upi_id,
-                "PAN" : field.panNumber,
-                "NAME" : field.name,
-                "VENDORID" : field.vendorId
-            }
-
-        else:
-            return {
-                "id" : field.id,
-                "NAME" : field.name,
-                "ACCOUNT_NUMBER" : field.accountNumber,
-                "IFSC" : field.ifsc,
-                "PAN" : field.panNumber,
-                "VENDORID" : field.vendorId
-            } 
+        return worker
 
 def check_names(pan_name : str,vpa_name : str):
     str1 = pan_name.lower()
@@ -1127,3 +1106,36 @@ def extract_passbook_details(image_url):
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session):
+
+    contract_schema = schemas.Contract(
+        employerNumber = employerNumber,
+        workerNumber = workerNumber,
+        upi = upi,
+        accountNumber = accountNumber,
+        ifsc = ifsc,
+        name = name,
+        salary = salary
+    )
+
+    employment_contract_gen.create_employment_record_pdf(contract_schema, db)
+
+    employment_contract_name = f"{employerNumber}_ER_{workerNumber}.pdf"
+    object_name = f"employmentRecords/{employment_contract_name}"
+    
+    static_dir = os.path.join(os.getcwd(), 'contracts')
+
+    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber , models.worker_employer.c.employer_number == employerNumber).first()
+
+    filePath = os.path.join(static_dir, f"{field.id}_ER.pdf")
+
+    print(f"the pdf path is : {filePath}")
+    uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
+
+    print("uploaded the employment contract.")
+
+    whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="worker_onboarding_successful")
+
+    print("Employment Contract sent successfully.")

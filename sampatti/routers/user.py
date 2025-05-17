@@ -99,45 +99,6 @@ def send_worker_salary_slips(db : Session = Depends(get_db)):
 def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session = Depends(get_db)):
     return userControllers.update_worker_salary(employerNumber, workerName, salary, db)
 
-@router.post("/contract")
-def contract_generation(request : schemas.Contract, db : Session = Depends(get_db)):
-
-    employment_contract_gen.create_employment_record_pdf(request, db)
-    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == request.workerNumber, models.worker_employer.c.employer_number == request.employerNumber).first()
-
-    static_pdf_path = os.path.join(os.getcwd(), 'contracts', f"{field.id}_ER.pdf")
-
-    return FileResponse(static_pdf_path, media_type='application/pdf', filename=f"{request.workerNumber}_ER_{request.employerNumber}.pdf")
-
-
-@router.delete("/delete_demo_contract")
-def delete_demo_contract(workerNumber : int, employerNumber : int, db: Session = Depends(get_db)):
-
-    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
-
-    static_pdf_path = os.path.join(os.getcwd(), 'contracts', f"{field.id}_ER.pdf")
-    if(static_pdf_path):
-        os.remove(static_pdf_path)
-        return {
-            "MESSAGE" : "File deleted Successfully."
-        }
-
-    else:
-        return {
-            "MESSAGE" : "No such file exist."
-        }
-    
-    
-@router.post("/generate_contract")
-def generate_mediaId(workerNumber: int, employerNumber: int, db : Session = Depends(get_db)):
-
-    field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber, models.worker_employer.c.employer_number == employerNumber).first()
-
-    path = f"{field.id}_ER.pdf"
-    folder = 'contracts'
-    return whatsapp_message.generate_mediaId(path, folder)
-
-
 @router.get("/send_employer_invoice")
 def send_employer_invoice(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.send_employer_invoice(employerNumber, orderId, db)
@@ -272,12 +233,11 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
 def upload_image_from_url(image_url: str, object_name: str):
     return uploading_files_to_spaces.upload_image_from_url(image_url, object_name)
 
+@router.post("/generate_employment_contract")
+def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session = Depends(get_db)):
+    return userControllers.generate_employment_contract(employerNumber, workerNumber , upi , accountNumber , ifsc , name , salary , db)
+
 
 @router.post("/test")
-def test_func():
-    return talk_to_agent_excel_file.bank_account_validation_status()
-
-
-@router.get("/send_confirmation")
-def send_vendor_confirmation_message(employerNumber: int, worker_name : str, template_name : str):
-    return whatsapp_message.send_vendor_confirmation_message(employerNumber, worker_name, template_name)
+def test_func(db : Session = Depends(get_db)):
+    return talk_to_agent_excel_file.create_relations_in_db(db=db)
