@@ -233,11 +233,11 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
 def upload_image_from_url(image_url: str, object_name: str):
     return uploading_files_to_spaces.upload_image_from_url(image_url, object_name)
 
+
+@router.get("/survey_model")
+def process_survey_input(user_name: str, worker_number: str, user_input: str, survey_id: int, db: Session = Depends(get_db)):
+    return userControllers.process_survey_input(user_name, worker_number, user_input, survey_id, db)
+
 @router.post("/generate_employment_contract")
-def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session = Depends(get_db)):
-    return userControllers.generate_employment_contract(employerNumber, workerNumber , upi , accountNumber , ifsc , name , salary , db)
-
-
-@router.post("/test")
-def test_func(db : Session = Depends(get_db)):
-    return talk_to_agent_excel_file.create_relations_in_db(db=db)
+def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session = Depends(get_db)): 
+    return userControllers.generate_employment_contract(employerNumber, workerNumber, upi, accountNumber, ifsc, name, salary, db)

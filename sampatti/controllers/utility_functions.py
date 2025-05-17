@@ -184,14 +184,17 @@ Extract and return the following structured information as a JSON object. Follow
     - `repayment_amount`
     - `repayment_start_month` and `repayment_start_year`
     - `frequency`
-- Calculation logic:
-    - make sure frequency if provided in the input, then use that.
-    - Total repaid = repayment_amount x frequency occurred up to the current month.
-    - Remaining balance = total cash advance - total repaid.
-    - Balance should **never be negative** — if repayments exceed the advance, cap the remaining balance at 0.
-- If the employer mentions only the cash advance but does **not** provide repayment details (amount, frequency, or start date):
-    - Do **not** allow confirmation.
-    - Clearly ask the employer if they would like to set up a repayment plan or proceed without one.
+- **Calculation logic**:
+    - If all required repayment values are provided (repayment_amount, start month/year, frequency):
+        - Calculate how many **repayment cycles** have occurred up to the current month.
+            - A repayment cycle occurs every `frequency` months starting from the repayment start date.
+            - Example: If repayment started in December 2024, and frequency is 2 (alternate month), then repayments occur in Feb 2025, Apr 2025, etc.
+        - **total_repaid = repayment_amount x number_of_cycles**
+        - **remaining_balance = original_advance - total_repaid**
+        - Cap remaining_balance at 0 if it becomes negative.
+    - If the employer mentions only the cash advance without full repayment info:
+        - Do NOT confirm.
+        - Ask if they'd like to set up a repayment plan.
 
 ### 2. **repayment_amount**:
 - The fixed repayment amount per cycle.
@@ -688,6 +691,26 @@ def convert_mp3_to_ogg(input_file : str, output_file : str):
         print(f"Error during conversion: {e}")
     except Exception as e:
         print(f"Error: {e}")
+
+
+
+def systemattic_survey_message(worker_number: str, user_name: str, survey_id: int, db: Session) -> dict:
+    total_survey_messages = db.query(models.SurveyResponse).filter(
+        models.SurveyResponse.worker_number == worker_number,
+        models.SurveyResponse.user_name == user_name,
+        models.SurveyResponse.survey_id == survey_id
+    ).all()
+
+    message = "Here are the answers you provided:\n\n"
+
+    for i, response in enumerate(total_survey_messages, start=1):
+
+        question = db.query(models.QuestionBank).filter(models.QuestionBank.id == response.question_id).first()
+        
+        if question:
+            message += f"{i}. {question.questionText}\n   Answer {i}: {response.response}\n\n"
+
+    return {"confirmation_message": message.strip()}
+
         
         
-    

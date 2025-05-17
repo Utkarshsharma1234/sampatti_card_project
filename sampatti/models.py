@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -171,3 +171,15 @@ class CashAdvanceRepaymentLog(Base):
 
     advance = relationship("cashAdvance", back_populates="repayments")
 
+
+class SurveyResponse(Base):
+    __tablename__ = 'survey_responses'
+
+    response_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    survey_id = Column(String, ForeignKey('SurveyDetails.id'), nullable=False)
+    question_id = Column(String, ForeignKey('QuestionBank.id'), nullable=False)
+    user_id = Column(String, index=True)
+    user_name = Column(String)
+    worker_number = Column(String)  
+    response = Column(String)
+    timestamp = Column(String, default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
