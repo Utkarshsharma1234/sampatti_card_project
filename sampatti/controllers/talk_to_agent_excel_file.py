@@ -7,6 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from ..controllers import utility_functions, cashfree_api, userControllers
 from sqlalchemy.orm import Session
 from .. import schemas
+from .utility_functions import current_date
 
 # Load environment variables from .env file
 load_dotenv()
@@ -71,12 +72,17 @@ def get_client():
     client = gspread.authorize(creds)
     return client
 
+sheet_title = "OpsTeamWorkerOnboardingSheet"
+main_sheet = "WorkerOnboardingSheet"
+
 all_columns = [
-    "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary"
+    "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary", "date_of_onboarding"
 ]
 
 def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str, salary : int):
 
+
+    date = current_date()
     # Input row dictionary
     input_data = {
         "id": utility_functions.generate_unique_id(length=16),
@@ -88,13 +94,14 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
         "PAN_number": pan_number,
         "bank_passbook_image": bank_passbook_image,
         "pan_card_image": pan_card_image,
-        "salary" : salary
+        "salary" : salary,
+        "date_of_onboarding" : date
     }
+
 
     # Setup Google Sheets credentials
     client = get_client()
-    sheet_title = "WorkerOnboardingDetailsOpsTeam"
-    team_emails = ['utkarsh@sampatticard.in']
+    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in']
 
     try:
         spreadsheet = client.open(sheet_title)
@@ -156,7 +163,7 @@ def add_vendor_to_cashfree():
     # Define the scope and credentials
 
     client = get_client()
-    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    sheet = client.open(sheet_title).sheet1
     records = sheet.get_all_records()
 
     # Iterate over each record starting from row 2 (1-indexed)
@@ -220,8 +227,8 @@ def process_vendor_status(db : Session):
     # Setup
 
     client = get_client()
-    onboarding_sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
-    worker_details_main_sheet = client.open("WorkerOnboardingDetails").sheet1
+    onboarding_sheet = client.open(sheet_title).sheet1
+    worker_details_main_sheet = client.open(main_sheet).sheet1
 
     records = onboarding_sheet.get_all_records()
     header = onboarding_sheet.row_values(1)
@@ -289,7 +296,7 @@ def process_vendor_status(db : Session):
 def create_relations_in_db(db : Session):
 
     client = get_client()
-    onboarding_sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    onboarding_sheet = client.open(sheet_title).sheet1
 
     records = onboarding_sheet.get_all_records()
     header = onboarding_sheet.row_values(1)
@@ -305,6 +312,7 @@ def create_relations_in_db(db : Session):
         bank_account_number = row.get("bank_account_number", "")
         ifsc_code = row.get("ifsc_code", "").strip()
         confirmation_message = row.get("confirmation_message", "").strip()
+        date_of_onboarding = row.get("date_of_onboarding", "").strip()
 
         if confirmation_message == "SENT":
             continue
@@ -322,7 +330,7 @@ def create_relations_in_db(db : Session):
                     worker_id = "worker_id"
                 )
 
-                userControllers.create_relation(relation, db)
+                userControllers.create_relation(relation, db, date_of_onboarding)
                 userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, worker_name, salary, db)
                 update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
                 
@@ -336,7 +344,7 @@ def bank_account_validation_status():
 
     # Access the sheet
     client = get_client()
-    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    sheet = client.open(sheet_title).sheet1
     header = sheet.row_values(1)
     records = sheet.get_all_records()
 
@@ -381,7 +389,7 @@ def fetch_pan_bank_details_from_image():
 
     # Access the sheet
     client = get_client()
-    sheet = client.open("WorkerOnboardingDetailsOpsTeam").sheet1
+    sheet = client.open(sheet_title).sheet1
     header = sheet.row_values(1)
     records = sheet.get_all_records()
 

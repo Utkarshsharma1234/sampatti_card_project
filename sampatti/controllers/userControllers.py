@@ -117,7 +117,7 @@ def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
 
 
 # creating a relation between employer and worker.
-def create_relation(request : schemas.Worker_Employer, db: Session):
+def create_relation(request : schemas.Worker_Employer, db: Session, date_of_onboarding = current_date()):
 
     unique_id = generate_unique_id()
 
@@ -133,7 +133,8 @@ def create_relation(request : schemas.Worker_Employer, db: Session):
         salary_amount=request.salary,
         worker_name=request.worker_name,
         employer_id=employer_id,
-        worker_id = worker_id
+        worker_id = worker_id,
+        date_of_onboarding = date_of_onboarding
     )
 
     db.execute(worker_employer_relation)
