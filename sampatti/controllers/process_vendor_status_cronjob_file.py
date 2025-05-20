@@ -2,7 +2,7 @@ import requests
 
 def main():
 
-    url = "https://conv.sampatticards.com/user/generate_talk_to_agent_sheet" 
+    url = "https://conv.sampatticards.com/user/process_vendor_status_from_sheet" 
     response = requests.get(url)
     if response.status_code == 200:
         print("Request successful:", response.json())

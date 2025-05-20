@@ -8,7 +8,7 @@ from ..controllers import rag_funcs, userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
-from ..controllers import utility_functions, rag_funcs
+from ..controllers import utility_functions, rag_funcs, onboarding_tasks
 
 
 router = APIRouter(
@@ -241,3 +241,12 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
 @router.post("/generate_employment_contract")
 def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session = Depends(get_db)): 
     return userControllers.generate_employment_contract(employerNumber, workerNumber, upi, accountNumber, ifsc, name, salary, db)
+
+@router.post("/add_vendors_to_cashfree_from_sheet")
+def run_tasks_till_add_vendor():
+    return onboarding_tasks.run_tasks_till_add_vendor()
+
+
+@router.post("/process_vendor_status_from_sheet")
+def run_tasks_after_vendor_addition():
+    return onboarding_tasks.run_tasks_after_vendor_addition()

@@ -2,7 +2,7 @@ import requests
 
 def main():
 
-    url = "https://conv.sampatticards.com/user/employer_invoices" 
+    url = "https://conv.sampatticards.com/user/add_vendors_to_cashfree_from_sheet" 
     response = requests.get(url)
     if response.status_code == 200:
         print("Request successful:", response.json())
