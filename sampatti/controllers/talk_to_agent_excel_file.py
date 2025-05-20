@@ -72,7 +72,7 @@ def get_client():
     client = gspread.authorize(creds)
     return client
 
-sheet_title = "OpsTeamWorkerOnboardingSheet"
+sheet_title = "OpsTeamWorkerDetailsSheet"
 main_sheet = "WorkerOnboardingSheet"
 
 all_columns = [
@@ -95,7 +95,7 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
         "bank_passbook_image": bank_passbook_image,
         "pan_card_image": pan_card_image,
         "salary" : salary,
-        "date_of_onboarding" : date
+        "date_of_onboarding" : f"{date}"
     }
 
 
