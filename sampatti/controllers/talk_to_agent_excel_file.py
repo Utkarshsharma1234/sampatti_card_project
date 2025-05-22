@@ -305,6 +305,7 @@ def create_relations_in_db(db : Session):
         vendorId = row.get("vendorId", "").strip()
         employer_number = row.get("employer_number", "")
         worker_name = row.get("bank_account_name_cashfree", "").strip()
+        pan_name = row.get("pan_card_name_cashfree", "").strip()
         worker_number = row.get("worker_number", "")
         salary = row.get("salary", "")
         vendor_status = row.get("cashfree_vendor_add_status", "")
@@ -314,6 +315,11 @@ def create_relations_in_db(db : Session):
         confirmation_message = row.get("confirmation_message", "").strip()
         date_of_onboarding = row.get("date_of_onboarding", "").strip()
 
+
+        if not worker_name:
+            worker_name = pan_name
+
+            
         if confirmation_message == "SENT":
             continue
 
