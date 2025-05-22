@@ -8,7 +8,7 @@ from ..controllers import rag_funcs, userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
-from ..controllers import utility_functions, rag_funcs, onboarding_tasks
+from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
 
 
 router = APIRouter(
@@ -39,25 +39,13 @@ def create_domestic_worker(request : schemas.Domestic_Worker, db: Session = Depe
 def create_worker_account_number(request : schemas.Domestic_Worker, db: Session = Depends(get_db)):
     return userControllers.create_worker_account_number(request,db)
 
-@router.post('/assign_vendor_id')
-def assign_vendor_id(workerNumber : int, vendorId : str, db : Session = Depends(get_db)):
-    return userControllers.assign_vendor_id(workerNumber, vendorId, db)
-
 @router.post('/create_relation')
 def create_relation(request : schemas.Worker_Employer, db : Session = Depends(get_db)):
     return userControllers.create_relation(request, db)
 
-@router.delete('/delete_relation')
-def delete_relation(workerNumber : int, employerNumber : int, db : Session = Depends(get_db)):
-    return userControllers.delete_relation(workerNumber, employerNumber,db)
-
 @router.get("/check_existence")
 def check_existence(employerNumber : int, workerNumber : int, db : Session = Depends(get_db)):
     return userControllers.check_existence(employerNumber, workerNumber,db)
-
-@router.get("/check_name_matching")
-def check_names(pan_name : str, vpa_name : str):
-    return userControllers.check_names(pan_name, vpa_name)
 
 @router.get("/worker_details")
 def get_worker_id(workerNumber : int, db : Session = Depends(get_db)):
@@ -78,14 +66,6 @@ def extract_salary(salary_amount : str):
 @router.post('/talk_to_agent/create')
 def create_talk_to_agent_employer(request : schemas.talkToAgent, db : Session = Depends(get_db)):
     return userControllers.create_talk_to_agent_employer(request, db)
-
-@router.post('/message_log/create')
-def create_message_log(request : schemas.Message_log_Schema, db : Session = Depends(get_db)):
-    return userControllers.create_message_log(request, db)
-
-@router.put('/domestic_worker/update')
-def update_worker(oldNumber : int, newNumber: int, db : Session = Depends(get_db)):
-    return userControllers.update_worker(oldNumber,newNumber, db)
 
 @router.post("/salary")
 def insert_salary(request : schemas.Salary, db : Session = Depends(get_db)):
@@ -114,10 +94,6 @@ def send_greetings_message(db : Session = Depends(get_db)):
 @router.get('/generate_talk_to_agent_sheet')
 def generate_sheet():
     return talk_to_agent_excel_file.upload_data_to_google_sheets()
-
-@router.get('/copy_employer_message')
-def copy_employer_message(db : Session = Depends(get_db)):
-    return userControllers.copy_employer_message(db)
 
 @router.post("/salary_details")
 def create_salary_details(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
@@ -250,3 +226,8 @@ def run_tasks_till_add_vendor():
 @router.post("/process_vendor_status_from_sheet")
 def run_tasks_after_vendor_addition():
     return onboarding_tasks.run_tasks_after_vendor_addition()
+
+
+@router.post("/process_advance_query")
+def process_advance_query(chatId, query):
+    return cash_advance_management.process_advance_query(chatId, query)

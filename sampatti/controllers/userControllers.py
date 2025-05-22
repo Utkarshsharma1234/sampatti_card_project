@@ -108,14 +108,6 @@ def get_worker_id(workerNumber : int, db : Session):
             "workerId" : f"{generate_unique_id(16)}"
         }
 
-# assigning the vendor id to the worker in the domestic worker table.
-def assign_vendor_id(workerNumber : int, vendorId : str, db : Session):
-
-    update_statement = update(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == workerNumber).values(vendorId = vendorId)
-    db.execute(update_statement)
-    db.commit()
-
-
 # creating a relation between employer and worker.
 def create_relation(request : schemas.Worker_Employer, db: Session, date_of_onboarding = current_date()):
 
@@ -142,47 +134,6 @@ def create_relation(request : schemas.Worker_Employer, db: Session, date_of_onbo
     return {
         "MESSAGE" : "SUCCESSFUL"
     }
-
-#deleting the relation
-def delete_relation(workerNumber: int, employerNumber: int, db: Session):
-
-    field = delete(models.worker_employer).where(
-        models.worker_employer.c.worker_number == workerNumber,
-        models.worker_employer.c.employer_number == employerNumber
-    )
-
-    with db.begin():
-        result = db.execute(field)
-
-    return {"MESSAGE": "Record deleted successfully."}
-
-def create_message_log(request : schemas.Message_log_Schema, db  :Session):
-
-    existing_message = db.query(models.MessageLogSystem).where(models.MessageLogSystem.employerNumber==request.employerNumber).where(models.MessageLogSystem.workerNumber==request.workerNumber).first()
-
-    if not existing_message:
-
-        unique_id = generate_unique_id()
-        new_message = models.MessageLogSystem(id = unique_id, employerNumber = request.employerNumber, date=f"{current_date()}", lastMessage=request.lastMessage, workerNumber= request.workerNumber, workerName = request.workerName)
-        db.add(new_message)
-        db.commit()
-        db.refresh(new_message)
-        return new_message
-    
-    else:
-        update_statement = update(models.MessageLogSystem).where(models.MessageLogSystem.workerNumber == request.workerNumber).where(models.MessageLogSystem.employerNumber==request.employerNumber).values(lastMessage=request.lastMessage)
-
-        db.execute(update_statement)
-        db.commit()
-
-
-def update_worker(oldNumber : int, newNumber : int, db : Session):
-
-    update_statement = update(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == oldNumber).values(workerNumber=newNumber)
-
-    db.execute(update_statement)
-    db.commit()
-
 
 def insert_salary(request : schemas.Salary, db : Session):
 
@@ -235,22 +186,6 @@ def check_worker(workerNumber : int, db : Session):
     else:
         return worker
 
-def check_names(pan_name : str,vpa_name : str):
-    str1 = pan_name.lower()
-    str2 = vpa_name.lower()
-
-    exact_match = exact_match_case_insensitive(str1, str2)
-    fuzzy_score = fuzzy_match_score(str1, str2)
-
-    print(f"At least one exact match (case insensitive): {exact_match}")
-    print(f"Fuzzy match score: {fuzzy_score}")
-
-    if(exact_match == True and fuzzy_score*100 >= 40):
-        return {"message" : "VALID"}
-    
-    else:
-        return {"message" : "INVALID"}
-
 
 def number_regex(numberString : str):
 
@@ -271,20 +206,6 @@ def extract_salary(salary_amount : str):
         return {"extracted_salary" : int(match.group())}
     
     return {"extracted_salary" : "INVALID"}
-
-
-def copy_employer_message(db : Session):
-
-    messages = db.query(models.MessageLogSystem).all()
-
-    for entity in messages:
-
-        if entity.lastMessage == "COMPLETED":
-            continue
-        new_user = models.TalkToAgentEmployer(id = generate_unique_id(), date = current_date(), employerNumber = entity.employerNumber, workerNumber = entity.workerNumber, worker_bank_name = entity.workerName, worker_pan_name = "None", vpa = "None", issue = f"FLOW NOT COMPLETED. LAST MESSAGE - {entity.lastMessage}")
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
 
 
 def send_employer_invoice(employerNumber : int, orderId : str, db : Session):

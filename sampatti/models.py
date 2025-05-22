@@ -77,17 +77,6 @@ class SalaryDetails(Base):
     year = Column(Integer)
     order_id=Column(String)
 
-
-class SalaryRecords(Base):
-    __tablename__ = "SalaryRecords"
-    id = Column(String, primary_key=True)
-    worker_id = Column(String)
-    employer_id = Column(String)
-    currentSalary = Column(Integer, default=0)
-    modifiedSalary = Column(Integer, default=0)
-    dateIssuedOn = Column(String)
-
-
 class AttendanceRecords(Base):
     __tablename__ = "AttendanceRecords"
     id = Column(String, primary_key=True)
@@ -167,9 +156,45 @@ class CashAdvanceRepaymentLog(Base):
     actual_repayment_amount = Column(Integer)
     remaining_advance = Column(Integer)
     payment_status = Column(String, default='Pending')
-    frequency = Column(Integer, default=1)  # 1, 2, 3, 6, or 0 #add this
+    frequency = Column(Integer, default=1)  # 1, 2, 3, 6, or 0 #add th
 
     advance = relationship("cashAdvance", back_populates="repayments")
+
+
+class CashAdvanceManagement(Base):
+
+    __tablename__ = "CashAdvanceManagement"
+    id = Column(String, primary_key=True)
+    worker_id = Column(String, ForeignKey("Domestic_Worker.id"))
+    employer_id = Column(String, ForeignKey("Employer.id"))
+    monthly_salary = Column(Integer)
+    cashAdvance = Column(Integer)
+    repaymentAmount = Column(Integer)
+    repaymentStartMonth = Column(Integer)
+    repaymentStartYear = Column(Integer)
+    frequency = Column(Integer)
+    bonus = Column(Integer)
+    deduction = Column(Integer)
+    chatId = Column(String)
+
+
+class SalaryManagementRecords(Base):
+
+    __tablename__ = "SalaryManagementRecords"
+    id = Column(String, primary_key=True)
+    worker_id = Column(String, ForeignKey("Domestic_Worker.id"))
+    employer_id = Column(String, ForeignKey("Employer.id"))
+    currentMonthlySalary = Column(Integer)
+    modifiedMonthlySalary = Column(Integer)
+    cashAdvance = Column(Integer)
+    repaymentAmount = Column(Integer)
+    repaymentStartMonth = Column(Integer)
+    repaymentStartYear = Column(Integer)
+    frequency = Column(Integer)
+    bonus = Column(Integer)
+    deduction = Column(Integer)
+    chatId = Column(String)
+    date_issued_on = Column(String)
 
 
 class SurveyResponse(Base):
