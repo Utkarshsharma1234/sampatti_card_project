@@ -228,7 +228,6 @@ def process_vendor_status(db : Session):
 
     client = get_client()
     onboarding_sheet = client.open(sheet_title).sheet1
-    worker_details_main_sheet = client.open(main_sheet).sheet1
 
     records = onboarding_sheet.get_all_records()
     header = onboarding_sheet.row_values(1)
@@ -265,11 +264,6 @@ def process_vendor_status(db : Session):
             if vendor_status == "ACTIVE":
                 
                 update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
-                row_values = onboarding_sheet.row_values(idx)
-                worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
-
-                # Print the main sheet URL
-                main_sheet_url = worker_details_main_sheet.url
                 # make entry in the db.
 
                 worker = schemas.Domestic_Worker(
@@ -297,6 +291,7 @@ def create_relations_in_db(db : Session):
 
     client = get_client()
     onboarding_sheet = client.open(sheet_title).sheet1
+    worker_details_main_sheet = client.open(main_sheet).sheet1
 
     records = onboarding_sheet.get_all_records()
     header = onboarding_sheet.row_values(1)
@@ -339,7 +334,10 @@ def create_relations_in_db(db : Session):
                 userControllers.create_relation(relation, db, date_of_onboarding)
                 userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, worker_name, salary, db)
                 update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
-                
+                row_values = onboarding_sheet.row_values(idx)
+                worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
+                main_sheet_url = worker_details_main_sheet.url
+                print(main_sheet_url)
             except Exception as e:
                 print(f"Error creating worker employer relation in db : {e}")
         
