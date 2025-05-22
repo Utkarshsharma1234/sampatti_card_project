@@ -73,7 +73,7 @@ def get_client():
     return client
 
 sheet_title = "OpsTeamWorkerDetailsSheet"
-main_sheet = "WorkerOnboardingDetails"
+main_sheet = "OnboardingWorkerDetails"
 
 all_columns = [
     "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary", "date_of_onboarding"
@@ -319,7 +319,7 @@ def create_relations_in_db(db : Session):
         if not worker_name:
             worker_name = pan_name
 
-            
+
         if confirmation_message == "SENT":
             continue
 
