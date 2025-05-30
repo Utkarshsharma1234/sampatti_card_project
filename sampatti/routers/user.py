@@ -1,4 +1,4 @@
-import os
+import os, uuid
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from .. import schemas, models
@@ -133,7 +133,7 @@ def process_audio(user_input : str, user_language : str, employerNumber : int, w
     return userControllers.process_audio(user_input, user_language, employerNumber, workerName, db)
 
 @router.post('/extract_name')
-async def extract_name(file_url: str, employerNumber : int):
+async def extract_name(file_url: str, employerNumber : int): 
     return await userControllers.extract_name(file_url, employerNumber,)
 
 @router.get("/get_next_question")
@@ -227,7 +227,18 @@ def run_tasks_till_add_vendor():
 def run_tasks_after_vendor_addition():
     return onboarding_tasks.run_tasks_after_vendor_addition()
 
+@router.get("/get_worker_employer_relation")
+def get_worker_employer_relation(employerNumber : int, workerName : str, db : Session = Depends(get_db)):
+    
+    relation = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name == workerName).first()
+
+    return {"response" : relation}
+
+@router.get("/chat_id")
+def get_chat_id():
+    return {"id" : f"{uuid.uuid4()}"}
+
 
 @router.post("/process_advance_query")
-def process_advance_query(chatId, query):
-    return cash_advance_management.process_advance_query(chatId, query)
+def process_advance_query(chatId, query, workerId, employerId, db:Session = Depends(get_db)):
+    return cash_advance_management.process_advance_query(chatId, query, workerId, employerId, db)
