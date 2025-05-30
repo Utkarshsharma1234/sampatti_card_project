@@ -158,20 +158,27 @@ def extracted_info_from_llm(user_input: str, worker_id: str, employer_id: str, c
     try:
         llm = OpenAI(api_key=openai_api_key)  # Ensure API key is loaded correctly
         current_date = datetime.now()
+        today = datetime.today()
+        current_month = today.month
+        current_year = today.year
         print(f"Current Date: {current_date}")
 
 
         template = """
-You are a warm, professional, and engaging assistant helping employers manage cash advances and repayments for their workers.
+You are a helpful assistant managing salary, bonus, deduction, and cash advance details for a worker.
 
 The system provides the following context from the database (if available), which contains the existing cash advance details for the worker. Use this context as the baseline, and update only the fields mentioned in the employer's new input: {context}
 
+### Known Context:
 The employer has sent the following message: "{user_input}"
 
 Additional information:
 - worker_id: {worker_id}
 - employer_id: {employer_id}
 - current date: {current_date}
+- today: {today}
+- current_month: {current_month}
+- current_year: {current_year}
 
 ---
 
@@ -197,10 +204,19 @@ Extract and return the following structured information as a JSON object. Follow
         - Ask if they'd like to set up a repayment plan.
 
 ### 2. **repayment_amount**:
-- The fixed repayment amount per cycle.
-- If mentioned in user_input, use it.
-- If not mentioned, use context if available.
-- If missing from both, set to 0.
+   - If the user gives a cashAdvance, prompt for:
+     - repaymentAmount
+     - repaymentStartMonth
+     - repaymentStartYear
+     - frequency
+   - If the user says:
+     - “repayment starts next month” → calculate from current date:
+       - if May 2025 → month = 6, year = 2025
+       - if December → month = 1, year = current_year + 1
+     - if month name is given (e.g., “July”) → month = 7
+       - if that month is already over this year, assume next year
+
+
 
 ### 3. **repayment_start_month** and **repayment_start_year**:
 - If a month is mentioned (like "December"), map to the corresponding month number (December = 12).
@@ -217,19 +233,46 @@ Extract and return the following structured information as a JSON object. Follow
     - "alternate month," "every other month," "every two months" → 2
     - "every three months," "quarterly" → 3
     - "every six months," "half-yearly" → 6
-    - "evry n months" → n (where n is the number of months)
+    - "every n months" → n (where n is the number of months)
     - "random," "unscheduled," or if not specified → 0
 - If repayment_amount is provided but frequency is not mentioned, default frequency to 1 (monthly).
 
-### 5,6,7. **bonus and deduction logic (salary adjustment rules):**
-- Always use `monthly_salary` from context unless explicitly told to change permanently.
-- **If employer provides a different salary for 'this month only':**
-  - If given salary < context salary → **deduction = context salary - given salary**.
-  - If given salary > context salary → **bonus = given salary - context salary**.
-  - Keep the permanent monthly salary unchanged.
-- **If employer says "permanently change salary":**
-  - Update `monthly_salary` to the new value.
-  - Set bonus and deduction to 0.
+### 5. **Salary**
+   - Never change monthly_salary unless the user explicitly says it has changed.
+   - If user says “change salary” but doesn’t clearly say if it's permanent:
+    - Ask: “Do you want to permanently change the salary, or just for this month?”
+    - Until confirmation, do not change salary value. Only compute bonus/deduction if amount change is temporary.
+- If user says "permanent change" or "change from this month":
+    - Update `monthly_salary` to the new value.
+    - Set bonus and deduction to 0.
+- If salary change is for this month only:
+    - Calculate:
+        - deduction = context_salary - new_salary (if less)
+        - bonus = new_salary - context_salary (if more)
+    - Keep monthly_salary unchanged.
+
+### 6. **bonus*
+    - Only apply bonus if the user *explicitly* uses phrases like this:
+        - “give bonus ₹X from salary”
+        - “extra ₹X”
+        - “add salary by ₹X”
+        - “give ₹X this month”, bonus = X - monthly_salary
+        - more phrases like this for bonus
+    - Do *not* infer deduction based on cashAdvance or repayment.
+    - Do not auto-calculate deduction as monthly_salary - repaymentAmount.
+    - bonus and repayment are separate and should never overlap unless user gives both explicitly.
+
+### 7. **deduction*
+    - Only apply deduction if the user *explicitly* uses phrases like this:
+        - “deduct ₹X from salary”
+        - “take out ₹X”
+        - “reduce salary by ₹X”
+        - “only give ₹X this month”, deduction = monthly_salary - X
+    - If user says that "i have paid X earlier and cut this from salary" or similiar phrases, user your mind to understand phrases, deduction = monthly_salary - X.
+    - Do *not* infer deduction based on cashAdvance or repayment.
+    - Do not auto-calculate deduction as monthly_salary - repaymentAmount.
+    - Deduction and repayment are separate and should never overlap unless user gives both explicitly.
+
 
 ### 8. **confirmation**:
 - Set to 1 if user_input clearly confirms the details with phrases like:
@@ -239,7 +282,12 @@ Extract and return the following structured information as a JSON object. Follow
     - There is any update, change request, or question.
     - Confirmation is unclear or partial (e.g., "yes, but change repayment to 1500").
 
----
+
+### Rules for Updating Fields:
+
+
+
+
 
 ## SCENARIO HANDLING:
 
@@ -248,45 +296,38 @@ Extract and return the following structured information as a JSON object. Follow
 - If conflicting or unclear instructions are given (like "set repayment to 2000 but no repayment"), set unclear fields to 0 and politely ask for clarification.
 - If they use timing phrases like "next month," calculate the correct month and year based on current_date.
 - If the user mentions only "bonus" or "deduction" without a cash advance, still return those fields properly.
-- if user only provide bonus or deduction or monthly salary, then set don't mention the cash advance and repayment unless mentioned by user.
+- If the user says change the salary then update the monthly salary and set bonus and deduction to 0 accordingly.
+- If the user only wanted to give bonus or deduction then set don't mention the cash advance and repayment unless mentioned by user.
+- If user only provide bonus or deduction or monthly salary, then set don't mention the cash advance and repayment unless mentioned by user.
 
 ---
 
 ## AI MESSAGE RULES (`ai_message`):
 
-- Summarize the extracted data clearly and conversationally and include all the details that is present in the context and give summary of the context and the user input.
+Questions to ask in "ai_message":
+   - never ask questions which may result in answer as "No".
+   - interact with the employer like you are managing the financials of the employer which he gives to his domestic worker and help them as a guide will do, very human-like interaction.
+   - treat different pockets pocket1 : (cash advance, repayment amount, repayment startmonth, repayment startyear, frequency), pocket2: bonus, pocket3: deduction, pocket4: salary. if values from one pocket are not complete prompt the user for those values and never mix up these pockets. if user is not talking about any pocket dont prompt for that value.
+   - once you feel like the values from one pocket are received inform in a very human like way of all the recorded values which user gave you and make the "readyToConfirm" as 1.
+   - when "readyToConfirm" is 1 the ending should be "Shall we lock in the details ?" 
 
-- Reflect what was provided:
-    - Example: "I've recorded a 50000 advance with 2000 repayments every alternate month starting from May 2025"
-
-- If cash advance is provided but repayment details are missing:
-    - Ask: "we have only recorded the cash advance. Please provide repayment details and if you want to set up a repayment plan or if you want to proceed with the cash advance only please confirm."
-
-- If bonus or deduction is provided:
-    - Example: "I've noted a bonus of 3000 this month. Is that correct?"
-    
-- If confirmation is 1:
-    - Include a thank-you note and don't ask for confirmation question just summarize the whole context and say thank you for confirming.
-    - Summarize all the details with clearness and warmth and say "Thank you for confirming!"
-    
-- If partial confirmation (e.g., "yes, but..."), reflect the update and ask again for final confirmation:
-    - Example: "I've updated the repayment to 1500 and include all the details. Does this look correct?"
-    
-- If any key info is unclear (like repayment year), explain what’s missing and ask politely for clarification.
-- Always end with a friendly question:
+- If only cash advance is given and repayment is missing:
+    - "You have provided a cash advance of ₹X, but the repayment amount, frequency, or start month is missing. Could you please specify how you would like the repayment to be scheduled?"
+- If only bonus or deduction is given:
+    - "I've noted a bonus of ₹X this month. Is that correct?"
+- If salary is changed temporarily:
+    - "The monthly salary remains unchanged, but I’ve noted a deduction of ₹X for this month based on the updated salary."
+- If permanent salary change:
+    - "Monthly salary has been updated to ₹X as requested."
+- If confirmation = 1:
+    - "Thank you for confirming! All the details have been recorded successfully: [summary of all fields]."
+    - Please make sure to take the correct values and show the correct context that is being provide by the user before confirming.
+- If partial confirmation:
+    - "I've updated the repayment to ₹X. Let me know if everything looks correct or if you’d like to make any further changes."
+- If unclear:
+    - Ask a polite clarifying question.
+- Always end with a warm question like:
     - "Does this look correct? If not, please let me know what to update!"
-- Keep the tone warm, natural, and helpful (avoid robotic language).
-
-- If **all repayment details are provided**:
-  - Summarize cash advance, repayment amount, frequency, start month, repayments done so far, and remaining balance.
-  - Example:  
-    - "You've given a cash advance of 50000 starting from December 2024, with repayments of 2000 every alternate month. Up to now, 4 repayments have been scheduled, totaling 8000. The remaining balance is 42000. Please confirm if these details are correct, or let me know if you'd like to update any detail."
-
-- **If repayment details are missing (amount, frequency, or start date):**
-  - Do NOT allow confirmation.
-  - Ask specific, clear questions like:
-    - "You have provided a cash advance of 50000, but the repayment amount, frequency, or start month is missing. Could you please specify how you would like the repayment to be scheduled?"
-  - Make sure the employer provides these details **explicitly** — avoid any yes/no type response acceptance.
 
 ---
 
@@ -309,6 +350,7 @@ Return ONLY the following JSON object:
 
 
 
+
         prompt_template = PromptTemplate(
             input_variables=["user_input", "current_date", "context", "worker_id", "employer_id"],
             template=template
@@ -317,6 +359,9 @@ Return ONLY the following JSON object:
         prompt = prompt_template.format(
             user_input=user_input,
             current_date=current_date,
+            today=today,
+            current_month=current_month,
+            current_year=current_year,
             context=context,
             worker_id=worker_id,
             employer_id=employer_id
@@ -363,7 +408,7 @@ def call_sarvam_api(file_path):
         files = { "file": (os.path.basename(file_path), file, "audio/wav")}
         response = requests.post(url, headers=headers, files=files)
 
-
+    print(response.json())
 
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
@@ -712,5 +757,4 @@ def systemattic_survey_message(worker_number: str, user_name: str, survey_id: in
 
     return {"confirmation_message": message.strip()}
 
-        
         
