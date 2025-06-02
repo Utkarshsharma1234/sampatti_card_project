@@ -538,12 +538,14 @@ async def get_transalated_text(file_url: str):
         print("Duration Second: ",duration_seconds)
         
         
-        if duration_seconds<25.000:
+        if duration_seconds < 28.000:
             result = call_sarvam_api(wav_path)
-            return {
-                "text" : result["transcript"],
-                "user_language" : result["language_code"]
-            }
+            transcript = result["transcript"]
+            user_language = result["language_code"]
+            print("Transcript: ",transcript)
+            print("User Language: ",user_language)
+
+            return transcript
         else:
         # Step 3: Call the transcription function
             await transcribe_audio_from_file_path(wav_path)
