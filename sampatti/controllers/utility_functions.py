@@ -758,3 +758,359 @@ def systemattic_survey_message(worker_number: str, user_name: str, survey_id: in
     return {"confirmation_message": message.strip()}
 
         
+############
+# STT
+############
+
+import shutil
+import os
+import json
+import asyncio
+import aiofiles
+import requests
+import json
+from pathlib import Path
+from urllib.parse import urlparse
+from azure.storage.filedatalake.aio import DataLakeDirectoryClient, FileSystemClient
+from azure.storage.filedatalake import ContentSettings
+import mimetypes
+import logging
+from pprint import pprint
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+# Configuration
+API_SUBSCRIPTION_KEY = "3f3f7553-a322-4b7e-a4db-b13fbb93f529"
+
+
+class SarvamClient:
+    def __init__(self, url: str):
+        self.account_url, self.file_system_name, self.directory_name, self.sas_token = (
+            self._extract_url_components(url)
+        )
+        self.lock = asyncio.Lock()
+        print(f"Initialized SarvamClient with directory: {self.directory_name}")
+
+    def update_url(self, url: str):
+        self.account_url, self.file_system_name, self.directory_name, self.sas_token = (
+            self._extract_url_components(url)
+        )
+        print(f"Updated URL to directory: {self.directory_name}")
+
+    def _extract_url_components(self, url: str):
+        parsed_url = urlparse(url)
+        account_url = f"{parsed_url.scheme}://{parsed_url.netloc}".replace(
+            ".blob.", ".dfs."
+        )
+        path_components = parsed_url.path.strip("/").split("/")
+        file_system_name = path_components[0]
+        directory_name = "/".join(path_components[1:])
+        sas_token = parsed_url.query
+        return account_url, file_system_name, directory_name, sas_token
+
+    async def upload_files(self, local_file_paths, overwrite=True):
+        print(f"Starting upload of {len(local_file_paths)} files")
+        async with DataLakeDirectoryClient(
+            account_url=f"{self.account_url}?{self.sas_token}",
+            file_system_name=self.file_system_name,
+            directory_name=self.directory_name,
+            credential=None,
+        ) as directory_client:
+            tasks = []
+            for path in local_file_paths:
+                file_name = path.split("/")[-1]
+                tasks.append(
+                    self._upload_file(directory_client, path, file_name, overwrite)
+                )
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            print(
+                f"Upload completed for {sum(1 for r in results if not isinstance(r, Exception))} files"
+            )
+
+    async def _upload_file(
+        self, directory_client, local_file_path, file_name, overwrite=True
+    ):
+        try:
+            async with aiofiles.open(local_file_path, mode="rb") as file_data:
+                mime_type = mimetypes.guess_type(local_file_path)[0] or "audio/wav"
+                file_client = directory_client.get_file_client(file_name)
+                data = await file_data.read()
+                await file_client.upload_data(
+                    data,
+                    overwrite=overwrite,
+                    content_settings=ContentSettings(content_type=mime_type),
+                )
+                print(f"✅ File uploaded successfully: {file_name}")
+                print(f"   Type: {mime_type}")
+                return True
+        except Exception as e:
+            print(f"❌ Upload failed for {file_name}: {str(e)}")
+            return False
+
+    async def list_files(self):
+        print("\n📂 Listing files in directory...")
+        file_names = []
+        async with FileSystemClient(
+            account_url=f"{self.account_url}?{self.sas_token}",
+            file_system_name=self.file_system_name,
+            credential=None,
+        ) as file_system_client:
+            async for path in file_system_client.get_paths(self.directory_name):
+                file_name = path.name.split("/")[-1]
+                async with self.lock:
+                    file_names.append(file_name)
+        print(f"Found {len(file_names)} files:")
+        for file in file_names:
+            print(f"   📄 {file}")
+        return file_names
+
+    async def download_file(self, file_name, destination_dir, new_filename=None):
+
+        try:
+            async with DataLakeDirectoryClient(
+                account_url=f"{self.account_url}?{self.sas_token}",
+                file_system_name=self.file_system_name,
+                directory_name=self.directory_name,
+                credential=None,
+            ) as directory_client:
+                file_client = directory_client.get_file_client(file_name)
+                download_path = os.path.join(destination_dir, new_filename or file_name)
+
+                async with aiofiles.open(download_path, mode="wb") as file_data:
+                    stream = await file_client.download_file()
+                    data = await stream.readall()
+                    await file_data.write(data)
+                print(f"✅ Downloaded: {file_name} -> {download_path}")
+                return True
+        except Exception as e:
+            print(f"❌ Download failed for {file_name}: {str(e)}")
+            return False
+
+
+async def initialize_job():
+    print("\\n🚀 Initializing job...")
+    url = "https://api.sarvam.ai/speech-to-text-translate/job/init"
+    headers = {"API-Subscription-Key": API_SUBSCRIPTION_KEY}
+    response = requests.post(url, headers=headers)
+    print("\\nInitialize Job Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 202 else response.text)
+
+    if response.status_code == 202:
+        return response.json()
+    return None
+
+
+async def check_job_status(job_id):
+    print(f"\\n🔍 Checking status for job: {job_id}")
+    url = f"https://api.sarvam.ai/speech-to-text-translate/job/{job_id}/status"
+    headers = {"API-Subscription-Key": API_SUBSCRIPTION_KEY}
+    response = requests.get(url, headers=headers)
+    print("\\nJob Status Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 200 else response.text)
+
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+async def start_job(job_id):
+    print(f"\\n▶ Starting job: {job_id}")
+    url = "https://api.sarvam.ai/speech-to-text-translate/job"
+    headers = {
+        "API-Subscription-Key": API_SUBSCRIPTION_KEY,
+        "Content-Type": "application/json",
+    }
+    data = {"job_id": job_id, "job_parameters": {"with_diarization": True}}
+    print("\\nRequest Body:")
+    pprint(data)
+
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    print("\\nStart Job Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 200 else response.text)
+
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+
+async def transcribe_audio_from_file_path(filepath: str):
+    print("\\n=== Starting Speech-to-Text Processing ===")
+
+    # Step 1: Initialize the job
+    job_info = await initialize_job()
+    if not job_info:
+        print("❌ Job initialization failed")
+        return
+
+    job_id = job_info["job_id"]
+    input_storage_path = job_info["input_storage_path"]
+    output_storage_path = job_info["output_storage_path"]
+    logger.info(f"✅ Job Initialized with ID: {job_id}")
+
+    # Step 2: Upload files
+    print(f"\\n📤 Uploading files to input storage: {input_storage_path}")
+    client = SarvamClient(input_storage_path)
+    await client.upload_files([filepath])
+    logger.info(f"✅ Uploaded audio file: {filepath}")
+    print(f"Files to upload: {filepath}")
+    
+    
+    # Step 3: Start the job
+    job_start_response = await start_job(job_id)
+    if not job_start_response:
+        print("❌ Failed to start job")
+        return
+
+    # Step 4: Monitor job status
+    print("\\n⏳ Monitoring job status...")
+    attempt = 1
+    while True:
+        print(f"\\nStatus check attempt {attempt}")
+        job_status = await check_job_status(job_id)
+        if not job_status:
+            print("❌ Failed to get job status")
+            break
+
+        status = job_status["job_state"]
+        if status == "Completed":
+            print("✅ Job completed successfully!")
+            break
+        elif status == "Failed":
+            print("❌ Job failed!")
+            break
+        else:
+            print(f"⏳ Current status: {status}")
+            await asyncio.sleep(10)
+        attempt += 1
+
+    # Step 5: Download results
+    # Step 5: Download results
+    # Step 5: Download results
+    if status == "Completed":
+        print(f"\n📥 Downloading results from: {output_storage_path}")
+        client.update_url(output_storage_path)
+
+        # List all files
+        files = await client.list_files()
+
+        if not files:
+            print("❌ No files found to download.")
+        else:
+            print(f"Files to download: {files}")
+            destination_dir = "audio/"
+            os.makedirs(destination_dir, exist_ok=True)
+
+            try:
+                # Get job details to map input files to output files
+                job_status = await check_job_status(job_id)
+                file_mapping = {
+                    detail["file_id"]: detail["file_name"]
+                    for detail in job_status.get("job_details", [])
+                }
+
+                # Download files with original names
+                for file in files:
+                    # Get original filename from job details
+                    file_id = file.split(".")[0]  # e.g., '0' from '0.json'
+                    if file_id in file_mapping:
+                        original_name = file_mapping[file_id]
+                        new_filename = f"{os.path.splitext(original_name)[0]}.json"
+                        await client.download_file(
+                            file,
+                            destination_dir=destination_dir,
+                            new_filename=new_filename,
+                        )
+                        print(f"Downloaded and renamed {file} to {new_filename}")
+
+                print(f"Files have been downloaded to: {destination_dir}")
+            except Exception as e:
+                print(f"❌ Error during file download: {e}")
+
+        print("\n=== Processing Complete ===")
+
+
+def extract_transcript_from_json(file_path):
+    """
+    Extract transcript from audio.json file
+    
+    Args:
+        file_path (str): Path to the audio.json file
+    
+    Returns:
+        dict: Dictionary containing transcript information with keys:
+            - 'main_transcript': Main transcript text
+            - 'diarized_entries': List of diarized transcript entries (if available)
+            - 'language_code': Language code (if available)
+            - 'request_id': Request ID (if available)
+        Returns None if file not found or invalid JSON
+    """
+    try:
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"Error: File '{file_path}' not found.")
+            return None
+        
+        # Read and parse JSON file
+        with open(file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        
+        # Extract transcript information
+        result = {}
+        
+        # Main transcript
+        result['main_transcript'] = data.get('transcript', '')
+        
+        # Language code
+        result['language_code'] = data.get('language_code', '')
+        
+        # Request ID
+        result['request_id'] = data.get('request_id', '')
+        
+        # Diarized transcript entries
+        diarized_data = data.get('diarized_transcript', {})
+        result['diarized_entries'] = diarized_data.get('entries', [])
+        
+        return result
+        
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON format in file '{file_path}': {e}")
+        return None
+    except Exception as e:
+        print(f"Error reading file '{file_path}': {e}")
+        return None
+
+
+def get_main_transcript(file_path):
+    """
+    Simple method to get just the main transcript text
+    
+    Args:
+        file_path (str): Path to the audio.json file
+    
+    Returns:
+        str: Main transcript text, empty string if error
+    """
+    transcript_data = extract_transcript_from_json(file_path)
+    if transcript_data:
+        return transcript_data['main_transcript']
+    return ""
+
+
+def extract_transcript_from_json_file(json_file_path: str) -> str:
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data.get("transcript", "")
+    except Exception as e:
+        print(f"Error reading transcript: {e}")
+        return ""
