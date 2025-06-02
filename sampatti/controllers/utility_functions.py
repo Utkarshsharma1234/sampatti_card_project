@@ -15,7 +15,22 @@ from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
 from .. import models
 import subprocess
-import re
+import asyncio
+import aiofiles
+from pathlib import Path
+from urllib.parse import urlparse
+from azure.storage.filedatalake.aio import DataLakeDirectoryClient, FileSystemClient
+from azure.storage.filedatalake import ContentSettings
+import mimetypes
+import logging
+from pprint import pprint
+
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
@@ -762,30 +777,6 @@ def systemattic_survey_message(worker_number: str, user_name: str, survey_id: in
 # STT
 ############
 
-import shutil
-import os
-import json
-import asyncio
-import aiofiles
-import requests
-import json
-from pathlib import Path
-from urllib.parse import urlparse
-from azure.storage.filedatalake.aio import DataLakeDirectoryClient, FileSystemClient
-from azure.storage.filedatalake import ContentSettings
-import mimetypes
-import logging
-from pprint import pprint
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-# Configuration
-API_SUBSCRIPTION_KEY = "3f3f7553-a322-4b7e-a4db-b13fbb93f529"
-
-
 class SarvamClient:
     def __init__(self, url: str):
         self.account_url, self.file_system_name, self.directory_name, self.sas_token = (
@@ -893,7 +884,7 @@ class SarvamClient:
 async def initialize_job():
     print("\\n🚀 Initializing job...")
     url = "https://api.sarvam.ai/speech-to-text-translate/job/init"
-    headers = {"API-Subscription-Key": API_SUBSCRIPTION_KEY}
+    headers = {"API-Subscription-Key": sarvam_api_key}
     response = requests.post(url, headers=headers)
     print("\\nInitialize Job Response:")
     print(f"Status Code: {response.status_code}")
@@ -908,7 +899,7 @@ async def initialize_job():
 async def check_job_status(job_id):
     print(f"\\n🔍 Checking status for job: {job_id}")
     url = f"https://api.sarvam.ai/speech-to-text-translate/job/{job_id}/status"
-    headers = {"API-Subscription-Key": API_SUBSCRIPTION_KEY}
+    headers = {"API-Subscription-Key": sarvam_api_key}
     response = requests.get(url, headers=headers)
     print("\\nJob Status Response:")
     print(f"Status Code: {response.status_code}")
@@ -924,7 +915,7 @@ async def start_job(job_id):
     print(f"\\n▶ Starting job: {job_id}")
     url = "https://api.sarvam.ai/speech-to-text-translate/job"
     headers = {
-        "API-Subscription-Key": API_SUBSCRIPTION_KEY,
+        "API-Subscription-Key": sarvam_api_key,
         "Content-Type": "application/json",
     }
     data = {"job_id": job_id, "job_parameters": {"with_diarization": True}}
