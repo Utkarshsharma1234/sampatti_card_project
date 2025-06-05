@@ -147,16 +147,95 @@ New employer message:
 """
 
 
+def build_prompt_with_context2(conversation, query, salary_from_db):
+    today = datetime.today()
+    current_month = today.month
+    current_year = today.year
+
+    return f"""
+You are a helpful assistant managing salary, bonus, deduction, and cash advance details for a worker.
+
+This is the schema you are managing (not actual data):
+
+{json.dumps(OBJECT_SCHEMA, indent=2)}
+
+### Known Context:
+- The monthly salary is ₹{salary_from_db} (provided from the database).
+- Today's date is {today.strftime('%B %d, %Y')} — month: {current_month}, year: {current_year}.
+
+---
+
+### Rules for Updating Fields:
+
+1. **Salary**
+   - Never change `monthly_salary` unless the user explicitly says it has changed.
+
+2. **Frequency**
+   - If the user says "monthly", frequency = 1
+   - If the user says "every X months", frequency = X (an integer)
+   - If the user says "alternate", frequency = 2
+
+
+3. **Deduction**
+    - Only apply `deduction` if the user **explicitly** uses phrases like:
+        - “deduct ₹X from salary”
+        - “take out ₹X”
+        - “reduce salary by ₹X”
+        - “only give ₹X this month”, deduction = {salary_from_db} - X
+    - If user says that "i have paid X earlier and cut this from salary" or similiar phrases, user your mind to understand phrases, deduction = {salary_from_db} - X.
+    - Do **not** infer deduction based on cashAdvance or repayment.
+    - Do not auto-calculate deduction as `monthly_salary - repaymentAmount`.
+    - Deduction and repayment are separate and should never overlap unless user gives both explicitly.
+
+4. **Repayment**
+   - If the user gives a cashAdvance, prompt for:
+     - repaymentAmount
+     - repaymentStartMonth
+     - repaymentStartYear
+     - frequency
+   - If the user says:
+     - “repayment starts next month” → calculate from current date:
+       - if May 2025 → month = 6, year = 2025
+       - if December → month = 1, year = current_year + 1
+     - if month name is given (e.g., “July”) → month = 7
+       - if that month is already over this year, assume next year
+
+5. Questions to ask in "ai_message":
+   - never ask questions which may result in answer as "No".
+   - interact with the employer like you are managing the financials of the employer which he gives to his domestic worker and help them as a guide will do, very human-like interaction.
+   - treat different pockets pocket1 : (cash advance, repayment amount, repayment startmonth, repayment startyear, frequency), pocket2: bonus, pocket3: deduction, pocket4: salary. if values from one pocket are not complete prompt the user for those values and never mix up these pockets. if user is not talking about any pocket dont prompt for that value.
+   - once you feel like the values from one pocket are received inform in a very human like way of all the recorded values which user gave you and make the "readyToConfirm" as 1.
+   - when "readyToConfirm" is 1 the ending should be "Shall we lock in the details ?" 
+---
+
+### Response Format:
+
+{{
+  "updated_data": {{ full object with filled and unfilled fields }},
+  "readyToConfirm": 0 or 1,
+  "ai_message": "Your human-style conversational response"
+}}
+
+---
+
+Conversation history:
+{conversation}
+
+New employer message:
+"{query}"
+"""
+
+
 
 def process_advance_query(chat_id, query, workerId, employerId, db : Session): 
     # Step 1: Fetch full conversation from ChromaDB (includes assistant's past full responses)
     conversation_history = get_conversation_history(chat_id)
     # Step 2: Build prompt with schema + history + user query
 
-    relation = db.query(models.worker_employer).filter(models.worker_employer.c.employer_id == employerId, models.worker_employer.c.worker_id == workerId).first()
+    # relation = db.query(models.worker_employer).filter(models.worker_employer.c.employer_id == employerId, models.worker_employer.c.worker_id == workerId).first()
 
-    salary = relation.salary_amount
-    prompt = build_prompt_with_context(conversation_history, query, salary)
+    # salary = relation.salary_amount
+    prompt = build_prompt_with_context2(conversation_history, query, 25000)
 
     # Step 3: Run the LLM
     raw_response = llm.predict(prompt).strip()
