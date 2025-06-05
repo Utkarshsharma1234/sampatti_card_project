@@ -5,9 +5,8 @@ from sqlalchemy import delete, insert, update
 from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
 from ..database import get_db
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation, employment_contract_gen
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message, transcribe_audio_from_file_path, get_main_transcript, extract_transcript_from_json_file
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
@@ -509,45 +508,65 @@ def create_salary_record(employerNumber : int, workerName : str, currentSalary :
 async def get_transalated_text(file_url: str):
 
     if not file_url:
-        raise HTTPException(status_code=400, detail="File is not uploaded.")
-    
-    static_dir = 'audio_files'
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
+        raise HTTPException(status_code=400, detail="File URL is required.")
 
-    temp_wav_path = ""
+    output_dir = 'audio/'
+    os.makedirs(output_dir, exist_ok=True)
+
+    temp_path = ""
+    wav_path = os.path.join(output_dir, "audio.wav")
 
     try:
-        # Download the file from the given URL
+        # Step 1: Download the file
         response = requests.get(file_url)
-        with tempfile.NamedTemporaryFile(dir=static_dir, delete=False) as temp:
-            # Write the downloaded content to the temp file
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to download file from the URL.")
+
+        with tempfile.NamedTemporaryFile(delete=False) as temp:
             temp.write(response.content)
             temp_path = temp.name
 
-        print(f"Downloaded temp file: {temp_path}")
-        audio = AudioSegment.from_file(temp_path)  # Automatically detects the format
-        temp_wav_path = f"{temp_path}.wav"  # Create a new temp path for the wav file
-        audio.export(temp_wav_path, format="wav")  # Export the audio as .wav
-        print(f"Converted to wav: {temp_wav_path}")
+        print(f"Downloaded temporary file: {temp_path}")
 
-        # Transcribe the audio using Whisper
-        result = call_sarvam_api(temp_wav_path)
-        return {
-            "text" : result["transcript"],
-            "user_language" : result["language_code"]
-        }
+        # Step 2: Convert to WAV format
+        audio = AudioSegment.from_file(temp_path)
+        audio.export(wav_path, format="wav")
+
+        print(f"Converted to WAV and saved at: {wav_path}")
+
+        duration_seconds = len(audio) / 1000.0
+        print("Duration Second: ",duration_seconds)
+        
+        
+        if duration_seconds < 28.000:
+            result = call_sarvam_api(wav_path)
+            transcript = result["transcript"]
+            user_language = result["language_code"]
+            print("Transcript: ",transcript)
+            print("User Language: ",user_language)
+
+            return transcript
+        else:
+        # Step 3: Call the transcription function
+            await transcribe_audio_from_file_path(wav_path)
+            print("await transcribe_audio_from_file_path(wav_path) successfull")
+        
+            transcript = get_main_transcript("audio/audio.json")
+            print(transcript)
+
+            return transcript
 
     except PermissionError as e:
-        return JSONResponse(content={"error": f"Error saving temporary file: {e}"}, status_code=500)
+        return JSONResponse(content={"error": f"Permission error: {e}"}, status_code=500)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
-        # Clean up by deleting the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        if os.path.exists(temp_wav_path):
-            os.remove(temp_wav_path)
+        # Cleanup temp files
+        try:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception as cleanup_err:
+            print(f"Cleanup error: {cleanup_err}")
 
 
 def process_audio(user_input: str, user_language: str, employerNumber: int, workerName: str, db: Session):

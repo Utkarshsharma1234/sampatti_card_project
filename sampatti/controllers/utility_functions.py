@@ -15,7 +15,22 @@ from langchain.chat_models import ChatOpenAI
 from langchain_community.chat_models import ChatOpenAI
 from .. import models
 import subprocess
-import re
+import asyncio
+import aiofiles
+from pathlib import Path
+from urllib.parse import urlparse
+from azure.storage.filedatalake.aio import DataLakeDirectoryClient, FileSystemClient
+from azure.storage.filedatalake import ContentSettings
+import mimetypes
+import logging
+from pprint import pprint
+
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 load_dotenv()
 groq_key= os.environ.get('GROQ_API_KEY')
@@ -158,20 +173,27 @@ def extracted_info_from_llm(user_input: str, worker_id: str, employer_id: str, c
     try:
         llm = OpenAI(api_key=openai_api_key)  # Ensure API key is loaded correctly
         current_date = datetime.now()
+        today = datetime.today()
+        current_month = today.month
+        current_year = today.year
         print(f"Current Date: {current_date}")
 
 
         template = """
-You are a warm, professional, and engaging assistant helping employers manage cash advances and repayments for their workers.
+You are a helpful assistant managing salary, bonus, deduction, and cash advance details for a worker.
 
 The system provides the following context from the database (if available), which contains the existing cash advance details for the worker. Use this context as the baseline, and update only the fields mentioned in the employer's new input: {context}
 
+### Known Context:
 The employer has sent the following message: "{user_input}"
 
 Additional information:
 - worker_id: {worker_id}
 - employer_id: {employer_id}
 - current date: {current_date}
+- today: {today}
+- current_month: {current_month}
+- current_year: {current_year}
 
 ---
 
@@ -197,10 +219,19 @@ Extract and return the following structured information as a JSON object. Follow
         - Ask if they'd like to set up a repayment plan.
 
 ### 2. **repayment_amount**:
-- The fixed repayment amount per cycle.
-- If mentioned in user_input, use it.
-- If not mentioned, use context if available.
-- If missing from both, set to 0.
+   - If the user gives a cashAdvance, prompt for:
+     - repaymentAmount
+     - repaymentStartMonth
+     - repaymentStartYear
+     - frequency
+   - If the user says:
+     - “repayment starts next month” → calculate from current date:
+       - if May 2025 → month = 6, year = 2025
+       - if December → month = 1, year = current_year + 1
+     - if month name is given (e.g., “July”) → month = 7
+       - if that month is already over this year, assume next year
+
+
 
 ### 3. **repayment_start_month** and **repayment_start_year**:
 - If a month is mentioned (like "December"), map to the corresponding month number (December = 12).
@@ -217,19 +248,46 @@ Extract and return the following structured information as a JSON object. Follow
     - "alternate month," "every other month," "every two months" → 2
     - "every three months," "quarterly" → 3
     - "every six months," "half-yearly" → 6
-    - "evry n months" → n (where n is the number of months)
+    - "every n months" → n (where n is the number of months)
     - "random," "unscheduled," or if not specified → 0
 - If repayment_amount is provided but frequency is not mentioned, default frequency to 1 (monthly).
 
-### 5,6,7. **bonus and deduction logic (salary adjustment rules):**
-- Always use `monthly_salary` from context unless explicitly told to change permanently.
-- **If employer provides a different salary for 'this month only':**
-  - If given salary < context salary → **deduction = context salary - given salary**.
-  - If given salary > context salary → **bonus = given salary - context salary**.
-  - Keep the permanent monthly salary unchanged.
-- **If employer says "permanently change salary":**
-  - Update `monthly_salary` to the new value.
-  - Set bonus and deduction to 0.
+### 5. **Salary**
+   - Never change monthly_salary unless the user explicitly says it has changed.
+   - If user says “change salary” but doesn’t clearly say if it's permanent:
+    - Ask: “Do you want to permanently change the salary, or just for this month?”
+    - Until confirmation, do not change salary value. Only compute bonus/deduction if amount change is temporary.
+- If user says "permanent change" or "change from this month":
+    - Update `monthly_salary` to the new value.
+    - Set bonus and deduction to 0.
+- If salary change is for this month only:
+    - Calculate:
+        - deduction = context_salary - new_salary (if less)
+        - bonus = new_salary - context_salary (if more)
+    - Keep monthly_salary unchanged.
+
+### 6. **bonus*
+    - Only apply bonus if the user *explicitly* uses phrases like this:
+        - “give bonus ₹X from salary”
+        - “extra ₹X”
+        - “add salary by ₹X”
+        - “give ₹X this month”, bonus = X - monthly_salary
+        - more phrases like this for bonus
+    - Do *not* infer deduction based on cashAdvance or repayment.
+    - Do not auto-calculate deduction as monthly_salary - repaymentAmount.
+    - bonus and repayment are separate and should never overlap unless user gives both explicitly.
+
+### 7. **deduction*
+    - Only apply deduction if the user *explicitly* uses phrases like this:
+        - “deduct ₹X from salary”
+        - “take out ₹X”
+        - “reduce salary by ₹X”
+        - “only give ₹X this month”, deduction = monthly_salary - X
+    - If user says that "i have paid X earlier and cut this from salary" or similiar phrases, user your mind to understand phrases, deduction = monthly_salary - X.
+    - Do *not* infer deduction based on cashAdvance or repayment.
+    - Do not auto-calculate deduction as monthly_salary - repaymentAmount.
+    - Deduction and repayment are separate and should never overlap unless user gives both explicitly.
+
 
 ### 8. **confirmation**:
 - Set to 1 if user_input clearly confirms the details with phrases like:
@@ -239,7 +297,12 @@ Extract and return the following structured information as a JSON object. Follow
     - There is any update, change request, or question.
     - Confirmation is unclear or partial (e.g., "yes, but change repayment to 1500").
 
----
+
+### Rules for Updating Fields:
+
+
+
+
 
 ## SCENARIO HANDLING:
 
@@ -248,45 +311,38 @@ Extract and return the following structured information as a JSON object. Follow
 - If conflicting or unclear instructions are given (like "set repayment to 2000 but no repayment"), set unclear fields to 0 and politely ask for clarification.
 - If they use timing phrases like "next month," calculate the correct month and year based on current_date.
 - If the user mentions only "bonus" or "deduction" without a cash advance, still return those fields properly.
-- if user only provide bonus or deduction or monthly salary, then set don't mention the cash advance and repayment unless mentioned by user.
+- If the user says change the salary then update the monthly salary and set bonus and deduction to 0 accordingly.
+- If the user only wanted to give bonus or deduction then set don't mention the cash advance and repayment unless mentioned by user.
+- If user only provide bonus or deduction or monthly salary, then set don't mention the cash advance and repayment unless mentioned by user.
 
 ---
 
 ## AI MESSAGE RULES (`ai_message`):
 
-- Summarize the extracted data clearly and conversationally and include all the details that is present in the context and give summary of the context and the user input.
+Questions to ask in "ai_message":
+   - never ask questions which may result in answer as "No".
+   - interact with the employer like you are managing the financials of the employer which he gives to his domestic worker and help them as a guide will do, very human-like interaction.
+   - treat different pockets pocket1 : (cash advance, repayment amount, repayment startmonth, repayment startyear, frequency), pocket2: bonus, pocket3: deduction, pocket4: salary. if values from one pocket are not complete prompt the user for those values and never mix up these pockets. if user is not talking about any pocket dont prompt for that value.
+   - once you feel like the values from one pocket are received inform in a very human like way of all the recorded values which user gave you and make the "readyToConfirm" as 1.
+   - when "readyToConfirm" is 1 the ending should be "Shall we lock in the details ?" 
 
-- Reflect what was provided:
-    - Example: "I've recorded a 50000 advance with 2000 repayments every alternate month starting from May 2025"
-
-- If cash advance is provided but repayment details are missing:
-    - Ask: "we have only recorded the cash advance. Please provide repayment details and if you want to set up a repayment plan or if you want to proceed with the cash advance only please confirm."
-
-- If bonus or deduction is provided:
-    - Example: "I've noted a bonus of 3000 this month. Is that correct?"
-    
-- If confirmation is 1:
-    - Include a thank-you note and don't ask for confirmation question just summarize the whole context and say thank you for confirming.
-    - Summarize all the details with clearness and warmth and say "Thank you for confirming!"
-    
-- If partial confirmation (e.g., "yes, but..."), reflect the update and ask again for final confirmation:
-    - Example: "I've updated the repayment to 1500 and include all the details. Does this look correct?"
-    
-- If any key info is unclear (like repayment year), explain what’s missing and ask politely for clarification.
-- Always end with a friendly question:
+- If only cash advance is given and repayment is missing:
+    - "You have provided a cash advance of ₹X, but the repayment amount, frequency, or start month is missing. Could you please specify how you would like the repayment to be scheduled?"
+- If only bonus or deduction is given:
+    - "I've noted a bonus of ₹X this month. Is that correct?"
+- If salary is changed temporarily:
+    - "The monthly salary remains unchanged, but I’ve noted a deduction of ₹X for this month based on the updated salary."
+- If permanent salary change:
+    - "Monthly salary has been updated to ₹X as requested."
+- If confirmation = 1:
+    - "Thank you for confirming! All the details have been recorded successfully: [summary of all fields]."
+    - Please make sure to take the correct values and show the correct context that is being provide by the user before confirming.
+- If partial confirmation:
+    - "I've updated the repayment to ₹X. Let me know if everything looks correct or if you’d like to make any further changes."
+- If unclear:
+    - Ask a polite clarifying question.
+- Always end with a warm question like:
     - "Does this look correct? If not, please let me know what to update!"
-- Keep the tone warm, natural, and helpful (avoid robotic language).
-
-- If **all repayment details are provided**:
-  - Summarize cash advance, repayment amount, frequency, start month, repayments done so far, and remaining balance.
-  - Example:  
-    - "You've given a cash advance of 50000 starting from December 2024, with repayments of 2000 every alternate month. Up to now, 4 repayments have been scheduled, totaling 8000. The remaining balance is 42000. Please confirm if these details are correct, or let me know if you'd like to update any detail."
-
-- **If repayment details are missing (amount, frequency, or start date):**
-  - Do NOT allow confirmation.
-  - Ask specific, clear questions like:
-    - "You have provided a cash advance of 50000, but the repayment amount, frequency, or start month is missing. Could you please specify how you would like the repayment to be scheduled?"
-  - Make sure the employer provides these details **explicitly** — avoid any yes/no type response acceptance.
 
 ---
 
@@ -309,6 +365,7 @@ Return ONLY the following JSON object:
 
 
 
+
         prompt_template = PromptTemplate(
             input_variables=["user_input", "current_date", "context", "worker_id", "employer_id"],
             template=template
@@ -317,6 +374,9 @@ Return ONLY the following JSON object:
         prompt = prompt_template.format(
             user_input=user_input,
             current_date=current_date,
+            today=today,
+            current_month=current_month,
+            current_year=current_year,
             context=context,
             worker_id=worker_id,
             employer_id=employer_id
@@ -363,7 +423,7 @@ def call_sarvam_api(file_path):
         files = { "file": (os.path.basename(file_path), file, "audio/wav")}
         response = requests.post(url, headers=headers, files=files)
 
-
+    print(response.json())
 
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Error from Sarvam API: {response.text}")
@@ -713,4 +773,335 @@ def systemattic_survey_message(worker_number: str, user_name: str, survey_id: in
     return {"confirmation_message": message.strip()}
 
         
+############
+# STT
+############
+
+class SarvamClient:
+    def __init__(self, url: str):
+        self.account_url, self.file_system_name, self.directory_name, self.sas_token = (
+            self._extract_url_components(url)
+        )
+        self.lock = asyncio.Lock()
+        print(f"Initialized SarvamClient with directory: {self.directory_name}")
+
+    def update_url(self, url: str):
+        self.account_url, self.file_system_name, self.directory_name, self.sas_token = (
+            self._extract_url_components(url)
+        )
+        print(f"Updated URL to directory: {self.directory_name}")
+
+    def _extract_url_components(self, url: str):
+        parsed_url = urlparse(url)
+        account_url = f"{parsed_url.scheme}://{parsed_url.netloc}".replace(
+            ".blob.", ".dfs."
+        )
+        path_components = parsed_url.path.strip("/").split("/")
+        file_system_name = path_components[0]
+        directory_name = "/".join(path_components[1:])
+        sas_token = parsed_url.query
+        return account_url, file_system_name, directory_name, sas_token
+
+    async def upload_files(self, local_file_paths, overwrite=True):
+        print(f"Starting upload of {len(local_file_paths)} files")
+        async with DataLakeDirectoryClient(
+            account_url=f"{self.account_url}?{self.sas_token}",
+            file_system_name=self.file_system_name,
+            directory_name=self.directory_name,
+            credential=None,
+        ) as directory_client:
+            tasks = []
+            for path in local_file_paths:
+                file_name = path.split("/")[-1]
+                tasks.append(
+                    self._upload_file(directory_client, path, file_name, overwrite)
+                )
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            print(
+                f"Upload completed for {sum(1 for r in results if not isinstance(r, Exception))} files"
+            )
+
+    async def _upload_file(
+        self, directory_client, local_file_path, file_name, overwrite=True
+    ):
+        try:
+            async with aiofiles.open(local_file_path, mode="rb") as file_data:
+                mime_type = mimetypes.guess_type(local_file_path)[0] or "audio/wav"
+                file_client = directory_client.get_file_client(file_name)
+                data = await file_data.read()
+                await file_client.upload_data(
+                    data,
+                    overwrite=overwrite,
+                    content_settings=ContentSettings(content_type=mime_type),
+                )
+                print(f"✅ File uploaded successfully: {file_name}")
+                print(f"   Type: {mime_type}")
+                return True
+        except Exception as e:
+            print(f"❌ Upload failed for {file_name}: {str(e)}")
+            return False
+
+    async def list_files(self):
+        print("\n📂 Listing files in directory...")
+        file_names = []
+        async with FileSystemClient(
+            account_url=f"{self.account_url}?{self.sas_token}",
+            file_system_name=self.file_system_name,
+            credential=None,
+        ) as file_system_client:
+            async for path in file_system_client.get_paths(self.directory_name):
+                file_name = path.name.split("/")[-1]
+                async with self.lock:
+                    file_names.append(file_name)
+        print(f"Found {len(file_names)} files:")
+        for file in file_names:
+            print(f"   📄 {file}")
+        return file_names
+
+    async def download_file(self, file_name, destination_dir, new_filename=None):
+
+        try:
+            async with DataLakeDirectoryClient(
+                account_url=f"{self.account_url}?{self.sas_token}",
+                file_system_name=self.file_system_name,
+                directory_name=self.directory_name,
+                credential=None,
+            ) as directory_client:
+                file_client = directory_client.get_file_client(file_name)
+                download_path = os.path.join(destination_dir, new_filename or file_name)
+
+                async with aiofiles.open(download_path, mode="wb") as file_data:
+                    stream = await file_client.download_file()
+                    data = await stream.readall()
+                    await file_data.write(data)
+                print(f"✅ Downloaded: {file_name} -> {download_path}")
+                return True
+        except Exception as e:
+            print(f"❌ Download failed for {file_name}: {str(e)}")
+            return False
+
+
+async def initialize_job():
+    print("\\n🚀 Initializing job...")
+    url = "https://api.sarvam.ai/speech-to-text-translate/job/init"
+    headers = {"API-Subscription-Key": sarvam_api_key}
+    response = requests.post(url, headers=headers)
+    print("\\nInitialize Job Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 202 else response.text)
+
+    if response.status_code == 202:
+        return response.json()
+    return None
+
+
+async def check_job_status(job_id):
+    print(f"\\n🔍 Checking status for job: {job_id}")
+    url = f"https://api.sarvam.ai/speech-to-text-translate/job/{job_id}/status"
+    headers = {"API-Subscription-Key": sarvam_api_key}
+    response = requests.get(url, headers=headers)
+    print("\\nJob Status Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 200 else response.text)
+
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+async def start_job(job_id):
+    print(f"\\n▶ Starting job: {job_id}")
+    url = "https://api.sarvam.ai/speech-to-text-translate/job"
+    headers = {
+        "API-Subscription-Key": sarvam_api_key,
+        "Content-Type": "application/json",
+    }
+    data = {"job_id": job_id, "job_parameters": {"with_diarization": True}}
+    print("\\nRequest Body:")
+    pprint(data)
+
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    print("\\nStart Job Response:")
+    print(f"Status Code: {response.status_code}")
+    print("Response Body:")
+    pprint(response.json() if response.status_code == 200 else response.text)
+
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+
+async def transcribe_audio_from_file_path(filepath: str):
+    print("\\n=== Starting Speech-to-Text Processing ===")
+
+    # Step 1: Initialize the job
+    job_info = await initialize_job()
+    if not job_info:
+        print("❌ Job initialization failed")
+        return
+
+    job_id = job_info["job_id"]
+    input_storage_path = job_info["input_storage_path"]
+    output_storage_path = job_info["output_storage_path"]
+    logger.info(f"✅ Job Initialized with ID: {job_id}")
+
+    # Step 2: Upload files
+    print(f"\\n📤 Uploading files to input storage: {input_storage_path}")
+    client = SarvamClient(input_storage_path)
+    await client.upload_files([filepath])
+    logger.info(f"✅ Uploaded audio file: {filepath}")
+    print(f"Files to upload: {filepath}")
+    
+    
+    # Step 3: Start the job
+    job_start_response = await start_job(job_id)
+    if not job_start_response:
+        print("❌ Failed to start job")
+        return
+
+    # Step 4: Monitor job status
+    print("\\n⏳ Monitoring job status...")
+    attempt = 1
+    while True:
+        print(f"\\nStatus check attempt {attempt}")
+        job_status = await check_job_status(job_id)
+        if not job_status:
+            print("❌ Failed to get job status")
+            break
+
+        status = job_status["job_state"]
+        if status == "Completed":
+            print("✅ Job completed successfully!")
+            break
+        elif status == "Failed":
+            print("❌ Job failed!")
+            break
+        else:
+            print(f"⏳ Current status: {status}")
+            await asyncio.sleep(10)
+        attempt += 1
+
+    # Step 5: Download results
+    # Step 5: Download results
+    # Step 5: Download results
+    if status == "Completed":
+        print(f"\n📥 Downloading results from: {output_storage_path}")
+        client.update_url(output_storage_path)
+
+        # List all files
+        files = await client.list_files()
+
+        if not files:
+            print("❌ No files found to download.")
+        else:
+            print(f"Files to download: {files}")
+            destination_dir = "audio/"
+            os.makedirs(destination_dir, exist_ok=True)
+
+            try:
+                # Get job details to map input files to output files
+                job_status = await check_job_status(job_id)
+                file_mapping = {
+                    detail["file_id"]: detail["file_name"]
+                    for detail in job_status.get("job_details", [])
+                }
+
+                # Download files with original names
+                for file in files:
+                    # Get original filename from job details
+                    file_id = file.split(".")[0]  # e.g., '0' from '0.json'
+                    if file_id in file_mapping:
+                        original_name = file_mapping[file_id]
+                        new_filename = f"{os.path.splitext(original_name)[0]}.json"
+                        await client.download_file(
+                            file,
+                            destination_dir=destination_dir,
+                            new_filename=new_filename,
+                        )
+                        print(f"Downloaded and renamed {file} to {new_filename}")
+
+                print(f"Files have been downloaded to: {destination_dir}")
+            except Exception as e:
+                print(f"❌ Error during file download: {e}")
+
+        print("\n=== Processing Complete ===")
+
+
+def extract_transcript_from_json(file_path):
+    """
+    Extract transcript from audio.json file
+    
+    Args:
+        file_path (str): Path to the audio.json file
+    
+    Returns:
+        dict: Dictionary containing transcript information with keys:
+            - 'main_transcript': Main transcript text
+            - 'diarized_entries': List of diarized transcript entries (if available)
+            - 'language_code': Language code (if available)
+            - 'request_id': Request ID (if available)
+        Returns None if file not found or invalid JSON
+    """
+    try:
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"Error: File '{file_path}' not found.")
+            return None
         
+        # Read and parse JSON file
+        with open(file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        
+        # Extract transcript information
+        result = {}
+        
+        # Main transcript
+        result['main_transcript'] = data.get('transcript', '')
+        
+        # Language code
+        result['language_code'] = data.get('language_code', '')
+        
+        # Request ID
+        result['request_id'] = data.get('request_id', '')
+        
+        # Diarized transcript entries
+        diarized_data = data.get('diarized_transcript', {})
+        result['diarized_entries'] = diarized_data.get('entries', [])
+        
+        return result
+        
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON format in file '{file_path}': {e}")
+        return None
+    except Exception as e:
+        print(f"Error reading file '{file_path}': {e}")
+        return None
+
+
+def get_main_transcript(file_path):
+    """
+    Simple method to get just the main transcript text
+    
+    Args:
+        file_path (str): Path to the audio.json file
+    
+    Returns:
+        str: Main transcript text, empty string if error
+    """
+    transcript_data = extract_transcript_from_json(file_path)
+    if transcript_data:
+        return transcript_data['main_transcript']
+    return ""
+
+
+def extract_transcript_from_json_file(json_file_path: str) -> str:
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data.get("transcript", "")
+    except Exception as e:
+        print(f"Error reading transcript: {e}")
+        return ""
