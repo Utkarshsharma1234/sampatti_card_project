@@ -41,7 +41,7 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Error processing webhook data")
     
 
-@router.post("/orai/webhook")
+@router.post("/orai")
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:
         payload = await request.json()
