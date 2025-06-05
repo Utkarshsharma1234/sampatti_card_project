@@ -39,4 +39,20 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
     except Exception as e:
         print(f"Error handling webhook: {e}")
         raise HTTPException(status_code=400, detail="Error processing webhook data")
+    
 
+@router.post("/orai/webhook")
+async def orai_webhook(request: Request, db : Session = Depends(get_db)):
+    try:
+        payload = await request.json()
+        
+        print("Webhook payload received:", payload)
+        
+        return {
+            "webhook_payload" : payload,
+            "message_log" : "payload received successfully"
+        }
+    
+    except Exception as e:
+        print(f"Error in handling the webhook from orai : {e}")
+        raise HTTPException(status_code=400, detail="Error processing webhook data")
