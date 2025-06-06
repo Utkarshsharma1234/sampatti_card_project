@@ -235,7 +235,8 @@ def process_vendor_status(db : Session):
     for idx, row in enumerate(records, start=2):  # start=2 for actual sheet row (header is at 1)
         vendorId = row.get("vendorId", "").strip()
         employer_number = row.get("employer_number", "")
-        worker_name = row.get("bank_account_name_cashfree", "").strip()
+        worker_bank_name = row.get("bank_account_name_cashfree", "").strip()
+        worker_pan_name = row.get("pan_card_name_cashfree", "").strip()
         worker_number = row.get("worker_number", "")
         PAN_number = row.get("PAN_number", "").strip()
         upi_id = row.get("UPI", "").strip()
@@ -266,8 +267,11 @@ def process_vendor_status(db : Session):
                 update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
                 # make entry in the db.
 
+                if not worker_bank_name:
+                    worker_bank_name = worker_pan_name
+
                 worker = schemas.Domestic_Worker(
-                    name = worker_name,
+                    name = worker_bank_name,
                     email = "sample@sample.com",
                     workerNumber=worker_number,
                     employerNumber = employer_number,
