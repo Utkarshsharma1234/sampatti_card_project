@@ -45,12 +45,7 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     c.setFont("Helvetica-Bold", 12)
     c.drawString(x, y, "Whatsapp Chat:")
 
-    if not request.upi:
-        request.upi = "N/A"
-
-    else :
-        request.accountNumber = "N/A"
-        request.ifsc = "N/A"
+    
     # Chat Transcript
     chat_text = f"""Employer: I'm interested in onboarding my domestic worker for salary slip
 issuance.

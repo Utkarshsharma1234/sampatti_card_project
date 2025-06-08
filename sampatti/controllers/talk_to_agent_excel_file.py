@@ -337,6 +337,14 @@ def create_relations_in_db(db : Session):
                 )
 
                 userControllers.create_relation(relation, db, date_of_onboarding)
+
+                if not bank_account_number:
+                    bank_account_number="N/A"
+                    ifsc_code="N/A"
+
+                if not upi_id:
+                    upi_id="N/A"
+
                 userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, PAN_number, worker_name, salary, db)
                 update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
                 row_values = onboarding_sheet.row_values(idx)
