@@ -77,6 +77,7 @@ class SalaryDetails(Base):
     month = Column(String)
     year = Column(Integer)
     order_id=Column(String)
+    deduction=Column(Integer)
 
 class AttendanceRecords(Base):
     __tablename__ = "AttendanceRecords"

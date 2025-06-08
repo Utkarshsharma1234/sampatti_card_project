@@ -264,9 +264,6 @@ def payment_link_generation(db : Session):
     
     for item in total_relations:
 
-        if item.employer_number == 918197266977 and item.worker_number == 9380645635:
-            continue
-
         if item.employer_number == 917015645195 or item.employer_number == 919731011117 or item.employer_number == 917022878346:
             continue
         
@@ -279,7 +276,7 @@ def payment_link_generation(db : Session):
             total_salary = item.salary_amount
             number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
 
-            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'attendance' : number_of_month_days}
+            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days}
 
             note_string = json.dumps(note)
             createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
@@ -439,7 +436,7 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
     workerId = item.worker_id
     employerId = item.employer_id
 
-    note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'attendance' : 30}
+    note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'deduction' : deduction, 'attendance' : 30}
 
     note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])

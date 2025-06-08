@@ -9,7 +9,7 @@ from .cashfree_api import fetch_bank_ref
 from .utility_functions import current_year, current_date, current_month, previous_month
 
 
-def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, salary, cashAdvance, bonus, repayment, attendance, order_amount, db:Session) :
+def employer_invoice_generation(employerNumber, workerNumber, employerId, workerId, salary, cashAdvance, bonus, repayment, attendance, order_amount, deduction, db:Session) :
 
     ps_month = previous_month()
     month  = ""
@@ -73,7 +73,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     c.drawString(x, y, f"Employer Phone Number : {employerNumber}")
 
     receipt_data = []
-    receipt_data.append(["Worker Name", "Worker Number", "Reference", "Salary", "Cash Advance", "Repayment", "Bonus"])
+    receipt_data.append(["Worker Name", "Worker Number", "Reference", "Salary", "Cash Advance", "Repayment", "Bonus","Deduction"])
 
     rows = 0
 
@@ -85,7 +85,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     print(f"the utr no is :  {bank_ref_no}")
     workerName = transaction.worker_name
 
-    single_row = [f"{workerName}", f"{workerNumber}", bank_ref_no, salary, cashAdvance, repayment, bonus]
+    single_row = [f"{workerName}", f"{workerNumber}", bank_ref_no, salary, cashAdvance, repayment, bonus, deduction]
     receipt_data.append(single_row)
     rows += 1
     ct += 1
