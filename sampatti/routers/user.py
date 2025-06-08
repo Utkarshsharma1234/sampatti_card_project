@@ -215,8 +215,8 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
     return userControllers.process_survey_input(user_name, worker_number, user_input, survey_id, db)
 
 @router.post("/generate_employment_contract")
-def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session = Depends(get_db)): 
-    return userControllers.generate_employment_contract(employerNumber, workerNumber, upi, accountNumber, ifsc, name, salary, db)
+def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, panNumber: str, name : str, salary : int, db : Session = Depends(get_db)): 
+    return userControllers.generate_employment_contract(employerNumber, workerNumber, upi, accountNumber, ifsc, panNumber, name, salary, db)
 
 @router.post("/add_vendors_to_cashfree_from_sheet")
 def run_tasks_till_add_vendor():

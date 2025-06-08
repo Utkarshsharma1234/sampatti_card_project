@@ -28,13 +28,13 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     y = h-55
     c.drawImage(flat_logo, w-120, y, width=100, height=45)
     x = 40
-    y = y - 50
-    c.setFont("Helvetica-Bold", 40)
+    y = y - 40
+    c.setFont("Helvetica-Bold", 36)
     c.setFillColorRGB(0.078, 0.33, 0.45)
     c.drawString(x, y, "Digital Employment Record")
 
     # Employer Information
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont("Helvetica-Bold", 12)
     c.drawString(x, y-50, F"Reference Number: 0001-{field.id}")
     c.drawString(x, y-75, f"Employer Whatsapp Number: {request.employerNumber}")
     c.drawString(x, y-100, f"Domestic Worker ID: 010-{request.workerNumber}")
@@ -42,7 +42,7 @@ def create_employment_record_pdf(request: schemas.Contract, db:Session):
     y = y - 150
 
     # Chat Transcript Title
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont("Helvetica-Bold", 12)
     c.drawString(x, y, "Whatsapp Chat:")
 
     if not request.upi:
@@ -68,6 +68,7 @@ press "Yes' if the following details are correct:
 Name of domestic worker: {request.name}
 
 Bank Details: VPA : {request.upi},  Account Number : {request.accountNumber},  IFSC : {request.ifsc}
+PAN Number : {request.panNumber}
 
 Employer: Yes
 
@@ -79,23 +80,23 @@ Sampatti Bot: Excellent. We will now set up a monthly salary payment process for
 you. A reminder and payment link will be sent to you at the end of each month.
 Thanks."""        
 
-    c.setFont("Helvetica", 11)
-    y = y - 50
+    c.setFont("Helvetica", 10)
+    y = y - 35
     lines = chat_text.split('\n')
 
     for line in lines:
         c.drawString(x + 20, y, line)
         y -= 15  # Move to the next line
 
-    y = y - 30
+    y = y - 20
     # Timestamp
-    c.setFont("Helvetica", 12)
+    c.setFont("Helvetica-Bold", 10)
     c.drawString(x, y, f"Timestamp : {current_time}")
 
     # Verfication and Signature
 
 
-    y = y - 30
+    y = y - 50
     c.drawImage(circular_logo, 25, y-30 , 30, 30)
     declaration = """Verified by Sampatti Card
 The employment record is digitally created and verified and does not require attestation or physical signature. 

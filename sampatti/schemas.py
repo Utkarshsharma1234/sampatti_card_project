@@ -87,6 +87,7 @@ class Contract(BaseModel):
     ifsc : str
     name : str
     salary : int
+    panNumber : str
 
 class Vendor(BaseModel):
     vpa : str

@@ -1286,7 +1286,7 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
         "clarification_needed": clarification_needed
     }
 
-def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, name : str, salary : int, db : Session):
+def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, panNumber: str, name : str, salary : int, db : Session):
 
     contract_schema = schemas.Contract(
         employerNumber = employerNumber,
@@ -1295,7 +1295,8 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
         accountNumber = accountNumber,
         ifsc = ifsc,
         name = name,
-        salary = salary
+        salary = salary,
+        panNumber=panNumber
     )
 
     employment_contract_gen.create_employment_record_pdf(contract_schema, db)
