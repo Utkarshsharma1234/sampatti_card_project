@@ -305,6 +305,7 @@ def create_relations_in_db(db : Session):
         employer_number = row.get("employer_number", "")
         worker_name = row.get("bank_account_name_cashfree", "").strip()
         pan_name = row.get("pan_card_name_cashfree", "").strip()
+        PAN_number=row.get("PAN_number", "").strip()
         worker_number = row.get("worker_number", "")
         salary = row.get("salary", "")
         vendor_status = row.get("cashfree_vendor_add_status", "")
@@ -336,7 +337,7 @@ def create_relations_in_db(db : Session):
                 )
 
                 userControllers.create_relation(relation, db, date_of_onboarding)
-                userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, worker_name, salary, db)
+                userControllers.generate_employment_contract(employer_number, worker_number,upi_id, bank_account_number, ifsc_code, PAN_number, worker_name, salary, db)
                 update_sheet_cell(onboarding_sheet, idx, "confirmation_message", "SENT")
                 row_values = onboarding_sheet.row_values(idx)
                 worker_details_main_sheet.append_row(row_values, value_input_option="USER_ENTERED")
