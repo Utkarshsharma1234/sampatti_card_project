@@ -56,17 +56,17 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Webhook payload received : {payload}")
         print("payload exit")
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
 
-        payload = payload
-        headers = {
-            'D360-API-KEY': orai_api_key
-        }
+        # payload = payload
+        # headers = {
+        #     'D360-API-KEY': orai_api_key
+        # }
 
-        response = requests.post(url, headers=headers, json=payload)
-        response_data = json.loads(response.text)
-        print(response_data)
-        return response_data
+        # response = requests.post(url, headers=headers, json=payload)
+        # response_data = json.loads(response.text)
+        # print(response_data)
+        # return response_data
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
