@@ -44,10 +44,13 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 @router.post("/orai")
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:
-        # payload = await request.json()
+        payload = await request.json()
         
-        print("Webhook payload received")
-        
+        print("payload entered")
+        print(f"Webhook payload received : {payload}")
+        print("payload exit")
+
+
         return {
             "message_log" : "payload received successfully"
         }
