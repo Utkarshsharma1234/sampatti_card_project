@@ -49,24 +49,17 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 
 @router.post("/orai")
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
-    try:
+    try:    
         payload = await request.json()
-        
+        formatted_json = json.dumps(payload, indent=2)
+
         print("payload entered")
-        print(f"Webhook payload received : {payload}")
+        print(f"Webhook payload received : {formatted_json}")
         print("payload exit")
 
-        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
 
-        # payload = payload
-        # headers = {
-        #     'D360-API-KEY': orai_api_key
-        # }
-
-        # response = requests.post(url, headers=headers, json=payload)
-        # response_data = json.loads(response.text)
-        # print(response_data)
-        # return response_data
+        response = requests.post(url, json=formatted_json)
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
