@@ -1,7 +1,13 @@
+import json, os
 from fastapi import APIRouter, Depends, Request, HTTPException
+import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
+from dotenv import load_dotenv
+
+load_dotenv()
+orai_api_key = os.environ.get('ORAI_API_KEY')
 
 router = APIRouter(
     prefix="/webhook",
@@ -50,11 +56,18 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Webhook payload received : {payload}")
         print("payload exit")
 
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
 
-        return {
-            "message_log" : "payload received successfully"
+        payload = payload
+        headers = {
+            'D360-API-KEY': orai_api_key
         }
-    
+
+        response = requests.post(url, headers=headers, json=payload)
+        response_data = json.loads(response.text)
+        print(response_data)
+        return response_data
+
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
         raise HTTPException(status_code=400, detail="Error processing webhook data")
