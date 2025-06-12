@@ -242,3 +242,7 @@ def get_chat_id():
 @router.post("/process_advance_query")
 def process_advance_query(chatId, query, workerId, employerId, db:Session = Depends(get_db)):
     return cash_advance_management.process_advance_query(chatId, query, workerId, employerId, db)
+
+@router.post("/is_worker_onboarded")
+def is_employer_present(employer_number: str, db: Session = Depends(get_db)):
+    return userControllers.is_employer_present(employer_number, db)
