@@ -1318,3 +1318,11 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
     whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="successful_worker_onboarding")
 
     print("Employment Contract sent successfully.")
+
+
+def is_employer_present(employer_number: str, db: Session) -> bool:
+    
+    stmt = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employer_number)
+    result = db.execute(stmt).first()
+    print(f"Result of employer presence check: {result}")
+    return result is not None
