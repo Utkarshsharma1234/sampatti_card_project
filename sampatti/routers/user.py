@@ -232,7 +232,7 @@ def get_worker_employer_relation(employerNumber : int, workerName : str, db : Se
     
     relation = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.worker_name == workerName).first()
 
-    return {"response" : relation}
+    return {"response": dict(relation._mapping) if relation else "INVALID"}
 
 @router.get("/chat_id")
 def get_chat_id():
