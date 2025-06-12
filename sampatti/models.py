@@ -169,14 +169,11 @@ class CashAdvanceManagement(Base):
     id = Column(String, primary_key=True)
     worker_id = Column(String, ForeignKey("Domestic_Worker.id"))
     employer_id = Column(String, ForeignKey("Employer.id"))
-    monthly_salary = Column(Integer)
     cashAdvance = Column(Integer)
     repaymentAmount = Column(Integer)
     repaymentStartMonth = Column(Integer)
     repaymentStartYear = Column(Integer)
     frequency = Column(Integer)
-    bonus = Column(Integer)
-    deduction = Column(Integer)
     chatId = Column(String)
 
 
