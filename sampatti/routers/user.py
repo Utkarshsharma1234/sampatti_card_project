@@ -5,7 +5,7 @@ from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import rag_funcs, userControllers
-from ..controllers import employment_contract_gen
+from ..controllers import employment_contract_gen, salary_summary_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
 from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management, ai_agents
@@ -257,6 +257,18 @@ def get_chat_id():
 @router.post("/process_advance_query")
 def process_advance_query(chatId, query, workerId, employerId, db:Session = Depends(get_db)):
     return cash_advance_management.process_advance_query(chatId, query, workerId, employerId, db)
+
+@router.post("/is_worker_onboarded")
+def is_employer_present(employer_number: str, db: Session = Depends(get_db)):
+    return userControllers.is_employer_present(employer_number, db)
+
+@router.get("/salary_summary_employer")
+def generate_salary_records_all_worker(employerNumber: int, db: Session = Depends(get_db)):
+    return salary_summary_gen.generate_salary_records_all_worker(employerNumber, db)
+
+@router.get("/salary_summary_employer_worker")
+def generate_salary_record(employerNumber: int, workerName: str, db: Session = Depends(get_db)):
+    return salary_summary_gen.generate_salary_record(employerNumber, workerName, db)
 
 @router.get("/ai_agents_queryExecutor")
 def queryExecutor(employerNumber : int, query : str):
