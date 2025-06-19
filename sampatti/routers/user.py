@@ -8,7 +8,9 @@ from ..controllers import rag_funcs, userControllers
 from ..controllers import employment_contract_gen
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
-from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
+from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management, ai_agents
+from pydantic import BaseModel
+from typing import Optional
 
 
 router = APIRouter(
@@ -22,6 +24,17 @@ last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
 previous_month = last_day_of_previous_month.strftime("%B")
 current_year = datetime.now().year
 
+
+class WorkerOnboardingRequest(BaseModel):
+    worker_number: int
+    employer_number: int
+    UPI: Optional[str] = ""
+    bank_account_number: Optional[str] = ""
+    ifsc_code: Optional[str] = ""
+    pan_number: str
+    bank_passbook_image: Optional[str] = ""
+    pan_card_image: Optional[str] = ""
+    salary: int
 
 @router.get("/download_salary_slip")
 def download_worker_salary_slip(workerNumber : int, month : str, year : int, db : Session = Depends(get_db)):
@@ -205,6 +218,8 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
     return talk_to_agent_excel_file.create_worker_details_onboarding(worker_number, employer_number, UPI, bank_account_number, ifsc_code, pan_number, bank_passbook_image, pan_card_image, salary)
 
 
+
+
 @router.post("/upload_image_to_server")
 def upload_image_from_url(image_url: str, object_name: str):
     return uploading_files_to_spaces.upload_image_from_url(image_url, object_name)
@@ -242,3 +257,12 @@ def get_chat_id():
 @router.post("/process_advance_query")
 def process_advance_query(chatId, query, workerId, employerId, db:Session = Depends(get_db)):
     return cash_advance_management.process_advance_query(chatId, query, workerId, employerId, db)
+
+@router.get("/ai_agents_queryExecutor")
+def queryExecutor(employerNumber : int, query : str):
+    return ai_agents.queryExecutor(employerNumber, query)
+
+
+@router.post("/ai_agent/onboarding_worker_sheet/create")
+def worker_onboarding(payload: WorkerOnboardingRequest):
+    return talk_to_agent_excel_file.create_worker_details_onboarding(payload.worker_number, payload.employer_number, payload.UPI, payload.bank_account_number, payload.ifsc_code, payload.pan_number, payload.bank_passbook_image, payload.pan_card_image, payload.salary)

@@ -17,7 +17,7 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('worker_id', String, default = ''),
     Column('date_of_onboarding', String, default=''),
     Column('monthly_leaves', Integer, default=0)
-)   
+)       
 
 
 class Domestic_Worker(Base):
