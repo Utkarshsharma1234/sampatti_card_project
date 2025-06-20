@@ -1,0 +1,9 @@
+.env
+sampattiCard/
+*.db
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+*.log

@@ -13,6 +13,7 @@ from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.documents import Document
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -22,8 +23,9 @@ load_dotenv()
 #     sources: list[str]
 #     tools_used: list[str]
 
+groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
+llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -96,6 +98,7 @@ def store_conversation(employer_number: int, message: str):
         }]
     )
     vectordb.persist()
+
 
 
 def get_sorted_chat_history(employer_number: int) -> str:
