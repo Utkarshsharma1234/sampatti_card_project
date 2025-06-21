@@ -54,37 +54,37 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        # headers = {
+        #     'Content-Type': 'application/json'
+        # }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
+        # response = requests.request("POST", url, headers=headers, data=formatted_json)
 
-        entry = data.get("entry", [])[0] if data.get("entry") else {}
-        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        value = changes.get("value", {})
+        # entry = data.get("entry", [])[0] if data.get("entry") else {}
+        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        # value = changes.get("value", {})
 
-        contacts = value.get("contacts", [])
-        employerNumber = contacts[0].get("wa_id") if contacts else None
+        # contacts = value.get("contacts", [])
+        # employerNumber = contacts[0].get("wa_id") if contacts else None
 
-        messages = value.get("messages", [])
-        message = messages[0] if messages else {}
-        message_type = message.get("type")
+        # messages = value.get("messages", [])
+        # message = messages[0] if messages else {}
+        # message_type = message.get("type")
 
         print("payload entered")
-        print(f"Webhook payload received : {data}")
+        print(f"Webhook payload received : {formatted_json}")
         print("payload exit")
 
-        print(f"Message type: {message_type}")
+        # print(f"Message type: {message_type}")
 
-        if message_type == "text":
-            body = message.get("text", {}).get("body")
-            return ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        # if message_type == "text":
+        #     body = message.get("text", {}).get("body")
+        #     return ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        else:
-            media_id = message.get(message_type, {}).get("id")
-            return ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        # else:
+        #     media_id = message.get(message_type, {}).get("id")
+        #     return ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
     except Exception as e:
