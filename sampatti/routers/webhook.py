@@ -61,22 +61,25 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
 
         # response = requests.request("POST", url, headers=headers, data=formatted_json)
 
-        # entry = data.get("entry", [])[0] if data.get("entry") else {}
-        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        # value = changes.get("value", {})
+        entry = data.get("entry", [])[0] if data.get("entry") else {}
+        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        value = changes.get("value", {})
 
-        # contacts = value.get("contacts", [])
-        # employerNumber = contacts[0].get("wa_id") if contacts else None
+        contacts = value.get("contacts", [])
+        employerNumber = contacts[0].get("wa_id") if contacts else None
 
-        # messages = value.get("messages", [])
-        # message = messages[0] if messages else {}
-        # message_type = message.get("type")
+        messages = value.get("messages", [])
+        message = messages[0] if messages else {}
+        message_type = message.get("type")
+        media_id = message.get(message_type, {}).get("id")
 
         print("payload entered")
         print(f"Webhook payload received : {formatted_json}")
         print("payload exit")
 
-        # print(f"Message type: {message_type}")
+        print(f"Message type: {message_type}")
+        print(f"Employernumber: {employerNumber}")
+        print(f"Media Id: {media_id}")
 
         # if message_type == "text":
         #     body = message.get("text", {}).get("body")
