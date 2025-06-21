@@ -271,8 +271,8 @@ def generate_salary_record(employerNumber: int, workerName: str, db: Session = D
     return salary_summary_gen.generate_salary_record(employerNumber, workerName, db)
 
 @router.get("/ai_agents_queryExecutor")
-def queryExecutor(employerNumber : int, query : str):
-    return ai_agents.queryExecutor(employerNumber, query)
+def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaId : str):
+    return ai_agents.queryExecutor(employer_number, typeofMessage, query, mediaId)
 
 
 @router.post("/ai_agent/onboarding_worker_sheet/create")

@@ -25,7 +25,7 @@ load_dotenv()
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="llama3-8b-8192", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -69,7 +69,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
-            Once you are done with the processing of the user query and ready to give the output then first save it to the chat history and then take the output and pass it to the send_audio tool alongwith the employernumber.
+            Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
             """,
         ),
         ("system", "{chat_history}"),
