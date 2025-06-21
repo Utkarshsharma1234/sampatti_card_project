@@ -11,3 +11,5 @@ audio_files
 questions
 chroma_db
 data
+Dockerfile
+.dockerignore

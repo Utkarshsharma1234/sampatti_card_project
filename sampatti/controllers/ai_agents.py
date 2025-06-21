@@ -8,12 +8,12 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .tools import search_tool, wiki_tool, save_tool, worker_onboarding_tool
+from .tools import search_tool, wiki_tool, save_tool, worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
 from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.documents import Document
-from langchain_groq import ChatGroq
+# from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -25,7 +25,7 @@ load_dotenv()
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
+llm = ChatOpenAI(model="llama3-8b-8192", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -62,6 +62,14 @@ prompt = ChatPromptTemplate.from_messages(
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
             Once all information is gathered, call the onboarding tool.
+
+            If the user input type is 'audio', use the transcribe_audio_tool with the mediaId to get the text and use that as the query for the LLM.
+
+            Always reason about the type and mediaId fields in the query context and decide autonomously whether to call a tool.
+
+            In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
+
+            Once you are done with the processing of the user query and ready to give the output then first save it to the chat history and then take the output and pass it to the send_audio tool alongwith the employernumber.
             """,
         ),
         ("system", "{chat_history}"),
@@ -70,8 +78,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-
-tools = [worker_onboarding_tool]
+tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
@@ -114,18 +121,20 @@ def get_sorted_chat_history(employer_number: int) -> str:
     return sorted_text
 
 
-def queryExecutor(employer_number: int, query: str):
+def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaId : str):
     sorted_history = get_sorted_chat_history(employer_number)
 
+    # Register all tools with the agent
     agent_executor = AgentExecutor(
         agent=agent,
-        tools=[worker_onboarding_tool],
+        tools=tools,
         memory=None,  # not using built-in memory
         verbose=True,
         handle_parsing_errors=True
     )
 
-    full_query = f"The employer number is {employer_number}. {query}"
+    # Pass all relevant info so the agent can reason and use tools
+    full_query = f"The employer number is {employer_number}. Query: {query}. Type: {typeofMessage}. MediaId: {mediaId}"
 
     inputs = {
         "query": full_query,
@@ -136,9 +145,11 @@ def queryExecutor(employer_number: int, query: str):
 
     try:
         assistant_response = response.get('output') or str(response)
-        store_conversation(employer_number, f"User: {query}\nAssistant: {assistant_response}")
+        store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         return response
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
         return {"error": str(e), "raw": response}
+
+

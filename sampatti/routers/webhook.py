@@ -5,6 +5,7 @@ from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
+from ..controllers import ai_agents
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -51,21 +52,36 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:    
         payload = await request.json()
-        formatted_json = json.dumps(payload, indent=2)
-
-        print("payload entered")
-        print(f"Webhook payload received : {formatted_json}")
-        print("payload exit")
+        data = json.dumps(payload, indent=2)
 
         url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
         headers = {
             'Content-Type': 'application/json'
         }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
-        return {
-            "Message" : "webhook received."
-        }
+        response = requests.request("POST", url, headers=headers, data=data)
+
+        
+        value = data["entry"][0]["changes"][0]["value"]
+        employerNumber = value["contacts"][0]["wa_id"]
+
+        message = value["messages"][0]
+        message_type = message["type"]
+
+        print("payload entered")
+        print(f"Webhook payload received : {data}")
+        print("payload exit")
+
+        print(f"Message type: {message_type}")
+
+        if message_type == "text":
+            body = message["text"]["body"]
+            return ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        
+        else:
+            media_id = message[message_type]["id"]
+            return ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")

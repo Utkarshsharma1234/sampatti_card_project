@@ -6,7 +6,11 @@ from pydantic import BaseModel, Field, root_validator
 from uuid import uuid4
 from typing import Optional
 from langchain.tools import StructuredTool
-import requests
+import requests, os, tempfile
+from pydub import AudioSegment
+from urllib.parse import urlparse
+from .utility_functions import call_sarvam_api
+
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -80,9 +84,103 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
 
     return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
 
+
+def transcribe_audio(mediaId: str):
+    """
+    Given a mediaId, calls the first API to get audio info, then fetches the audio file from another endpoint,
+    saves it to audio_files/{mediaId}_audio.mp3, and returns the file path or a success message.
+    """
+
+    orai_api_key = os.environ.get("ORAI_API_KEY")  
+
+    headers = {
+        "D360-API-KEY": orai_api_key
+    }
+
+    response_1 = requests.get(f"https://waba-v2.360dialog.io/{mediaId}", headers=headers)
+
+    if response_1.status_code != 200:
+        return f"Failed to get audio info: {response_1.status_code} {response_1.text}"
+
+    audio_info = response_1.json()
+    audio_url = audio_info.get("url")
+    if not audio_url or "whatsapp" not in audio_url:
+        return f"Audio URL not found or does not contain 'whatsapp' in API response."
+    
+    whatsapp_index = audio_url.find("whatsapp")
+    whatsapp_path = audio_url[whatsapp_index:]
+
+    response_2 = requests.get(f"https://waba-v2.360dialog.io/{whatsapp_path}", headers=headers, stream=True)
+    if response_2.status_code != 200:
+        return f"Failed to download audio: {response_2.status_code} {response_2.text}"
+
+    output_dir = 'audio_files'
+    os.makedirs(output_dir, exist_ok=True)
+
+    temp_path = ""
+    wav_path = os.path.join(output_dir, f"{mediaId}_audio.wav")
+
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        temp.write(response_2.content)
+        temp_path = temp.name
+
+    print(f"Downloaded temporary file: {temp_path}")
+
+    # Step 2: Convert to WAV format
+    audio = AudioSegment.from_file(temp_path)
+    audio.export(wav_path, format="wav")
+
+    print(f"Converted to WAV and saved at: {wav_path}")
+
+    result = call_sarvam_api(wav_path)
+    transcript = result["transcript"]
+    user_language = result["language_code"]
+    print("Transcript: ",transcript)
+    print("User Language: ",user_language)
+
+    return transcript
+
+def send_audio(text: str, employerNumber: int, user_language: str = "en-IN"):
+    """
+    Sends an audio message by calling the /send_audio_message API endpoint.
+    Args:
+        text (str): The message text to convert to audio.
+        employerNumber (int): The employer's number.
+        user_language (str, optional): The language code. Defaults to "en-IN".
+    Returns:
+        dict: The response from the API.
+    """
+    url = "https://conv.sampatticards.com/user/send_audio_message"
+    payload = {
+        "text": text,
+        "user_language": user_language,
+        "employerNumber": employerNumber
+    }
+    try:
+        response = requests.post(url, params=payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
+
+    
+
 worker_onboarding_tool = StructuredTool.from_function(
     func=onboard_worker_employer,
     name="onboard_worker_with_employer",
     description="Onboards a worker under an existing employer by collecting bank/UPI, PAN, and salary info.",
     args_schema=WorkerEmployerInput
+)
+
+transcribe_audio_tool = StructuredTool.from_function(
+    func=transcribe_audio,
+    name="transcribe_audio_using_mediaID",
+    description="Transcribes audio and returns the text."
+)
+
+
+send_audio_tool = StructuredTool.from_function(
+    func=send_audio,
+    name="send_audio_using_employerNumber",
+    description="Sends the audio to the employer using the employer number."
 )
