@@ -84,19 +84,16 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Employernumber: {employerNumber}")
         print(f"Media Id: {media_id}")
 
-        if not employerNumber:
+        if not message_type:
             pass
-        else:
-            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-        # if message_type == "text":
-        #     body = message.get("text", {}).get("body")
-        #     userControllers.send_audio_message(body, "en-IN", employerNumber)
-        #     # ai_agents.queryExecutor(employerNumber, message_type, body, "")
+
+        elif message_type == "text":
+            body = message.get("text", {}).get("body")
+            ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        # else:
-        #     media_id = message.get(message_type, {}).get("id")
-        #     userControllers.send_audio_message("hi we wre processing your query. wait for a minute.", "en-IN", employerNumber)
-        #     # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        else:
+            media_id = message.get(message_type, {}).get("id")
+            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
     except Exception as e:
