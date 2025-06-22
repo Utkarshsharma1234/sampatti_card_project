@@ -1,3 +1,4 @@
+from datetime import datetime
 import json, os
 from fastapi import APIRouter, Depends, Request, HTTPException
 import requests
@@ -6,6 +7,8 @@ from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
 from ..controllers import ai_agents, whatsapp_message
+from ..controllers.utility_functions import call_sarvam_api
+from ..controllers.agent import queryExecutor
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -55,49 +58,89 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print("webhook received")
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
+        print("formatted_json: ", formatted_json)
+        message_type = data["entry"][0]["changes"][0]["value"]["messages"][0]["type"]
+        print("message_type: ", message_type)
+        if message_type == "text":
+            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+            headers = {
+                'Content-Type': 'application/json'
+            }
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
+            response = requests.request("POST", url, headers=headers, data=formatted_json)
+            print("webhook sent to orai.")
+            
+        elif message_type == "audio":
+            media_id = data["entry"][0]["changes"][0]["value"]["messages"][0]["audio"]["id"]
+            print("media_id: ", media_id)
+            url = f"https://waba-v2.360dialog.io/{media_id}"
+            headers = {
+                'D360-API-KEY': orai_api_key,
+                'Content-Type': 'application/json'
+            }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
+            response = requests.request("GET", url, headers=headers)
+            print("response: ", response)
+            if response.status_code == 200:
+            # Get the audio content as binary data
+                audio_content = response.content
+                content_type = response.headers.get('content-type', '').lower()
+                if 'audio/mpeg' in content_type or 'mp3' in content_type:
+                    file_extension = '.mp3'
+                elif 'audio/wav' in content_type:
+                    file_extension = '.wav'
+                elif 'audio/ogg' in content_type:
+                    file_extension = '.ogg'
+                else:
+                    file_extension = '.mp3' 
+                
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"audio_{media_id}"
+                save_directory = "downloaded_audio"  # Change this to your desired folder
+                save_path = os.path.join(save_directory, filename)
+                os.makedirs(save_directory, exist_ok=True)
+                with open(save_path, 'wb') as audio_file:
+                    audio_file.write(audio_content)
+                print(f"Audio file saved successfully: {save_path}")
+                print(f"File size: {len(audio_content)} bytes")
 
-        print("webhook sent to orai.")
-        # entry = data.get("entry", [])[0] if data.get("entry") else {}
-        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        # value = changes.get("value", {})
+                result = call_sarvam_api(save_path)
+                transcript = result["transcript"]
+                user_language = result["language_code"]
+                print("Transcript: ",transcript)
+                print("User Language: ",user_language)
+                
+                employerNumber = data["entry"][0]["changes"][0]["contacts"][0]["wa_id"]
+                print("Employer Number: ",employerNumber)
+                
+                url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+                headers = {
+                    'Content-Type': 'application/json'
+                }
 
-        # contacts = value.get("contacts", [])
-        # employerNumber = contacts[0].get("wa_id") if contacts else None
+                response = requests.request("POST", url, headers=headers, data=formatted_json)
+                print("webhook response: ", response)
 
-        # messages = value.get("messages", [])
-        # message = messages[0] if messages else {}
-        # message_type = message.get("type")
-        # media_id = message.get(message_type, {}).get("id")
+                print("webhook sent to orai.")
 
-        # # print("payload entered")
-        # # print(f"Webhook payload received : {formatted_json}")
-        # # print("payload exit")
+                text = queryExecutor(employerNumber, transcript)
+                print("Response from queryExecutor: ", text)
+                
+                url = "https://conv.sampatticards.com/user/send_audio_message"
+                payload = {
+                    "text": text,
+                    "user_language": user_language,
+                    "employerNumber": employerNumber
+                }
+                response = requests.post(url, params=payload)
+                response.raise_for_status()
+                data = response.json()
+                print("Audio message sent successfully:", data)
+                print("Process Complete!!!")
+                
 
-        # print(f"Message type: {message_type}")
-        # print(f"Employernumber: {employerNumber}")
-        # print(f"Media Id: {media_id}")
-
-        # # if not message_type:
-        # #     pass
-
-        # # elif message_type == "text":
-        # #     body = message.get("text", {}).get("body")
-        # #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-        # #     ai_agents.queryExecutor(employerNumber, message_type, body, "")
-        
-        # # else:
-        # #     media_id = message.get(message_type, {}).get("id")
-        # #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-
-        # #     ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
-
+                
+        print("Webhook Completed Successfully")
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
