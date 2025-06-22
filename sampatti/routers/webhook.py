@@ -51,9 +51,19 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 @router.post("/orai")
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:    
+
+        print("webhook received")
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
 
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        headers = {
+            'Content-Type': 'application/json'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=formatted_json)
+
+        print("webhook sent to orai.")
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
         value = changes.get("value", {})
@@ -66,29 +76,24 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         message_type = message.get("type")
         media_id = message.get(message_type, {}).get("id")
 
-        print("payload entered")
-        print(f"Webhook payload received : {formatted_json}")
-        print("payload exit")
+        # print("payload entered")
+        # print(f"Webhook payload received : {formatted_json}")
+        # print("payload exit")
 
         print(f"Message type: {message_type}")
         print(f"Employernumber: {employerNumber}")
         print(f"Media Id: {media_id}")
 
-        # if message_type == "text":
-        #     body = message.get("text", {}).get("body")
-        #     ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        if message_type == "text":
+            body = message.get("text", {}).get("body")
+            userControllers.send_audio_message(body, "en-IN", employerNumber)
+            # ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        # else:
-        #     media_id = message.get(message_type, {}).get("id")
-        #     ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        else:
+            media_id = message.get(message_type, {}).get("id")
+            userControllers.send_audio_message("hi we wre processing your query. wait for a minute.", "en-IN", employerNumber)
+            # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
-
-        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        # headers = {
-        #     'Content-Type': 'application/json'
-        # }
-
-        # response = requests.request("POST", url, headers=headers, data=formatted_json)
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
