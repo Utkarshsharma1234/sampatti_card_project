@@ -5,7 +5,7 @@ from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
-from ..controllers import ai_agents
+from ..controllers import ai_agents, whatsapp_message
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -84,15 +84,16 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Employernumber: {employerNumber}")
         print(f"Media Id: {media_id}")
 
-        if message_type == "text":
-            body = message.get("text", {}).get("body")
-            userControllers.send_audio_message(body, "en-IN", employerNumber)
-            # ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+        # if message_type == "text":
+        #     body = message.get("text", {}).get("body")
+        #     userControllers.send_audio_message(body, "en-IN", employerNumber)
+        #     # ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        else:
-            media_id = message.get(message_type, {}).get("id")
-            userControllers.send_audio_message("hi we wre processing your query. wait for a minute.", "en-IN", employerNumber)
-            # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        # else:
+        #     media_id = message.get(message_type, {}).get("id")
+        #     userControllers.send_audio_message("hi we wre processing your query. wait for a minute.", "en-IN", employerNumber)
+        #     # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
     except Exception as e:
