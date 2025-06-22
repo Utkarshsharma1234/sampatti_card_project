@@ -70,7 +70,6 @@ prompt = ChatPromptTemplate.from_messages(
 
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
-            Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
             """,
         ),
         ("system", "{chat_history}"),
@@ -79,7 +78,9 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool]
+
+            # Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
+tools = [worker_onboarding_tool, transcribe_audio_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
@@ -147,7 +148,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        # send_audio_message(assistant_response, "en-IN", employer_number)
+        send_audio_message(assistant_response, "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
