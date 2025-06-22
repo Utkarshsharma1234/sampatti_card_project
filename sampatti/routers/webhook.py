@@ -81,19 +81,40 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             }
 
             response = requests.request("GET", url, headers=headers)
-            print("response: ", response)
+            response = response.json()
+            print("Response from 360dialog: ", response)
+
+            wb = response["url"]
+            extracted_part = wb.split('whatsapp_business')[1]
+            extracted_part = 'whatsapp_business' + wb.split('whatsapp_business')[1]
+
+            url = f"https://waba-v2.360dialog.io/{extracted_part}"
+            headers = {
+                'D360-API-KEY': orai_api_key,
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers)
+
             if response.status_code == 200:
-            # Get the audio content as binary data
+        # Get the audio content as binary data
                 audio_content = response.content
+        
+        # Determine file extension from Content-Type header
                 content_type = response.headers.get('content-type', '').lower()
+    
                 if 'audio/mpeg' in content_type or 'mp3' in content_type:
                     file_extension = '.mp3'
                 elif 'audio/wav' in content_type:
                     file_extension = '.wav'
                 elif 'audio/ogg' in content_type:
                     file_extension = '.ogg'
+                elif 'audio/m4a' in content_type:
+                    file_extension = '.m4a'
+                elif 'audio/aac' in content_type:
+                    file_extension = '.aac'
                 else:
-                    file_extension = '.mp3' 
+                    file_extension = '.mp3'  # Default to mp3
                 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"audio_{media_id}"
