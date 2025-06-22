@@ -74,21 +74,21 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Employernumber: {employerNumber}")
         print(f"Media Id: {media_id}")
 
-        if message_type == "text":
-            body = message.get("text", {}).get("body")
-            ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        # if message_type == "text":
+        #     body = message.get("text", {}).get("body")
+        #     ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        else:
-            media_id = message.get(message_type, {}).get("id")
-            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        # else:
+        #     media_id = message.get(message_type, {}).get("id")
+        #     ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        # headers = {
+        #     'Content-Type': 'application/json'
+        # }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
+        # response = requests.request("POST", url, headers=headers, data=formatted_json)
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
