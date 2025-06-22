@@ -87,6 +87,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             wb = response["url"]
             extracted_part = wb.split('whatsapp_business')[1]
             extracted_part = 'whatsapp_business' + wb.split('whatsapp_business')[1]
+            print("extracted_part: ", extracted_part)
 
             url = f"https://waba-v2.360dialog.io/{extracted_part}"
             headers = {
@@ -94,83 +95,60 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                 'Content-Type': 'application/json'
             }
 
-            response = requests.request("GET", url, headers=headers)
+            response_2 = requests.request("GET", url, headers=headers)
 
-            if response.status_code == 200:
-        # Get the audio content as binary data
-                audio_content = response.content
-        
-        # Determine file extension from Content-Type header
-                content_type = response.headers.get('content-type', '').lower()
-    
-                if 'audio/mpeg' in content_type or 'mp3' in content_type:
-                    file_extension = '.mp3'
-                elif 'audio/wav' in content_type:
-                    file_extension = '.wav'
-                elif 'audio/ogg' in content_type:
-                    file_extension = '.ogg'
-                elif 'audio/m4a' in content_type:
-                    file_extension = '.m4a'
-                elif 'audio/aac' in content_type:
-                    file_extension = '.aac'
-                else:
-                    file_extension = '.mp3'  # Default to mp3
+            if response_2.status_code != 200:
+                return f"Failed to download audio: {response_2.status_code} {response_2.text}"
+
+            output_dir = 'audio_files'
+            os.makedirs(output_dir, exist_ok=True)
+
+            temp_path = ""
+            wav_path = os.path.join(output_dir, f"{mediaId}_audio.wav")
+
+            with tempfile.NamedTemporaryFile(delete=False) as temp:
+                temp.write(response_2.content)
+                temp_path = temp.name
+
+            print(f"Downloaded temporary file: {temp_path}")
+
+            # Step 2: Convert to WAV format
+            audio = AudioSegment.from_file(temp_path)
+            audio.export(wav_path, format="wav")
+
+            print(f"Converted to WAV and saved at: {wav_path}")
+
+            result = call_sarvam_api(wav_path)
+            transcript = result["transcript"]
+            user_language = result["language_code"]
+
+            print("Transcript: ",transcript)
+            print("User Language: ",user_language)
                 
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"audio_{media_id}"
-                save_directory = "downloaded_audio"  # Change this to your desired folder
-                save_path = os.path.join(save_directory, filename + file_extension)
-                with open(save_path, 'wb') as audio_file:
-                    audio_file.write(audio_content)
-                print(f"Audio file saved successfully: {save_path}")
-                print(f"File size: {len(audio_content)} bytes")
+            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+            headers = {
+                'Content-Type': 'application/json'
+            }
 
-                url = "https://api.sarvam.ai/speech-to-text-translate"
+            response = requests.request("POST", url, headers=headers, data=formatted_json)
+            print("webhook response: ", response)
 
-                files = {
-                    "file": (filename, open(save_path, 'rb'))
-                }
-                payload ={
-                    "model": "saaras:v2.5",
-                }
-                headers = {
-                    "api-subscription-key": sarvam_api_key
-                }
+            print("webhook sent to orai.")
 
-                response = requests.post(url, data=payload, files=files, headers=headers)
-                response = response.json()
-                print("Sarvam Response: ",response)
-                transcript = response["transcript"]
-                user_language = response["language_code"]
-                
-                
-                employerNumber = data["entry"][0]["changes"][0]["contacts"][0]["wa_id"]
-                print("Employer Number: ",employerNumber)
-                
-                url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-                headers = {
-                    'Content-Type': 'application/json'
-                }
+            text = queryExecutor(employerNumber, transcript)
+            print("Response from queryExecutor: ", text)
 
-                response = requests.request("POST", url, headers=headers, data=formatted_json)
-                print("webhook response: ", response)
-
-                print("webhook sent to orai.")
-
-                text = queryExecutor(employerNumber, transcript)
-                print("Response from queryExecutor: ", text)
-                
-                url = "https://conv.sampatticards.com/user/send_audio_message"
-                payload = {
-                    "text": text,
-                    "user_language": user_language,
-                    "employerNumber": employerNumber
-                }
-                response = requests.post(url, params=payload)
-                response.raise_for_status()
-                data = response.json()
-                print("Audio message sent successfully:", data)
-                print("Process Complete!!!")
+            url = "https://conv.sampatticards.com/user/send_audio_message"
+            payload = {
+                "text": text,
+                "user_language": user_language,
+                "employerNumber": employerNumber
+            }
+            response = requests.post(url, params=payload)
+            response.raise_for_status()
+            data = response.json()
+            print("Audio message sent successfully:", data)
+            print("Process Complete!!!")
                 
 
                 
