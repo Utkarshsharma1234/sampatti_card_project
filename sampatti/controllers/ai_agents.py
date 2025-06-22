@@ -147,7 +147,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        send_audio_message(assistant_response, "en-IN", employer_number)
+        # send_audio_message(assistant_response, "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
