@@ -123,7 +123,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             result = call_sarvam_api(wav_path)
             transcript = result["transcript"]
             user_language = result["language_code"]
-            employer_n = payload["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
+            employer_n =data["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
             print("employer_n: ", employer_n)
 
             print("Transcript: ",transcript)
