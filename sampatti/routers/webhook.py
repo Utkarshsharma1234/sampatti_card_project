@@ -95,7 +95,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                     file_extension = '.mp3' 
                 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"audio_{media_id}"
+                filename = f"audio_{media_id}.mp3"
                 save_directory = "downloaded_audio"  # Change this to your desired folder
                 save_path = os.path.join(save_directory, filename)
                 os.makedirs(save_directory, exist_ok=True)
