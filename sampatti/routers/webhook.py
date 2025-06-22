@@ -12,6 +12,7 @@ from ..controllers.agent import queryExecutor
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
+sarvam_api_key = os.environ.get('SARVAM_API_KEY')
 
 router = APIRouter(
     prefix="/webhook",
@@ -95,20 +96,32 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                     file_extension = '.mp3' 
                 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"audio_{media_id}.mp3"
+                filename = f"audio_{media_id}"
                 save_directory = "downloaded_audio"  # Change this to your desired folder
-                save_path = os.path.join(save_directory, filename)
-                os.makedirs(save_directory, exist_ok=True)
+                save_path = os.path.join(save_directory, filename + file_extension)
                 with open(save_path, 'wb') as audio_file:
                     audio_file.write(audio_content)
                 print(f"Audio file saved successfully: {save_path}")
                 print(f"File size: {len(audio_content)} bytes")
 
-                result = call_sarvam_api(save_path)
-                transcript = result["transcript"]
-                user_language = result["language_code"]
-                print("Transcript: ",transcript)
-                print("User Language: ",user_language)
+                url = "https://api.sarvam.ai/speech-to-text-translate"
+
+                files = {
+                    "file": (filename, open(save_path, 'rb'))
+                }
+                payload ={
+                    "model": "saaras:v2.5",
+                }
+                headers = {
+                    "api-subscription-key": sarvam_api_key
+                }
+
+                response = requests.post(url, data=payload, files=files, headers=headers)
+                response = response.json()
+                print("Sarvam Response: ",response)
+                transcript = response["transcript"]
+                user_language = response["language_code"]
+                
                 
                 employerNumber = data["entry"][0]["changes"][0]["contacts"][0]["wa_id"]
                 print("Employer Number: ",employerNumber)
