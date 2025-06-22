@@ -1,5 +1,6 @@
 from datetime import datetime
 import json, os
+import tempfile
 from fastapi import APIRouter, Depends, Request, HTTPException
 import requests
 from ..database import get_db
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 from ..controllers import ai_agents, whatsapp_message
 from ..controllers.utility_functions import call_sarvam_api
 from ..controllers.agent import queryExecutor
+from pydub import AudioSegment
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -104,7 +106,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             os.makedirs(output_dir, exist_ok=True)
 
             temp_path = ""
-            wav_path = os.path.join(output_dir, f"{mediaId}_audio.wav")
+            wav_path = os.path.join(output_dir, f"{media_id}_audio.wav")
 
             with tempfile.NamedTemporaryFile(delete=False) as temp:
                 temp.write(response_2.content)
@@ -121,6 +123,8 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             result = call_sarvam_api(wav_path)
             transcript = result["transcript"]
             user_language = result["language_code"]
+            employer_n = payload["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
+            print("employer_n: ", employer_n)
 
             print("Transcript: ",transcript)
             print("User Language: ",user_language)
@@ -135,14 +139,14 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
 
             print("webhook sent to orai.")
 
-            text = queryExecutor(employerNumber, transcript)
+            text = queryExecutor(employer_n, transcript)
             print("Response from queryExecutor: ", text)
 
             url = "https://conv.sampatticards.com/user/send_audio_message"
             payload = {
                 "text": text,
                 "user_language": user_language,
-                "employerNumber": employerNumber
+                "employerNumber": employer_n
             }
             response = requests.post(url, params=payload)
             response.raise_for_status()
