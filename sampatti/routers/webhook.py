@@ -84,7 +84,10 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Employernumber: {employerNumber}")
         print(f"Media Id: {media_id}")
 
-        whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+        if not employerNumber:
+            pass
+        else:
+            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
         # if message_type == "text":
         #     body = message.get("text", {}).get("body")
         #     userControllers.send_audio_message(body, "en-IN", employerNumber)
