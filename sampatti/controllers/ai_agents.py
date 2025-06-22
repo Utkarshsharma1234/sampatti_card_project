@@ -8,7 +8,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .tools import search_tool, wiki_tool, save_tool, worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
+from .tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
+from .userControllers import send_audio_message
 from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -146,10 +147,9 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        return response
+        send_audio_message(assistant_response, "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
-        return {"error": str(e), "raw": response}
 
 
