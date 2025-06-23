@@ -152,7 +152,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # send_greetings(employer_number, template_name="salary_adjust_greetings")
-        send_audio_message("HI testing the audio voice to voice.")
+        send_audio_message("HI testing the audio voice to voice.", "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
