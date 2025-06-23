@@ -56,12 +56,12 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        # headers = {
+        #     'Content-Type': 'application/json'
+        # }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
+        # response = requests.request("POST", url, headers=headers, data=formatted_json)
 
         print("webhook sent to orai.")
         entry = data.get("entry", [])[0] if data.get("entry") else {}
@@ -76,26 +76,26 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         message_type = message.get("type")
         media_id = message.get(message_type, {}).get("id")
 
-        # print("payload entered")
-        # print(f"Webhook payload received : {formatted_json}")
-        # print("payload exit")
+        print("payload entered")
+        print(f"Webhook payload received : {formatted_json}")
+        print("payload exit")
 
-        print(f"Message type: {message_type}")
-        print(f"Employernumber: {employerNumber}")
-        print(f"Media Id: {media_id}")
+        # print(f"Message type: {message_type}")
+        # print(f"Employernumber: {employerNumber}")
+        # print(f"Media Id: {media_id}")
 
-        if not message_type:
-            pass
+        # if not message_type:
+        #     pass
 
-        elif message_type == "text":
-            body = message.get("text", {}).get("body")
-            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            # ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        # elif message_type == "text":
+        #     body = message.get("text", {}).get("body")
+        #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+        #     ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        else:
-            media_id = message.get(message_type, {}).get("id")
-            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        # else:
+        #     media_id = message.get(message_type, {}).get("id")
+        #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+        #     ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
     except Exception as e:
