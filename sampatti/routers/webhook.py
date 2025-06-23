@@ -80,9 +80,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         # print(f"Webhook payload received : {formatted_json}")
         # print("payload exit")
 
-        print(f"Message type: {message_type}")
-        print(f"Employernumber: {employerNumber}")
-        print(f"Media Id: {media_id}")
+        print(f"Message type: {message_type}, Employernumber: {employerNumber}, Media Id: {media_id}")
 
         if not message_type:
             pass

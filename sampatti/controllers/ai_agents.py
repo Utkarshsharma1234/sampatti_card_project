@@ -10,6 +10,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from .tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
 from .userControllers import send_audio_message
+from .whatsapp_message import send_greetings
 from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -65,7 +66,7 @@ prompt = ChatPromptTemplate.from_messages(
             Once all information is gathered, call the onboarding tool.
 
             If the user input type is 'image', follow these steps -->> take the text as the main query -> process the query -> generate the output.
-            
+
             If the user input type is 'audio', follow these steps -->> use transcribe_audio_tool by giving it media Id and get the text from it -> make this text as the main query -> process the query using the chat history -> get the output.
 
             Always reason about the type and mediaId fields in the query context and decide autonomously whether to call a tool.
@@ -150,7 +151,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        send_audio_message(assistant_response, "en-IN", employer_number)
+        send_greetings(employer_number, template_name="salary_adjust_greetings")
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
