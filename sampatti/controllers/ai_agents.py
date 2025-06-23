@@ -64,7 +64,9 @@ prompt = ChatPromptTemplate.from_messages(
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
             Once all information is gathered, call the onboarding tool.
 
-            If the user input type is 'audio', use the transcribe_audio_tool with the mediaId to get the text and use that as the query for the LLM.
+            If the user input type is 'image', follow these steps -->> take the text as the main query -> process the query -> generate the output.
+            
+            If the user input type is 'audio', follow these steps -->> use transcribe_audio_tool by giving it media Id and get the text from it -> make this text as the main query -> process the query using the chat history -> get the output.
 
             Always reason about the type and mediaId fields in the query context and decide autonomously whether to call a tool.
 
