@@ -63,7 +63,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         # }
 
         # response = requests.request("POST", url, headers=headers, data=formatted_json)
-        
+
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
         value = changes.get("value", {})
@@ -83,7 +83,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         print(f"Message type: {message_type}, Employernumber: {employerNumber}, Media Id: {media_id}")
 
         if not message_type:
-            pass
+            print("None message type")
 
         elif message_type == "text":
             body = message.get("text", {}).get("body")
