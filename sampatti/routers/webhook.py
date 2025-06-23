@@ -64,39 +64,40 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         response = requests.request("POST", url, headers=headers, data=formatted_json)
 
         print("webhook sent to orai.")
-        # entry = data.get("entry", [])[0] if data.get("entry") else {}
-        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        # value = changes.get("value", {})
+        entry = data.get("entry", [])[0] if data.get("entry") else {}
+        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        value = changes.get("value", {})
 
-        # contacts = value.get("contacts", [])
-        # employerNumber = contacts[0].get("wa_id") if contacts else None
+        contacts = value.get("contacts", [])
+        employerNumber = contacts[0].get("wa_id") if contacts else None
 
-        # messages = value.get("messages", [])
-        # message = messages[0] if messages else {}
-        # message_type = message.get("type")
-        # media_id = message.get(message_type, {}).get("id")
+        messages = value.get("messages", [])
+        message = messages[0] if messages else {}
+        message_type = message.get("type")
+        media_id = message.get(message_type, {}).get("id")
 
-        # # print("payload entered")
-        # # print(f"Webhook payload received : {formatted_json}")
-        # # print("payload exit")
+        # print("payload entered")
+        # print(f"Webhook payload received : {formatted_json}")
+        # print("payload exit")
 
-        # print(f"Message type: {message_type}")
-        # print(f"Employernumber: {employerNumber}")
-        # print(f"Media Id: {media_id}")
+        print(f"Message type: {message_type}")
+        print(f"Employernumber: {employerNumber}")
+        print(f"Media Id: {media_id}")
 
-        # # if not message_type:
-        # #     pass
+        if not message_type:
+            pass
 
-        # # elif message_type == "text":
-        # #     body = message.get("text", {}).get("body")
-        # #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-        # #     ai_agents.queryExecutor(employerNumber, message_type, body, "")
+        elif message_type == "text":
+            body = message.get("text", {}).get("body")
+            userControllers.send_audio_message(body, "en-IN", employerNumber)
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            # ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        # # else:
-        # #     media_id = message.get(message_type, {}).get("id")
-        # #     # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-
-        # #     ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+        else:
+            media_id = message.get(message_type, {}).get("id")
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            userControllers.send_audio_message("Hi this is testing audio which is created for testing the webhook.", "en-IN", employerNumber)
+            # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
 
     except Exception as e:
