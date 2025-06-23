@@ -10,7 +10,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from .tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
 from .userControllers import send_audio_message
-from .whatsapp_message import send_greetings
+from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -151,8 +151,8 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        # send_greetings(employer_number, template_name="salary_adjust_greetings")
-        return send_audio_message("HI testing the audio voice to voice.", "en-IN", employer_number)
+        return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
+        # return send_audio_message("HI testing the audio voice to voice.", "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
