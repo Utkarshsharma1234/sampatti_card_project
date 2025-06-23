@@ -52,18 +52,18 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:    
 
-        print("webhook received")
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
+        formatted_json_oneline = json.dumps(data, separators=(',', ':'))
 
+        print(f"Webhook payload: {formatted_json_oneline}")
         # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
         # headers = {
         #     'Content-Type': 'application/json'
         # }
 
         # response = requests.request("POST", url, headers=headers, data=formatted_json)
-
-        print("webhook sent to orai.")
+        
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
         value = changes.get("value", {})
