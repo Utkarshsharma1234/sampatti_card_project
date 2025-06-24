@@ -1,15 +1,11 @@
 import json, os
-import tempfile
 from fastapi import APIRouter, Depends, Request, HTTPException
-import httpx
+import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
 from ..controllers import ai_agents, whatsapp_message
-from ..controllers.utility_functions import call_sarvam_api
-from ..controllers.agent import queryExecutor
-from pydub import AudioSegment
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -56,128 +52,51 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 async def orai_webhook(request: Request, db : Session = Depends(get_db)):
     try:    
 
-        print("webhook received")
         data = await request.json()
         formatted_json = json.dumps(data, indent=2)
-        print("formatted_json: ", formatted_json)
-        message_type = data["entry"][0]["changes"][0]["value"]["messages"][0]["type"]
-        employer_n =data["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
-        print("message_type: ", message_type)
+        formatted_json_oneline = json.dumps(data, separators=(',', ':'))
+
+        print(f"Webhook payload: {formatted_json_oneline}")
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        headers = {
+            'Content-Type': 'application/json'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=formatted_json)
+
+        entry = data.get("entry", [])[0] if data.get("entry") else {}
+        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        value = changes.get("value", {})
+
+        contacts = value.get("contacts", [])
+        employerNumber = contacts[0].get("wa_id") if contacts else None
+
+        messages = value.get("messages", [])
+        message = messages[0] if messages else {}
+        message_type = message.get("type")
+        media_id = message.get(message_type, {}).get("id")
+
+        # print("payload entered")
+        # print(f"Webhook payload received : {formatted_json}")
+        # print("payload exit")
+
+        print(f"Message type: {message_type}, Employernumber: {employerNumber}, Media Id: {media_id}")
+
+        if not message_type:
+            print("None message type")
+
+        elif message_type == "text":
+            body = message.get("text", {}).get("body")
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            # userControllers.send_audio_message("hi this is testing audio message how are you", "en-IN", employerNumber)
+            return ai_agents.queryExecutor(employerNumber, message_type, body, "")
         
-        
-        if message_type == "text":
-            query =data["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
-            text = queryExecutor(employer_n, query)
-            print("Response from queryExecutor: ", text)
-            
-            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-            headers = {
-                'Content-Type': 'application/json'
-            }
+        else:
+            media_id = message.get(message_type, {}).get("id")
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            # userControllers.send_audio_message("hi this is testing audio message how are you", "en-IN", employerNumber)
+            return ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, content=formatted_json)
-            print("webhook sent to orai.")
-            
-            
-            
-        elif message_type == "audio":
-            media_id = data["entry"][0]["changes"][0]["value"]["messages"][0]["audio"]["id"]
-            print("media_id: ", media_id)
-            url = f"https://waba-v2.360dialog.io/{media_id}"
-            headers = {
-                'D360-API-KEY': orai_api_key,
-                'Content-Type': 'application/json'
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, headers=headers)
-                response = response.json()
-            print("Response from 360dialog: ", response)
-
-            wb = response["url"]
-            extracted_part = wb.split('whatsapp_business')[1]
-            extracted_part = 'whatsapp_business' + wb.split('whatsapp_business')[1]
-            print("extracted_part: ", extracted_part)
-
-            url = f"https://waba-v2.360dialog.io/{extracted_part}"
-            headers = {
-                'D360-API-KEY': orai_api_key,
-                'Content-Type': 'application/json'
-            }
-
-            async with httpx.AsyncClient() as client:
-                response_2 = await client.get(url, headers=headers)
-
-            if response_2.status_code != 200:
-                return f"Failed to download audio: {response_2.status_code} {response_2.text}"
-
-            output_dir = 'audio_files'
-            os.makedirs(output_dir, exist_ok=True)
-
-            temp_path = ""
-            wav_path = os.path.join(output_dir, f"{media_id}_audio.wav")
-
-            with tempfile.NamedTemporaryFile(delete=False) as temp:
-                temp.write(response_2.content)
-                temp_path = temp.name
-
-            print(f"Downloaded temporary file: {temp_path}")
-
-            # Step 2: Convert to WAV format
-            audio = AudioSegment.from_file(temp_path)
-            audio.export(wav_path, format="wav")
-
-            print(f"Converted to WAV and saved at: {wav_path}")
-
-            result = call_sarvam_api(wav_path)
-            transcript = result["transcript"]
-            user_language = result["language_code"]
-            employer_n =data["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
-            print("employer_n: ", employer_n)
-
-            print("Transcript: ",transcript)
-            print("User Language: ",user_language)
-                
-            
-
-            text = queryExecutor(employer_n, transcript)
-            print("Response from queryExecutor: ", text)
-
-            url = "https://conv.sampatticards.com/user/send_audio_message"
-            payload = {
-                "text": text,
-                "user_language": user_language,
-                "employerNumber": employer_n
-            }
-            try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    response = await client.post(url, params=payload)
-                    response.raise_for_status()
-                    data = response.json()
-                print("Audio message sent successfully:", data)
-                print("Process Complete!!!")
-            except httpx.TimeoutException:
-                print("Timeout occurred while sending audio message.")
-                raise HTTPException(status_code=504, detail="Timeout while sending audio message.")
-            except Exception as e:
-                print(f"Error sending audio message: {e}")
-                raise HTTPException(status_code=500, detail="Error sending audio message.")
-            
-            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-            headers = {
-                'Content-Type': 'application/json'
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, content=formatted_json)
-            print("webhook response: ", response)
-
-            print("webhook sent to orai.")
-                
-
-                
-        print("Webhook Completed Successfully")
 
     except Exception as e:
         print(f"Error in handling the webhook from orai : {e}")
