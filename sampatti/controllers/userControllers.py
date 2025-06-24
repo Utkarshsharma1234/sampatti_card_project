@@ -622,10 +622,14 @@ def send_audio_message(text : str, user_language : str, employerNumber : int):
 
     static_dir = "audio_files"
     if user_language == "en-IN":
-        return send_audio(static_dir, text, "en-IN", employerNumber)  
+        result = send_audio(static_dir, text, "en-IN", employerNumber)
+        print("Send Audio finding error: ", result)
+        return result
     else:
         translated_text = translate_text_sarvam(text, "en-IN", user_language)
-        return send_audio(static_dir, translated_text, user_language, employerNumber)   
+        result = send_audio(static_dir, translated_text, user_language, employerNumber)  
+        print("Send Audio finding error: ", result)
+        return result
 
 
 def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session):

@@ -152,7 +152,9 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
-        return send_audio_message(assistant_response, "en-IN", employer_number)
+        result = send_audio_message(assistant_response, "en-IN", employer_number)
+        print("Send Audio findind error: ", result)
+        return result
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
