@@ -15,7 +15,7 @@ from langchain.memory import VectorStoreRetrieverMemory
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.documents import Document
-# from langchain_groq import ChatGroq
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -27,7 +27,8 @@ load_dotenv()
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
+#llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
+llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -152,9 +153,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
-        result = send_audio_message(assistant_response, "en-IN", employer_number)
-        print("Send Audio findind error: ", result)
-        return result
+        return send_audio_message(assistant_response, "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
