@@ -512,10 +512,11 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
             os.remove(mp3_file_path)
             os.remove(ogg_file_path)
             print(f"Deleted files: {mp3_file_path} and {ogg_file_path}")
+            return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
         except Exception as delete_error:
             print(f"Error deleting files: {delete_error}")
-
-        return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+            return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+        
 
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
