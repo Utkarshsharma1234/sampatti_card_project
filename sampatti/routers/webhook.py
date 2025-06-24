@@ -1,7 +1,7 @@
 import json, os
 import tempfile
 from fastapi import APIRouter, Depends, Request, HTTPException
-import requests
+import httpx
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
@@ -61,15 +61,25 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         formatted_json = json.dumps(data, indent=2)
         print("formatted_json: ", formatted_json)
         message_type = data["entry"][0]["changes"][0]["value"]["messages"][0]["type"]
+        employer_n =data["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
         print("message_type: ", message_type)
+        
+        
         if message_type == "text":
+            query =data["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
+            text = queryExecutor(employer_n, query)
+            print("Response from queryExecutor: ", text)
+            
             url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
             headers = {
                 'Content-Type': 'application/json'
             }
 
-            response = requests.request("POST", url, headers=headers, data=formatted_json)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, content=formatted_json)
             print("webhook sent to orai.")
+            
+            
             
         elif message_type == "audio":
             media_id = data["entry"][0]["changes"][0]["value"]["messages"][0]["audio"]["id"]
@@ -80,8 +90,9 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                 'Content-Type': 'application/json'
             }
 
-            response = requests.request("GET", url, headers=headers)
-            response = response.json()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers)
+                response = response.json()
             print("Response from 360dialog: ", response)
 
             wb = response["url"]
@@ -95,7 +106,8 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                 'Content-Type': 'application/json'
             }
 
-            response_2 = requests.request("GET", url, headers=headers)
+            async with httpx.AsyncClient() as client:
+                response_2 = await client.get(url, headers=headers)
 
             if response_2.status_code != 200:
                 return f"Failed to download audio: {response_2.status_code} {response_2.text}"
@@ -138,18 +150,27 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
                 "user_language": user_language,
                 "employerNumber": employer_n
             }
-            response = requests.post(url, params=payload)
-            response.raise_for_status()
-            data = response.json()
-            print("Audio message sent successfully:", data)
-            print("Process Complete!!!")
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(url, params=payload)
+                    response.raise_for_status()
+                    data = response.json()
+                print("Audio message sent successfully:", data)
+                print("Process Complete!!!")
+            except httpx.TimeoutException:
+                print("Timeout occurred while sending audio message.")
+                raise HTTPException(status_code=504, detail="Timeout while sending audio message.")
+            except Exception as e:
+                print(f"Error sending audio message: {e}")
+                raise HTTPException(status_code=500, detail="Error sending audio message.")
             
             url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
             headers = {
                 'Content-Type': 'application/json'
             }
 
-            response = requests.request("POST", url, headers=headers, data=formatted_json)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, content=formatted_json)
             print("webhook response: ", response)
 
             print("webhook sent to orai.")
