@@ -5,7 +5,7 @@ from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import rag_funcs, userControllers
-from ..controllers import employment_contract_gen, salary_summary_gen
+from ..controllers import employment_contract_gen, salary_summary_gen, agent
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
 from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management, ai_agents
@@ -278,3 +278,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
 @router.post("/ai_agent/onboarding_worker_sheet/create")
 def worker_onboarding(payload: WorkerOnboardingRequest):
     return talk_to_agent_excel_file.create_worker_details_onboarding(payload.worker_number, payload.employer_number, payload.UPI, payload.bank_account_number, payload.ifsc_code, payload.pan_number, payload.bank_passbook_image, payload.pan_card_image, payload.salary)
+
+@router.get("/agents_queryExecutor")
+def queryExecutor(employer_number: int, query : str):
+    return agent.queryExecutor(employer_number, query)
