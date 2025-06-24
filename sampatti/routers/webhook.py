@@ -127,15 +127,7 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             print("Transcript: ",transcript)
             print("User Language: ",user_language)
                 
-            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-            headers = {
-                'Content-Type': 'application/json'
-            }
-
-            response = requests.request("POST", url, headers=headers, data=formatted_json)
-            print("webhook response: ", response)
-
-            print("webhook sent to orai.")
+            
 
             text = queryExecutor(employer_n, transcript)
             print("Response from queryExecutor: ", text)
@@ -151,6 +143,16 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
             data = response.json()
             print("Audio message sent successfully:", data)
             print("Process Complete!!!")
+            
+            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=formatted_json)
+            print("webhook response: ", response)
+
+            print("webhook sent to orai.")
                 
 
                 
