@@ -49,11 +49,12 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
     
 
 @router.post("/orai")
-def orai_webhook(request: Request, background_tasks: BackgroundTasks):
+async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
+        data = await request.json()
 
         # Immediately start background processing
-        background_tasks.add_task(process_orai_webhook, request)
+        background_tasks.add_task(process_orai_webhook, data)
 
         # Immediate response
         return {"status": "received"}
@@ -63,9 +64,8 @@ def orai_webhook(request: Request, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Error processing webhook data")
 
 
-def process_orai_webhook(request: Request):
+def process_orai_webhook(data: dict):
     try:
-        data = request.json()
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
 
@@ -101,7 +101,8 @@ def process_orai_webhook(request: Request):
             # ai_agents.queryExecutor(employerNumber, message_type, body, "")
 
         else:
-            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+            whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
