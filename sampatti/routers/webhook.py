@@ -1,5 +1,5 @@
 import json, os
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
@@ -49,20 +49,34 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
     
 
 @router.post("/orai")
-async def orai_webhook(request: Request, db : Session = Depends(get_db)):
-    try:    
-
+async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
+    try:
         data = await request.json()
+
+        # Immediately start background processing
+        background_tasks.add_task(process_orai_webhook, data)
+
+        # Immediate response
+        return {"status": "received"}
+
+    except Exception as e:
+        print(f"Error in initial webhook handling: {e}")
+        raise HTTPException(status_code=400, detail="Error processing webhook data")
+
+
+def process_orai_webhook(data: dict):
+    try:
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
 
         print(f"Webhook payload: {formatted_json_oneline}")
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
 
-        response = requests.request("POST", url, headers=headers, data=formatted_json)
+        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        # headers = {
+        #     'Content-Type': 'application/json'
+        # }
+
+        # response = requests.post(url, headers=headers, data=formatted_json)
 
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
@@ -76,28 +90,17 @@ async def orai_webhook(request: Request, db : Session = Depends(get_db)):
         message_type = message.get("type")
         media_id = message.get(message_type, {}).get("id")
 
-        # print("payload entered")
-        # print(f"Webhook payload received : {formatted_json}")
-        # print("payload exit")
-
-        print(f"Message type: {message_type}, Employernumber: {employerNumber}, Media Id: {media_id}")
+        print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
         if not message_type:
             print("None message type")
 
         elif message_type == "text":
             body = message.get("text", {}).get("body")
-            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            # userControllers.send_audio_message("hi this is testing audio message how are you", "en-IN", employerNumber)
-            return ai_agents.queryExecutor(employerNumber, message_type, body, "")
-        
-        else:
-            media_id = message.get(message_type, {}).get("id")
-            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            # userControllers.send_audio_message("hi this is testing audio message how are you", "en-IN", employerNumber)
-            return ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+            ai_agents.queryExecutor(employerNumber, message_type, body, "")
 
+        else:
+            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
     except Exception as e:
-        print(f"Error in handling the webhook from orai : {e}")
-        raise HTTPException(status_code=400, detail="Error processing webhook data")
+        print(f"Error in background processing of orai webhook: {e}")
