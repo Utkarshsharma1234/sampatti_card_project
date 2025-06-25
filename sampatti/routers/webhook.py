@@ -97,11 +97,13 @@ def process_orai_webhook(data: dict):
 
         elif message_type == "text":
             body = message.get("text", {}).get("body")
-            whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
             # ai_agents.queryExecutor(employerNumber, message_type, body, "")
 
         else:
-            whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
             # ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
 
     except Exception as e:
