@@ -154,6 +154,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
         if typeofMessage=="text":
+            print(assistant_response)
             return assistant_response
         elif typeofMessage=="audio":
             return send_audio_message(assistant_response, "en-IN", employer_number)
