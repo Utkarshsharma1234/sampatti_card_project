@@ -28,7 +28,7 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 #llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -153,7 +153,10 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
-        return send_audio_message(assistant_response, "en-IN", employer_number)
+        if typeofMessage=="text":
+            return assistant_response
+        elif typeofMessage=="audio":
+            return send_audio_message(assistant_response, "en-IN", employer_number)
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)

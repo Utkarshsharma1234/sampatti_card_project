@@ -71,12 +71,12 @@ def process_orai_webhook(data: dict):
 
         print(f"Webhook payload: {formatted_json_oneline}")
 
-        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        # headers = {
-        #     'Content-Type': 'application/json'
-        # }
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        headers = {
+            'Content-Type': 'application/json'
+        }
 
-        # response = requests.post(url, headers=headers, data=formatted_json)
+        response = requests.post(url, headers=headers, data=formatted_json)
 
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
