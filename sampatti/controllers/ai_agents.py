@@ -155,7 +155,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
         # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
         if typeofMessage=="text":
             print(assistant_response)
-            return assistant_response
+            return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
         elif typeofMessage=="audio":
             return send_audio_message(assistant_response, "en-IN", employer_number)
 
