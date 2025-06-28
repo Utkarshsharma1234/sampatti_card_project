@@ -515,13 +515,6 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
         except Exception as delete_error:
             print(f"Error deleting files: {delete_error}")
 
-        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        headers = {
-            'Content-Type': 'application/json'
-        }
-
-        response = requests.post(url, headers=headers, data=formatted_json)
-
         return {
             "MESSAGE": "AUDIO SENT SUCCESSFULLY."
         }

@@ -5,7 +5,7 @@ from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
-from ..controllers import ai_agents, whatsapp_message
+from ..controllers import ai_agents, whatsapp_message, super_agent
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -96,15 +96,15 @@ def process_orai_webhook(data: dict):
             print("None message type")
 
         elif message_type == "text":
-            body = message.get("text", {}).get("body")
+            query = message.get("text", {}).get("body")
             # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
             # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            ai_agents.queryExecutor(employerNumber, message_type, body, "")
+            super_agent.super_agent_query(employerNumber, message_type, query, "")
 
         else:
             # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
             # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+            super_agent.super_agent_query(employerNumber, message_type, "", media_id)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")

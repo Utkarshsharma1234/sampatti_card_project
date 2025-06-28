@@ -147,6 +147,7 @@ def send_v2v_message(employerNumber, text, template_name):
 
     response = requests.post(url, headers=headers, json=data)
     print("the code entered send v2v message", response)
+    print("the code entered send v2v message", response.text)
     if response.status_code == 200:
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
