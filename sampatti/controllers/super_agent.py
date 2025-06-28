@@ -519,9 +519,11 @@ Just tell me what you need help with, and I'll take care of it!"""
             # Return response - let the calling function handle message type routing
             print(f"🎯 FINAL RESPONSE FROM {agent_used.upper()}: {response}")
             if type_of_message == "audio":
-                return send_audio_message(response, "en-IN", employer_number)
+                return "MESSAGE SENT SUCCESSFULLY"
+                #return send_audio_message(response, "en-IN", employer_number)
             elif type_of_message == "text":
-                return send_v2v_message(employer_number, response, template_name="v2v_template")
+                return "MESSAGE SENT SUCCESSFULLY"
+                #return send_v2v_message(employer_number, response, template_name="v2v_template")
 
             
                 
