@@ -21,6 +21,7 @@ from .cash_advance_agent import queryE as cash_advance_agent
 from .tools import transcribe_audio_tool
 
 
+
 load_dotenv()
 print("✅ Successfully imported onboarding_agent")
 print("✅ Successfully imported cash_advance_agent")
@@ -517,13 +518,20 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"💾 Stored conversation with agent: {agent_used}")
 
             # Return response - let the calling function handle message type routing
-            print(f"🎯 FINAL RESPONSE FROM {agent_used.upper()}: {response}")
-            if type_of_message == "audio":
+            print(f"🎯 FINAL RESPONSE FROM {agent_used}: {response}")
+            if agent_used == "super_agent":
+                if type_of_message=="audio":
+                    print("MESSAGE SENT SUCCESSFULLY") 
+                    return send_audio_message(response, "en-IN", employer_number)
+                elif type_of_message=="text":
+                    print("MESSAGE SENT SUCCESSFULLY")
+                    return send_v2v_message(employer_number, response, template_name="v2v_template")
+            else:
+                # For specialized agents, we assume they handle their own message sending
+                print(f"✅ {agent_used.upper()} handled message sending internally")
+                print("MESSAGE SENT SUCCESSFULLY")
                 return "MESSAGE SENT SUCCESSFULLY"
-                #return send_audio_message(response, "en-IN", employer_number)
-            elif type_of_message == "text":
-                return "MESSAGE SENT SUCCESSFULLY"
-                #return send_v2v_message(employer_number, response, template_name="v2v_template")
+           
 
             
                 
