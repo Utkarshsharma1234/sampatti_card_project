@@ -84,7 +84,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 
             # Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
-tools = [worker_onboarding_tool, transcribe_audio_tool]
+tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
