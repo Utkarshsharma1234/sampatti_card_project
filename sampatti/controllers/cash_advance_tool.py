@@ -486,6 +486,7 @@ def generate_payment_link_func(
             "bonus": bonus,
             "deduction": deduction
         }
+        print("Print Payload: ", payload)
         
         # Make API call
         response = requests.get(url, params=payload)
@@ -499,7 +500,7 @@ def generate_payment_link_func(
         else:
             return {
                 "success": False,
-                "error": f"API call failed with status {response.status_code}: {response.text}"
+                "error": f"API call failed with status:####{response.text}####: {response.status_code}: {response.text}"
             }
             
     except Exception as e:
@@ -528,6 +529,48 @@ def generate_payment_link_func(
             "success": False,
             "error": str(e)
         }
+
+def update_salary_func(employer_number: int, worker_name: str, new_salary: int) -> dict:
+    try:
+        # API endpoint
+        url = "https://conv.sampatticards.com/user/update_salary"
+        
+        # Parameters for the API call
+        params = {
+            "employerNumber": employer_number,
+            "workerName": worker_name,
+            "salary": new_salary
+        }
+        
+        # Make the API call
+        response = requests.put(url, params=params)
+        
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "message": f"Salary updated successfully for {worker_name} to ₹{new_salary}",
+                "data": response.json() if response.content else {}
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Failed to update salary. Status code: {response.status_code}",
+                "error": response.text
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error updating salary: {str(e)}",
+            "error": str(e)
+        }
+
+# Create the tool
+update_salary_tool = StructuredTool.from_function(
+    func=update_salary_func,
+    name="update_salary_tool",
+    description="Update worker salary using API call. Use this when user wants to change only the salary amount.",
+)
 
 # Create structured tools
 get_worker_by_name_and_employer_tool = StructuredTool.from_function(

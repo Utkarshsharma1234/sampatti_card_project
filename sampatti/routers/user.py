@@ -284,5 +284,5 @@ def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str = 
     return cash_advance_agent.queryE(employer_number, typeofMessage, query, mediaId)
 
 @router.post("/super_agent")
-def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = ""):
+def super_agent_query(employer_number: int, type_of_message: str, query: str = "", media_id: str = ""):
     return super_agent.super_agent_query(employer_number, type_of_message, query, media_id)
