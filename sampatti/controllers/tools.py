@@ -3,13 +3,16 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from langchain.tools import Tool
 from datetime import datetime
 from pydantic import BaseModel, Field, root_validator
-from uuid import uuid4
+import uuid
 from typing import Optional
 from langchain.tools import StructuredTool
 import requests, os, tempfile
 from pydub import AudioSegment
 from urllib.parse import urlparse
 from .utility_functions import call_sarvam_api
+from ..database import get_db
+from sqlalchemy.orm import Session
+from ..models import CashAdvanceManagement, worker_employer
 
 
 
@@ -37,6 +40,21 @@ search_tool = Tool(
 
 api_wrapper = WikipediaAPIWrapper(top_k_results=5, doc_content_chars_max=100)
 wiki_tool = WikipediaQueryRun(api_wrapper=api_wrapper)
+
+# Pydantic models for structured output
+class CashAdvanceData(BaseModel):
+    worker_id: str = ""
+    employer_id: str = ""
+    cashAdvance: int = -1
+    repaymentAmount: int = -1
+    repaymentStartMonth: int = -1
+    repaymentStartYear: int = -1
+    frequency: int = -1
+
+class AgentResponse(BaseModel):
+    updated_data: CashAdvanceData
+    readyToConfirm: int = 0
+    ai_message: str
 
 
 class WorkerEmployerInput(BaseModel):
@@ -163,6 +181,115 @@ def send_audio(text: str, employerNumber: int, user_language: str = "en-IN"):
     except requests.RequestException as e:
         return {"error": str(e)}
 
+import re
+
+def normalize_name(name: str) -> str:
+    # Lowercase, strip, remove extra/multiple spaces
+    return re.sub(r'\s+', ' ', name.strip().lower())
+
+def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> dict:
+    db = next(get_db())
+    """
+    Find worker details by name and employer number from worker_employer table.
+    Returns worker information if found, empty dict if not found.
+    Improved: Robust name matching (normalize, partial match, suggestions)
+    """
+    try:
+        # Fetch all workers for this employer
+        results = db.execute(
+            worker_employer.select().where(
+                worker_employer.c.employer_number == employer_number
+            )
+        ).fetchall()
+        
+        norm_input = normalize_name(worker_name)
+        exact_match = None
+        partial_matches = []
+        for row in results:
+            db_name = row.worker_name or ""
+            norm_db_name = normalize_name(db_name)
+            if norm_db_name == norm_input:
+                exact_match = row
+                break
+            elif norm_input in norm_db_name or norm_db_name in norm_input:
+                partial_matches.append(row)
+
+        print("Exact Matches:#######: ", exact_match)
+        if exact_match:
+            return {
+                "found": True,
+                "worker_id": exact_match.worker_id,
+                "employer_id": exact_match.employer_id,
+                "worker_name": exact_match.worker_name,
+                "salary_amount": exact_match.salary_amount
+            }
+        elif partial_matches:
+            # Return the closest match (first partial)
+            row = partial_matches[0]
+            return {
+                "found": True,
+                "worker_id": row.worker_id,
+                "employer_id": row.employer_id,
+                "worker_name": row.worker_name,
+                "salary_amount": row.salary_amount,
+                "note": "Partial match found. Please verify the worker name is correct."
+            }
+        else:
+            # Optionally, suggest available names
+            suggestions = [row.worker_name for row in results if row.worker_name]
+            return {"found": False, "suggestions": suggestions}
+    except Exception as e:
+        print(f"Error finding worker: {e}")
+        return {"found": False, "error": str(e)}
+    finally:
+        db.close()
+
+def store_cash_advance_data(
+    worker_id: str,
+    employer_id: str,
+    cash_advance: int,
+    repayment_amount: int,
+    repayment_start_month: int,
+    repayment_start_year: int,
+    frequency: int,
+    chat_id: str
+) -> dict:
+    db = next(get_db())
+    """
+    Store cash advance data in CashAdvanceManagement table.
+    """
+    try:
+        # Create new cash advance record
+        cash_advance_record = CashAdvanceManagement(
+            id=str(uuid.uuid4().hex),
+            worker_id=worker_id,
+            employer_id=employer_id,
+            cashAdvance=cash_advance,
+            repaymentAmount=repayment_amount,
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,
+            chatId=chat_id
+        )
+        
+        db.add(cash_advance_record)
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Cash advance data stored successfully",
+            "record_id": cash_advance_record.id
+        }
+    except Exception as e:
+        db.rollback()
+        print(f"Error storing cash advance data: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+    finally:
+        db.close()
+
     
 
 worker_onboarding_tool = StructuredTool.from_function(
@@ -184,3 +311,16 @@ send_audio_tool = StructuredTool.from_function(
     name="send_audio_using_employerNumber",
     description="Sends the audio to the employer using the employer number."
 )
+
+get_worker_by_name_and_employer_tool = StructuredTool.from_function(
+    func=get_worker_by_name_and_employer,
+    name="get_worker_by_name_and_employer",
+    description="Find worker details by name and employer number from worker_employer table."
+)
+
+store_cash_advance_data_tool = StructuredTool.from_function(
+    func=store_cash_advance_data,
+    name="store_cash_advance_data",
+    description="Store cash advance data in CashAdvanceManagement table."
+)
+

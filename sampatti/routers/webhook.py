@@ -5,7 +5,7 @@ from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import userControllers
 from dotenv import load_dotenv
-from ..controllers import ai_agents, whatsapp_message
+from ..controllers import ai_agents, whatsapp_message, super_agent
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -71,12 +71,12 @@ def process_orai_webhook(data: dict):
 
         print(f"Webhook payload: {formatted_json_oneline}")
 
-        # url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-        # headers = {
-        #     'Content-Type': 'application/json'
-        # }
+        url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+        headers = {
+            'Content-Type': 'application/json'
+        }
 
-        # response = requests.post(url, headers=headers, data=formatted_json)
+        response = requests.post(url, headers=headers, data=formatted_json)
 
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
@@ -96,11 +96,15 @@ def process_orai_webhook(data: dict):
             print("None message type")
 
         elif message_type == "text":
-            body = message.get("text", {}).get("body")
-            ai_agents.queryExecutor(employerNumber, message_type, body, "")
+            query = message.get("text", {}).get("body")
+            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            super_agent.super_agent_query(employerNumber, message_type, query, "")
 
         else:
-            ai_agents.queryExecutor(employerNumber, message_type, "", media_id)
+            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
+            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
+            super_agent.super_agent_query(employerNumber, message_type, "", media_id)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")

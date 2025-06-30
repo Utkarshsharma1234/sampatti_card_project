@@ -514,7 +514,7 @@ def send_audio(output_directory: str, sample_output: str, language: str, employe
             print(f"Deleted files: {mp3_file_path} and {ogg_file_path}")
         except Exception as delete_error:
             print(f"Error deleting files: {delete_error}")
-            
+
         return {
             "MESSAGE": "AUDIO SENT SUCCESSFULLY."
         }
