@@ -521,16 +521,16 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"🎯 FINAL RESPONSE FROM {agent_used}: {response}")
             if agent_used == "super_agent":
                 if type_of_message=="audio":
-                    print("MESSAGE SENT SUCCESSFULLY") 
+                    print("MESSAGE SENT SUCCESSFULLY: ", response) 
                     return send_audio_message(response, "en-IN", employer_number)
                 elif type_of_message=="text":
-                    print("MESSAGE SENT SUCCESSFULLY")
+                    print("MESSAGE SENT SUCCESSFULLY: ", response)
                     return send_v2v_message(employer_number, response, template_name="v2v_template")
             else:
                 # For specialized agents, we assume they handle their own message sending
                 print(f"✅ {agent_used.upper()} handled message sending internally")
-                print("MESSAGE SENT SUCCESSFULLY")
-                return "MESSAGE SENT SUCCESSFULLY"
+                print("MESSAGE SENT SUCCESSFULLY: ",response)
+                return f"MESSAGE SENT SUCCESSFULLY: {response}"
            
 
             
