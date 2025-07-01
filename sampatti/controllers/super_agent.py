@@ -29,7 +29,7 @@ print("✅ Successfully imported cash_advance_agent")
 
 # Configuration
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 class IntentClassification(BaseModel):
