@@ -2,7 +2,7 @@ from cgitb import text
 import json
 import os
 import time
-import re
+import requests, re
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 import chromadb
@@ -423,7 +423,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Full traceback: {traceback.format_exc()}")
             return error_msg
 
-    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json) -> str:
+    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json: Dict[str, Any]) -> str:
         """Main method to process user queries"""
         print(f"\n🤖 Super Agent Processing Query for Employer {employer_number}")
         print(f"📝 Query: {query}")
@@ -541,7 +541,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
                 send_audio_message(error_message, "en-IN", employer_number)
 
-            print(f"Webhook payload: {formatted_json_oneline}")
+            print(f"Webhook payload: {formatted_json}")
 
             url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
             headers = {
