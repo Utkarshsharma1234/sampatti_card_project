@@ -272,10 +272,8 @@ def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str):
         # Send response based on message type
         if typeofMessage == "text":
             print("Assistant Response: ", assistant_response)
-            send_message_user(employer_number, body)
             return assistant_response 
         elif typeofMessage == "audio":
-            send_audio_message(assistant_response, "en-IN", employer_number)
             return assistant_response
             
     except Exception as e:
