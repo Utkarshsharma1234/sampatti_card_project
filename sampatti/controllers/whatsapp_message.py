@@ -1,7 +1,9 @@
 import json
-from fastapi import HTTPException
+from fastapi import Body, HTTPException
 import requests, os
 from dotenv import load_dotenv
+
+from sampatti.models import Employer
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -280,3 +282,26 @@ def send_intro_video(employerNumber,template_name):
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 
+
+def send_message_user(employer_number, body):
+
+    url = "https://waba-v2.360dialog.io/messages"
+
+    payload = json.dumps({
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": employer_number,
+        "type": "text",
+        "text": {
+            "body": body
+        }
+    })
+
+    headers = {
+        'D360-API-KEY': orai_api_key,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    print(response.text)
