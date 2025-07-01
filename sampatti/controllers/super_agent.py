@@ -1,3 +1,4 @@
+from cgitb import text
 import json
 import os
 import time
@@ -422,7 +423,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Full traceback: {traceback.format_exc()}")
             return error_msg
 
-    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str) -> str:
+    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json) -> str:
         """Main method to process user queries"""
         print(f"\n🤖 Super Agent Processing Query for Employer {employer_number}")
         print(f"📝 Query: {query}")
@@ -518,23 +519,38 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"💾 Stored conversation with agent: {agent_used}")
 
             # Return response - let the calling function handle message type routing
-            print(f"🎯 FINAL RESPONSE FROM {agent_used}: {response}")
-            if agent_used == "super_agent":
-                if type_of_message=="audio":
-                    print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                    return send_audio_message(response, "en-IN", employer_number)
-                elif type_of_message=="text":
-                    print("MESSAGE SENT SUCCESSFULLY: ", response)
-                    send_message_user(employer_number, response)
-                    return f"MESSAGE SENT SUCCESSFULLY: {response}"
-            else:
-                # For specialized agents, we assume they handle their own message sending
-                print(f"✅ {agent_used.upper()} handled message sending internally")
-                print("MESSAGE SENT SUCCESSFULLY: ",response)
-                return f"MESSAGE SENT SUCCESSFULLY: {response}"
+            # print(f"🎯 FINAL RESPONSE FROM {agent_used}: {response}")
+            # if agent_used == "super_agent":
+            #     if type_of_message=="audio":
+            #         print("MESSAGE SENT SUCCESSFULLY: ", response) 
+            #         return send_audio_message(response, "en-IN", employer_number)
+            #     elif type_of_message=="text":
+            #         print("MESSAGE SENT SUCCESSFULLY: ", response)
+            #         send_message_user(employer_number, response)
+            #         return f"MESSAGE SENT SUCCESSFULLY: {response}"
+            # else:
+            #     # For specialized agents, we assume they handle their own message sending
+            #     print(f"✅ {agent_used.upper()} handled message sending internally")
+            #     print("MESSAGE SENT SUCCESSFULLY: ",response)
+            #     return f"MESSAGE SENT SUCCESSFULLY: {response}"
            
+            if type_of_message=="text":
+                print("MESSAGE SENT SUCCESSFULLY: ", response) 
+                send_message_user(employer_number, response)
+            if type_of_message=="audio":
+                print("MESSAGE SENT SUCCESSFULLY: ", response) 
+                send_audio_message(error_message, "en-IN", employer_number)
 
-            
+            print(f"Webhook payload: {formatted_json_oneline}")
+
+            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.post(url, headers=headers, data=formatted_json)
+
+
                 
         except Exception as e:
             error_message = f"I apologize, but I encountered an error while processing your request. Please try again."
@@ -564,6 +580,6 @@ Just tell me what you need help with, and I'll take care of it!"""
 # Global instance
 super_agent_instance = SuperAgent()
 
-def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "") -> str:
+def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) ->str:
     """Main entry point for the Super Agent"""
-    return super_agent_instance.process_query(employer_number, type_of_message, query, media_id)
+    return super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
