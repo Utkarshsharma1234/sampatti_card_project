@@ -15,7 +15,7 @@ from langchain.tools import StructuredTool
 from sqlalchemy.orm import Session
 
 from .userControllers import send_audio_message
-from .whatsapp_message import send_v2v_message
+from .whatsapp_message import send_message_user, send_v2v_message
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_groq import ChatGroq
@@ -164,7 +164,6 @@ prompt = ChatPromptTemplate.from_messages([
 
         RESPONSE FORMATTING:
         - Keep responses concise and professional
-        - Use single-line format without excessive line breaks
         - Include all necessary details in readable format
         - Always confirm actions before execution
         - Provide clear next steps after completing actions
@@ -195,14 +194,6 @@ agent = create_tool_calling_agent(
     prompt=prompt,
     tools=tools  
 )
-
-def sanitize_whatsapp_text(text):
-    # Remove newlines/tabs
-    clean_text = text.replace('\n', ' ').replace('\t', ' ')
-    # Reduce multiple spaces to max 4
-    while '     ' in clean_text:  # 5 spaces
-        clean_text = clean_text.replace('     ', '    ')  # reduce to 4
-    return clean_text.strip()
 
 # ChromaDB setup for conversation memory
 PERSIST_DIR = "../../chroma_db"
@@ -281,9 +272,7 @@ def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str):
         # Send response based on message type
         if typeofMessage == "text":
             print("Assistant Response: ", assistant_response)
-            assistant_response = sanitize_whatsapp_text(assistant_response)
-            print("Sanitized Assistant Response: ", assistant_response)
-            send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
+            send_message_user(employer_number, body)
             return assistant_response 
         elif typeofMessage == "audio":
             send_audio_message(assistant_response, "en-IN", employer_number)

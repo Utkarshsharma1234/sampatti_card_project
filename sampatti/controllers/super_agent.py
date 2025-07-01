@@ -15,7 +15,7 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message
-from .whatsapp_message import send_v2v_message
+from .whatsapp_message import send_v2v_message, send_message_user
 from .ai_agents import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .tools import transcribe_audio_tool
@@ -525,7 +525,8 @@ Just tell me what you need help with, and I'll take care of it!"""
                     return send_audio_message(response, "en-IN", employer_number)
                 elif type_of_message=="text":
                     print("MESSAGE SENT SUCCESSFULLY: ", response)
-                    return send_v2v_message(employer_number, response, template_name="v2v_template")
+                    send_message_user(employer_number, response)
+                    return f"MESSAGE SENT SUCCESSFULLY: {response}"
             else:
                 # For specialized agents, we assume they handle their own message sending
                 print(f"✅ {agent_used.upper()} handled message sending internally")
