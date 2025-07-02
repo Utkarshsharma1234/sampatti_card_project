@@ -92,19 +92,30 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
+        # Forward to ngrok for specific number
+        if employerNumber == "918197266977":
+            ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
+            try: 
+                ngrok_response = requests.post(ngrok_url, headers=headers, data=formatted_json) 
+                print(f"Forwarded to ngrok. Status: {ngrok_response.status_code}")
+            except Exception as e:
+                print(f"Error forwarding to ngrok: {e}")
+            # Return early to skip super_agent processing
+            return
+
         if not message_type:
-            print("None message type")
+            print("None message type")
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
             # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
             # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            super_agent.super_agent_query(employerNumber, message_type, query, "")
+            super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
 
         else:
             # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
             # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
-            super_agent.super_agent_query(employerNumber, message_type, "", media_id)
+            super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
