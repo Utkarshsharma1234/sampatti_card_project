@@ -540,17 +540,6 @@ Just tell me what you need help with, and I'll take care of it!"""
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
                 send_audio_message(response, "en-IN", employer_number)
-
-            print(f"Webhook payload: {formatted_json}")
-
-            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
-            headers = {
-                'Content-Type': 'application/json'
-            }
-
-            response = requests.post(url, headers=headers, data=formatted_json)
-
-
                 
         except Exception as e:
             error_message = f"I apologize, but I encountered an error while processing your request. Please try again."
