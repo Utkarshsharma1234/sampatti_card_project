@@ -124,7 +124,7 @@ class SuperAgent:
         
         self.intent_classifier = self.intent_prompt | llm | intent_parser
 
-    def setup_conversation_manager(self):
+    def zsetup_conversation_manager(self):
         """Setup the main conversation management system"""
         response_parser = PydanticOutputParser(pydantic_object=SuperAgentResponse)
         
