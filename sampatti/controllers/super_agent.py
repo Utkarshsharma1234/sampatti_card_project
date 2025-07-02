@@ -539,7 +539,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 send_message_user(employer_number, response)
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                send_audio_message(error_message, "en-IN", employer_number)
+                send_audio_message(response, "en-IN", employer_number)
 
             print(f"Webhook payload: {formatted_json}")
 
