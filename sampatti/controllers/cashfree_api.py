@@ -173,7 +173,7 @@ def check_vendor_status(vendorId):
             'Content-Type': 'application/json'
         }
 
-        response = requests.get(url, headers=headers, json=payload)
+        response = requests.get(url, headers=headers, data=payload)
         response_data = json.loads(response.text)
         print(response_data)
         return response_data
