@@ -13,7 +13,6 @@ from .utility_functions import call_sarvam_api
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..models import CashAdvanceManagement, worker_employer
-from ..database import get_db_session
 from fastapi import Depends
 from .. import models
 
@@ -246,7 +245,7 @@ def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> d
         db.close()
 
 
-def get_worker_details(workerNumber : int, db : Session = Depends(get_db_session)):
+def get_worker_details(workerNumber : int, db : Session = Depends(get_db)):
     """
     Fetches worker details from the database using the worker number.
     Returns a dictionary with worker details or an error message.
