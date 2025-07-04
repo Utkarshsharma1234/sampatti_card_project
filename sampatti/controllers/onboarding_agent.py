@@ -73,12 +73,6 @@ prompt = ChatPromptTemplate.from_messages(
 
             If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details.
 
-            If the user input type is 'image', follow these steps -->> take the text as the main query -> process the query -> generate the output.
-
-            If the user input type is 'audio', follow these steps -->> use transcribe_audio_tool by giving it media Id and get the text from it -> make this text as the main query -> process the query using the chat history -> get the output.
-
-            Always reason about the type and mediaId fields in the query context and decide autonomously whether to call a tool.
-
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
             When you are done with the onboarding process, then never show the google sheet link to the employer, instead just send a message to the employer that we have collected all the information and the once the onboarding is done you will be informed about the onboarding status.
@@ -92,7 +86,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 
             # Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
-tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
@@ -148,7 +142,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     )
 
     # Pass all relevant info so the agent can reason and use tools
-    full_query = f"The employer number is {employer_number}. Query: {query}. Type: {typeofMessage}. MediaId: {mediaId}"
+    full_query = f"The employer number is {employer_number}. Query: {query}."
 
     inputs = {
         "query": full_query,
