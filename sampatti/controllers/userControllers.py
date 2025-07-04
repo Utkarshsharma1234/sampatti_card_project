@@ -180,7 +180,7 @@ def check_worker(workerNumber : int, db : Session):
     worker = db.query(models.Domestic_Worker).where(models.Domestic_Worker.workerNumber == workerNumber).first()
 
     if not worker :
-        return {"message" : "INVALID"}
+        return {"error" : "Worker not found."}
 
     else:
         return worker

@@ -246,19 +246,20 @@ def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> d
 
 
 def get_worker_details(workerNumber : int):
-    db = next(get_db())
     """
     Fetches worker details from the database using the worker number.
     Returns a dictionary with worker details or an error message.
     """
+    url = "https://conv.sampatticards.com/user/check_worker"
+    payload = {
+        "workerNumber": workerNumber
+    }
+    
     try:
-        worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-        if not worker:
-            return {"error": "Worker not found"}
-        
-        return worker 
-    except Exception as e:
-        print(f"Error fetching worker details: {e}")
+        response = requests.post(url, params=payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
         return {"error": str(e)}
 
 
