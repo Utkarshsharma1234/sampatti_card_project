@@ -3,9 +3,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import userControllers
+from ..controllers import onboarding_agent, userControllers
 from dotenv import load_dotenv
-from ..controllers import ai_agents, whatsapp_message, super_agent
+from ..controllers import whatsapp_message, super_agent
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
