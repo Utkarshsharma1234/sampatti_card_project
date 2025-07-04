@@ -254,9 +254,9 @@ def get_worker_details(workerNumber : int):
     payload = {
         "workerNumber": workerNumber
     }
-    
+
     try:
-        response = requests.post(url, params=payload)
+        response = requests.get(url, params=payload)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
