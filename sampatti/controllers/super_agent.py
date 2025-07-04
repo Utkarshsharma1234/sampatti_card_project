@@ -17,9 +17,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message, send_message_user
-from .ai_agents import queryExecutor as onboarding_agent
+from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
-from .tools import transcribe_audio_tool
+from .onboarding_tools import transcribe_audio_tool
 
 
 
