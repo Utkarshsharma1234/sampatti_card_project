@@ -69,7 +69,8 @@ prompt = ChatPromptTemplate.from_messages(
 
             When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
 
-            If the employer confirms the worker details which you have found out then just fetch all the values needed for onboarding from the response which you get from the get_worker_details_tool and call the `worker_onboarding_tool` to onboard the worker.
+            If the employer confirms the worker details which you have found out fetch all values needed for onboarding from the response which you get from the get_worker_details_tool then ask for the salary from the employer and call the `worker_onboarding_tool` to onboard the worker.
+            
             If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details.
 
             If the user input type is 'image', follow these steps -->> take the text as the main query -> process the query -> generate the output.

@@ -80,8 +80,8 @@ class WorkerEmployerInput(BaseModel):
 
 def onboard_worker_employer( worker_number: int, employer_number: int, pan_number: str, salary : int, UPI: Optional[str] = "", bank_account_number: Optional[str]= "", ifsc_code: Optional[str] = "") -> str:
 
-    bank_passbook_image = "placeholder_passbook.jpg"
-    pan_card_image = "placeholder_pan.jpg"
+    bank_passbook_image = "NA"
+    pan_card_image = "NA"
 
     worker_number = int(worker_number)
     employer_number = int(employer_number)
