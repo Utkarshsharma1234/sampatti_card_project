@@ -10,7 +10,7 @@ import requests, os, tempfile
 from pydub import AudioSegment
 from urllib.parse import urlparse
 from .utility_functions import call_sarvam_api
-from ..database import get_db
+from ..database import get_db_session, get_db
 from sqlalchemy.orm import Session
 from ..models import CashAdvanceManagement, worker_employer
 from fastapi import Depends
@@ -245,7 +245,8 @@ def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> d
         db.close()
 
 
-def get_worker_details(workerNumber : int, db : Session = Depends(get_db)):
+def get_worker_details(workerNumber : int):
+    db = next(get_db())
     """
     Fetches worker details from the database using the worker number.
     Returns a dictionary with worker details or an error message.
