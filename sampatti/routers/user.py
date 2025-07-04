@@ -4,11 +4,11 @@ from fastapi.responses import FileResponse
 from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import rag_funcs, userControllers
+from ..controllers import onboarding_agent, rag_funcs, userControllers
 from ..controllers import employment_contract_gen, salary_summary_gen, cash_advance_agent, super_agent
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
-from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management, ai_agents
+from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
 from pydantic import BaseModel
 from typing import Optional
 
@@ -272,7 +272,7 @@ def generate_salary_record(employerNumber: int, workerName: str, db: Session = D
 
 @router.get("/ai_agents_queryExecutor")
 def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaId : str):
-    return ai_agents.queryExecutor(employer_number, typeofMessage, query, mediaId)
+    return onboarding_agent.queryExecutor(employer_number, typeofMessage, query, mediaId)
 
 
 @router.post("/ai_agent/onboarding_worker_sheet/create")

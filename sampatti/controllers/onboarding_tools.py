@@ -3,7 +3,7 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from langchain.tools import Tool
 from datetime import datetime
 from pydantic import BaseModel, Field, root_validator
-import uuid
+import uuid, re
 from typing import Optional
 from langchain.tools import StructuredTool
 import requests, os, tempfile
@@ -13,7 +13,9 @@ from .utility_functions import call_sarvam_api
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..models import CashAdvanceManagement, worker_employer
-
+from ..database import get_db_session
+from fastapi import Depends
+from .. import models
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -181,7 +183,6 @@ def send_audio(text: str, employerNumber: int, user_language: str = "en-IN"):
     except requests.RequestException as e:
         return {"error": str(e)}
 
-import re
 
 def normalize_name(name: str) -> str:
     # Lowercase, strip, remove extra/multiple spaces
@@ -244,53 +245,28 @@ def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> d
     finally:
         db.close()
 
-def store_cash_advance_data(
-    worker_id: str,
-    employer_id: str,
-    cash_advance: int,
-    repayment_amount: int,
-    repayment_start_month: int,
-    repayment_start_year: int,
-    frequency: int,
-    chat_id: str
-) -> dict:
-    db = next(get_db())
+
+def get_worker_details(workerNumber : int, db : Session = Depends(get_db_session)):
     """
-    Store cash advance data in CashAdvanceManagement table.
+    Fetches worker details from the database using the worker number.
+    Returns a dictionary with worker details or an error message.
     """
     try:
-        # Create new cash advance record
-        cash_advance_record = CashAdvanceManagement(
-            id=str(uuid.uuid4().hex),
-            worker_id=worker_id,
-            employer_id=employer_id,
-            cashAdvance=cash_advance,
-            repaymentAmount=repayment_amount,
-            repaymentStartMonth=repayment_start_month,
-            repaymentStartYear=repayment_start_year,
-            frequency=frequency,
-            chatId=chat_id
-        )
+        worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
+        if not worker:
+            return {"error": "Worker not found"}
         
-        db.add(cash_advance_record)
-        db.commit()
-        
-        return {
-            "success": True,
-            "message": "Cash advance data stored successfully",
-            "record_id": cash_advance_record.id
-        }
+        return worker 
     except Exception as e:
-        db.rollback()
-        print(f"Error storing cash advance data: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    finally:
-        db.close()
+        print(f"Error fetching worker details: {e}")
+        return {"error": str(e)}
 
-    
+
+get_worker_details_tool = StructuredTool.from_function(
+    func=get_worker_details,
+    name="get_worker_details",
+    description="Fetches worker details by worker number."
+)
 
 worker_onboarding_tool = StructuredTool.from_function(
     func=onboard_worker_employer,
@@ -317,10 +293,3 @@ get_worker_by_name_and_employer_tool = StructuredTool.from_function(
     name="get_worker_by_name_and_employer",
     description="Find worker details by name and employer number from worker_employer table."
 )
-
-store_cash_advance_data_tool = StructuredTool.from_function(
-    func=store_cash_advance_data,
-    name="store_cash_advance_data",
-    description="Store cash advance data in CashAdvanceManagement table."
-)
-

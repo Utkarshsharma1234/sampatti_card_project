@@ -108,13 +108,9 @@ def process_orai_webhook(data: dict):
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
-            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
-            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
             super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
 
         else:
-            # whatsapp_message.send_v2v_message(employerNumber, "Hi this is a test message.", template_name="v2v_template")
-            # whatsapp_message.send_greetings(employerNumber, template_name="salary_adjust_greetings")
             super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
 
     except Exception as e:

@@ -173,13 +173,13 @@ def check_vendor_status(vendorId):
             'Content-Type': 'application/json'
         }
 
-        response = requests.get(url, headers=headers, json=payload)
+        response = requests.get(url, headers=headers, data=payload)
         response_data = json.loads(response.text)
         print(response_data)
         return response_data
     
     except Exception as e:
-        print(f"Error adding vendor : {e}")
+        print(f"Error checking vendor status: {e}")
 
 # fetching the UTR No.
 

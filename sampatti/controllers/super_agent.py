@@ -84,7 +84,7 @@ class SuperAgent:
         }
         
         self.setup_intent_classifier()
-        self.setup_conversation_manager()
+        # self.setup_conversation_manager()
 
     def setup_intent_classifier(self):
         """Setup the intent classification system"""

@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -67,6 +67,11 @@ prompt = ChatPromptTemplate.from_messages(
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
             Once all information is gathered, call the onboarding tool.
 
+            When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name.
+
+            If the employer confirms the worker details which you have found out then just fetch all the values needed for onboarding from the response which you get from the get_worker_details_tool and call the `worker_onboarding_tool` to onboard the worker.
+            If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details.
+
             If the user input type is 'image', follow these steps -->> take the text as the main query -> process the query -> generate the output.
 
             If the user input type is 'audio', follow these steps -->> use transcribe_audio_tool by giving it media Id and get the text from it -> make this text as the main query -> process the query using the chat history -> get the output.
@@ -85,7 +90,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 
             # Before returning any output, you MUST always call the `send_audio_tool` with the `employerNumber` and the `output`. Only after sending the audio, return the output object.
-tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool]
+tools = [worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
@@ -153,7 +158,6 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        # return send_v2v_message(employer_number, assistant_response, template_name="v2v_template")
         return assistant_response
 
     except Exception as e:
