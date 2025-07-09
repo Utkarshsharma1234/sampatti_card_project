@@ -67,13 +67,13 @@ def generate_salary_slip(workerNumber, db:Session) :
 
     c.setFont("Times-Roman", 10)
 
-    if worker.accountNumber is None:
+    if worker.accountNumber is None or worker.accountNumber == "":
         worker.accountNumber = "NA"
 
-    if worker.upi_id is None:
+    if worker.upi_id is None or worker.upi_id == "":
         worker.upi_id = "NA"
 
-    if worker.ifsc is None:
+    if worker.ifsc is None or worker.ifsc == "":
         worker.ifsc = "NA"
 
         
