@@ -11,7 +11,7 @@ from cashfree_pg.api_client import Cashfree
 from cashfree_pg.models.customer_details import CustomerDetails
 from .. import models
 from .whatsapp_message import send_whatsapp_message
-from .utility_functions import generate_unique_id, current_month, current_date, current_year
+from .utility_functions import generate_unique_id, current_month, current_date, current_year, previous_month
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 from dotenv import load_dotenv
@@ -251,6 +251,7 @@ def payment_link_generation(db : Session):
 
     cr_month = current_month()
     cr_year = current_year()
+    
     month_to_number = {
         "January": 1, "February": 2, "March": 3, "April": 4,
         "May": 5, "June": 6,
@@ -278,24 +279,30 @@ def payment_link_generation(db : Session):
 
             note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days}
 
+            order_splits = [
+                {
+                    "vendor_id": f"{item.vendor_id}",
+                    "amount": total_salary
+                }
+            ]
             note_string = json.dumps(note)
-            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
             try:
                 api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
-                # print(api_response.data)
+                response = dict(api_response.data)
+                payment_session_id = response["payment_session_id"]
+
+                send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
+
+                update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
+
+                db.execute(update_statement)
+                db.commit()
+                payment_ids.append(payment_session_id)
+
+
             except Exception as e:
                 print(e)
-
-            response = dict(api_response.data)
-            payment_session_id = response["payment_session_id"]
-
-            send_whatsapp_message(employerNumber=item.employer_number, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
-
-            update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_number == item.worker_number, models.worker_employer.c.employer_number == item.employer_number).values(order_id= response["order_id"])
-
-            db.execute(update_statement)
-            db.commit()
-            payment_ids.append(payment_session_id)
 
     return payment_ids
 
@@ -426,8 +433,23 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
     Cashfree.XEnvironment = Cashfree.XProduction
     x_api_version = "2023-08-01"
 
-    cr_month = current_month()
-    cr_year = current_year()
+    ps_month = previous_month()
+    month  = ""
+    year = ""
+
+    day_only = current_date().day
+    if(abs(31-day_only) >= abs(1-day_only)):
+        month = ps_month
+        if month == "December":
+            year = current_year() - 1
+
+        else:
+            year = current_year()
+
+    else:
+        month = current_month()
+        year = current_year()
+
 
     total_salary = cash_advance + bonus + monthly_salary - repayment_amount - deduction
 
@@ -435,22 +457,28 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
 
     note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'deduction' : deduction, 'attendance' : 30}
 
+    order_splits = [
+        {
+            "vendor_id": item.vendor_id,
+            "amount": total_salary
+        }
+    ]
     note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])
 
     customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
-    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
+
     try:
         api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
-        # print(api_response.data)
+        response = dict(api_response.data)
+        payment_session_id = response["payment_session_id"]
+
+        send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+
+        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
+        db.execute(update_statement)
+        db.commit()
+
     except Exception as e:
         print(e)
-
-    response = dict(api_response.data)
-    payment_session_id = response["payment_session_id"]
-
-    send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{cr_month} {cr_year}", link_param=payment_session_id, template_name="revised_salary_link_template")
-
-    update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
-    db.execute(update_statement)
-    db.commit()
