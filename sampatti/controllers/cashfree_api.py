@@ -278,8 +278,14 @@ def payment_link_generation(db : Session):
 
             note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days}
 
+            order_splits = [
+                {
+                    "vendor_id": f"{item.vendor_id}",
+                    "amount": total_salary
+                }
+            ]
             note_string = json.dumps(note)
-            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
             try:
                 api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
                 # print(api_response.data)
@@ -435,11 +441,17 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
 
     note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'deduction' : deduction, 'attendance' : 30}
 
+    order_splits = [
+        {
+            "vendor_id": f"{item.vendor_id}",
+            "amount": total_salary
+        }
+    ]
     note_string = json.dumps(note)
     actual_number = int(str(employerNumber)[2:])
 
     customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
-    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string)
+    createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
     try:
         api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
         # print(api_response.data)
