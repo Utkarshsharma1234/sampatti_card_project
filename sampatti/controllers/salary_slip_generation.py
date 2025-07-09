@@ -163,7 +163,7 @@ def generate_salary_slip(workerNumber, db:Session) :
     c.setFont("Helvetica-Bold", 10)
     y -= 30
     salary_in_words = amount_to_words(total_amount)
-    c.drawString(x, y, f"Total amount Credited INR {total_amount}/- Only")
+    c.drawString(x, y, f"Total amount Credited : INR {total_amount}/- Only")
     c.drawString(x, y-20, f"Amount in Words : {salary_in_words} Only")
           
 
