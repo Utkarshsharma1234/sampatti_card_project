@@ -20,7 +20,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_groq import ChatGroq
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
-from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool, store_salary_management_records_tool
+from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_func_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool, store_salary_management_records_tool
 from ..database import get_db
 
 load_dotenv()
@@ -154,7 +154,7 @@ prompt = ChatPromptTemplate.from_messages([
         TOOL USAGE MAPPING:
         - Worker lookup: get_worker_by_name_and_employer
         - Check existing advance: get_existing_cash_advance
-        - Store new advance: store_cash_advance_data
+        - Store new advance: store_cash_advance_data_func_tool
         - Update existing: update_cash_advance_data_func_tool
         - Store bonus/deduction: update_salary_details_func_tool
         - Combined data: store_combined_data_func_tool
@@ -241,7 +241,7 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 
 # Register tools with the agent
-tools = [get_worker_by_name_and_employer_tool, store_cash_advance_data_tool, get_existing_cash_advance_tool,
+tools = [get_worker_by_name_and_employer_tool, store_cash_advance_data_func_tool, get_existing_cash_advance_tool,
             update_cash_advance_data_func_tool, update_salary_details_func_tool, store_combined_data_func_tool,
             mark_advance_as_paid_func_tool, generate_payment_link_func_tool, update_salary_tool,
             store_salary_management_records_tool]
