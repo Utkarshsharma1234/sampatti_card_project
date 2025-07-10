@@ -4,7 +4,7 @@ import os
 import time
 import requests, re
 from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import chromadb
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -20,22 +20,29 @@ from .whatsapp_message import send_v2v_message, send_message_user
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio_tool
+# Import the employer and worker tools
+from .main_tool import add_employer_tool, get_employer_workers_info_tool, add_employer, get_employer_workers_info
+# Import attendance agent and tools
+from .attendance_agent import queryExecutor as attendance_agent
+from .attendance_tool import get_workers_for_employer_tool, manage_attendance_tool, get_attendance_summary_tool
 
 
 
 load_dotenv()
 print("✅ Successfully imported onboarding_agent")
 print("✅ Successfully imported cash_advance_agent")
+print("✅ Successfully imported employer and worker tools")
+print("✅ Successfully imported attendance_agent and attendance_tools")
 
 
 # Configuration
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 class IntentClassification(BaseModel):
     """Pydantic model for intent classification"""
-    primary_intent: str  # "onboarding", "cash_advance", "general_conversation", "greeting", "help"
+    primary_intent: str  # "onboarding", "cash_advance", "general_conversation", "greeting", "help", "worker_info"
     confidence: float  # 0.0 to 1.0
     keywords_found: list[str]
     requires_specialized_agent: bool
@@ -59,7 +66,7 @@ class SuperAgent:
             embedding_function=embedding
         )
         
-        # Intent keywords for classification
+        # Intent keywords for classification - Added worker_info keywords
         self.intent_keywords = {
             "onboarding": [
                 "onboard", "add worker", "new worker", "worker details", "employee details",
@@ -76,6 +83,15 @@ class SuperAgent:
                 "deduct from salary", "salary cut", "cut salary", "deduct money",
                 "payment to worker", "pay worker", "worker payment", "employee payment"
             ],
+            "worker_info": [
+                "show workers", "list workers", "worker list", "employee list", "my workers",
+                "worker status", "worker details", "employee status", "worker info",
+                "how many workers", "total workers", "worker count", "employee count",
+                "worker salary", "worker leaves", "worker onboarding date", "worker vendor",
+                "active workers", "inactive workers", "all workers", "my employees",
+                "tell me about workers", "worker information", "employee information",
+                "salary of", "what is salary", "worker a", "worker b"
+            ],
             "general_conversation": [
                 "hello", "hi", "how are you", "what can you do", "help", "thanks",
                 "good morning", "good evening", "bye", "goodbye", "thank you",
@@ -83,8 +99,18 @@ class SuperAgent:
             ]
         }
         
+        # Initialize tools
+        self.tools = [
+            add_employer_tool,
+            get_employer_workers_info_tool,
+            get_workers_for_employer_tool,
+            manage_attendance_tool,
+            get_attendance_summary_tool
+        ]
+        
         self.setup_intent_classifier()
-        # self.setup_conversation_manager()
+        self.setup_tool_agent()
+        self.setup_conversation_manager()
 
     def setup_intent_classifier(self):
         """Setup the intent classification system"""
@@ -99,15 +125,17 @@ class SuperAgent:
                 Analyze the user's message and classify it into one of these intents:
                 1. "onboarding" - Adding new workers, collecting worker details (UPI, bank, PAN, salary, etc.)
                 2. "cash_advance" - Cash advances, bonuses, deductions, payment links, salary payments
-                3. "general_conversation" - Greetings, help requests, general chat
-                4. "greeting" - Hello, hi, good morning, etc.
-                5. "help" - What can you do, how to use, etc.
+                3. "worker_info" - Viewing worker lists, worker details, worker status, counts, salary inquiries, etc.
+                4. "general_conversation" - Greetings, help requests, general chat
+                5. "greeting" - Hello, hi, good morning, etc.
+                6. "help" - What can you do, how to use, etc.
                 
                 Consider conversation history to understand context better.
                 
                 KEYWORDS FOR CLASSIFICATION:
                 Onboarding: {onboarding_keywords}
                 Cash Advance: {cash_advance_keywords}
+                Worker Info: {worker_info_keywords}
                 General: {general_keywords}
                 
                 Return your analysis in the specified JSON format.
@@ -120,12 +148,20 @@ class SuperAgent:
             format_instructions=intent_parser.get_format_instructions(),
             onboarding_keywords=", ".join(self.intent_keywords["onboarding"]),
             cash_advance_keywords=", ".join(self.intent_keywords["cash_advance"]),
+            worker_info_keywords=", ".join(self.intent_keywords["worker_info"]),
             general_keywords=", ".join(self.intent_keywords["general_conversation"])
         )
         
         self.intent_classifier = self.intent_prompt | llm | intent_parser
 
-    def zsetup_conversation_manager(self):
+    def setup_tool_agent(self):
+        """Setup placeholder for tool agent - currently using direct function calls"""
+        # Tool agent setup is not currently used as we're calling functions directly
+        # Keeping this method for potential future use with LangChain agents
+        self.tool_agent = None
+        self.tool_executor = None
+
+    def setup_conversation_manager(self):
         """Setup the main conversation management system"""
         response_parser = PydanticOutputParser(pydantic_object=SuperAgentResponse)
         
@@ -146,7 +182,8 @@ class SuperAgent:
                 
                 ROUTING DECISIONS:
                 - If intent is "onboarding": Route to onboarding specialist
-                - If intent is "cash_advance": Route to cash advance specialist  
+                - If intent is "cash_advance": Route to cash advance specialist
+                - If intent is "worker_info": Use internal tools to fetch worker information
                 - If intent is "general_conversation", "greeting", "help": Handle yourself
                 
                 CONVERSATION STAGES:
@@ -162,6 +199,7 @@ class SuperAgent:
                 For general chat: Be friendly but guide toward productive usage
                 
                 CAPABILITIES TO MENTION:
+                ✅ View all your workers and their details
                 ✅ Onboard new workers (collect UPI, bank details, PAN, salary info)
                 ✅ Manage cash advances and repayments  
                 ✅ Handle bonuses and salary deductions
@@ -186,6 +224,120 @@ class SuperAgent:
         
         self.conversation_manager = self.conversation_prompt | llm | response_parser
 
+    def ensure_employer_exists(self, employer_number: int):
+        """Ensure employer exists in database, add if not present"""
+        try:
+            # This will add the employer if not exists, or return existing employer
+            result = add_employer(employer_number)
+            print(f"EMPLOYER ADDING LOG: {result}")
+            print(f"✅ Employer {employer_number} ensured in database")
+            return True
+        except Exception as e:
+            print(f"❌ Error ensuring employer exists: {e}")
+            return False
+
+    def get_worker_info_response(self, employer_number: int, user_message: str) -> Dict[str, Any]:
+        """Fetch worker information and return raw data for the super agent to process"""
+        try:
+            # First ensure employer exists
+            self.ensure_employer_exists(employer_number)
+            
+            # Direct call to the function to get worker data
+            worker_data = get_employer_workers_info(employer_number)
+            
+            # Return the raw data for the super agent to process
+            return {
+                "success": True,
+                "data": worker_data,
+                "error": None
+            }
+                
+        except Exception as e:
+            print(f"❌ Error getting worker info: {e}")
+            print(f"❌ Error Type: {type(e).__name__}")
+            print(f"❌ Error Details: {str(e)}")
+            import traceback
+            print(f"❌ Full traceback: {traceback.format_exc()}")
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
+            }
+
+    def generate_worker_info_response(self, user_message: str, worker_data: Dict[str, Any], 
+                                    chat_history: str, employer_number: int) -> str:
+        """Generate a natural language response based on user query and worker data"""
+        
+        worker_info_prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                """
+                You are a helpful workplace management assistant. You have access to worker information 
+                and need to respond to the user's query in a natural, conversational way.
+                
+                Today's date: {today}
+                Employer Number: {employer_number}
+                
+                Worker Data Available:
+                {worker_data}
+                
+                RESPONSE GUIDELINES:
+                1. Answer the specific question the user asked
+                2. Be conversational and friendly
+                3. For Status when status= SENT it means the worker has paid the last salary.
+                4. Format dates nicely (e.g., "January 15, 2024" instead of "2024-01-15").
+                5. Format currency with commas (e.g., ₹12,000).
+                6. If user asks for specific information, focus on that
+                7. If user asks generally, provide a comprehensive overview
+                8. Always end with a helpful suggestion or question
+                9. Monthly leaves is total number of leaves in the current month.
+                
+                SPECIFIC QUERY HANDLING:
+                - "how many workers": Focus on count and status breakdown
+                - "worker salaries": Focus on salary information
+                - "worker details": Show comprehensive information
+                - "specific worker name": Focus on that worker only
+                - "salary of worker": Focus on the specific worker's salary
+                
+                Remember: Be helpful, natural, and answer exactly what the user is asking for.
+                """,
+            ),
+            ("system", "Conversation History:\n{chat_history}"),
+            ("human", "User Query: {user_message}"),
+        ])
+        
+        chain = worker_info_prompt | llm
+        
+        try:
+            response = chain.invoke({
+                "user_message": user_message,
+                "worker_data": json.dumps(worker_data, indent=2),
+                "chat_history": chat_history,
+                "today": datetime.now().strftime("%B %d, %Y"),
+                "employer_number": employer_number
+            })
+            
+            # Extract the content from the response
+            if hasattr(response, 'content'):
+                return response.content
+            else:
+                return str(response)
+                
+        except Exception as e:
+            print(f"❌ Error generating worker info response: {e}")
+            # Fallback to a basic response
+            if not worker_data["workers"]:
+                return (
+                    "I checked your records, and it looks like you don't have any workers registered yet. 😊\n\n"
+                    "Would you like to onboard your first worker? Just say 'add worker' or 'onboard new worker', "
+                    "and I'll guide you through the process step by step!"
+                )
+            else:
+                return (
+                    f"You have {worker_data['total_workers']} worker(s) in your system. "
+                    f"Would you like me to show you more specific details about them?"
+                )
+
     def store_conversation(self, employer_number: int, message: str, metadata: dict = None):
         """Store conversation in vector database with enhanced metadata"""
         default_metadata = {
@@ -200,7 +352,7 @@ class SuperAgent:
             texts=[message],
             metadatas=[default_metadata]
         )
-        self.vectordb.persist()
+        # Removed self.vectordb.persist() as it's deprecated in Chroma 0.4.x
 
     def get_sorted_chat_history(self, employer_number: int, limit: int = 20) -> str:
         """Retrieve recent sorted chat history for an employer"""
@@ -238,6 +390,18 @@ class SuperAgent:
     def fallback_intent_classification(self, user_message: str) -> IntentClassification:
         """Fallback keyword-based intent classification"""
         message_lower = user_message.lower()
+        
+        # Check for worker info keywords first (including salary queries)
+        worker_info_matches = [kw for kw in self.intent_keywords["worker_info"] if kw in message_lower]
+        if worker_info_matches or ("salary" in message_lower and "worker" in message_lower):
+            return IntentClassification(
+                primary_intent="worker_info",
+                confidence=0.9,
+                keywords_found=worker_info_matches or ["salary", "worker"],
+                requires_specialized_agent=False,  # Handled by super agent's tools
+                conversation_context="worker_info_request",
+                user_emotional_state="neutral"
+            )
         
         # Check for cash advance keywords with higher confidence for clear matches
         cash_advance_matches = [kw for kw in self.intent_keywords["cash_advance"] if kw in message_lower]
@@ -330,6 +494,7 @@ class SuperAgent:
                 response_text = """Hello! 👋 I'm your workplace management assistant. 
 
 I can help you with:
+• **View Your Workers** - See all your workers and their details
 • **Worker Onboarding** - Add new workers, collect their details (UPI, bank info, PAN, salary)
 • **Cash Advances** - Manage advances, repayments, bonuses, and deductions
 • **Payment Links** - Generate salary payment links
@@ -338,6 +503,10 @@ I can help you with:
 What would you like to do today?"""
             elif any(word in user_message.lower() for word in ["help", "what can you do"]):
                 response_text = """I'm here to help with your workplace management needs! Here's what I can assist you with:
+
+🔹 **Worker Information**
+   - View all your workers and their current status
+   - Check worker details like salary, leaves, and onboarding dates
 
 🔹 **Worker Onboarding**
    - Add new workers to your system
@@ -357,9 +526,9 @@ What would you like to do today?"""
 
 Just tell me what you need help with, and I'll take care of it!"""
             else:
-                response_text = "I understand you'd like to chat! While I'm here to help with workplace management tasks, feel free to let me know if you need assistance with worker onboarding, cash advances, or payment processing."
+                response_text = "I understand you'd like to chat! While I'm here to help with workplace management tasks, feel free to let me know if you need assistance with viewing your workers, worker onboarding, cash advances, or payment processing."
         else:
-            response_text = "I'm here to help! Please let me know what you'd like assistance with regarding worker management, onboarding, or cash advances."
+            response_text = "I'm here to help! Please let me know what you'd like assistance with regarding worker management, viewing worker details, onboarding, or cash advances."
 
         return SuperAgentResponse(
             agent_used="super_agent",
@@ -410,6 +579,27 @@ Just tell me what you need help with, and I'll take care of it!"""
                 print(f"📥 Cash Advance Agent Response: {response}")
                 return str(response) if response else "No response from cash advance agent."
                 
+            elif intent in ["attendance", "attendance_management", "attendance_info"]:
+                print(f"🔄 Routing to Attendance Agent for employer {employer_number}")
+                print(f"📤 Calling: attendance_agent({employer_number}, '{type_of_message}', '{query}', '{media_id}')")
+                
+                if attendance_agent is None:
+                    return "Attendance service is currently unavailable. Please try again later."
+                
+                response = attendance_agent(employer_number, type_of_message, query, media_id)
+                print(f"📥 Attendance Agent Response: {response}")
+                if isinstance(response, dict):
+                    for key in ["output", "result", "ai_message", "response_text", "message"]:
+                        if key in response and response[key]:
+                            return str(response[key])
+                    return str(response)
+                elif isinstance(response, str):
+                    return response
+                elif response is not None:
+                    return str(response)
+                else:
+                    return "Attendance agent did not return a response. Please check the worker details or try again."
+                
             else:
                 error_msg = f"I couldn't determine which specialist to connect you with for intent '{intent}'. Could you please clarify your request?"
                 print(f"❌ Unknown intent: {intent}")
@@ -431,6 +621,9 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"🆔 Media ID: {media_id}")
         
         try:
+            # Ensure employer exists in database first
+            self.ensure_employer_exists(employer_number)
+            
             # If the message is audio, transcribe it first
             if type_of_message == "audio" and media_id:
                 print(f"🔊 Transcribing audio with media ID: {media_id}")
@@ -455,9 +648,36 @@ Just tell me what you need help with, and I'll take care of it!"""
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
             
+            # Handle worker info requests with internal tools
+            if intent_analysis.primary_intent == "worker_info" and intent_analysis.confidence >= 0.7:
+                print(f"📊 WORKER INFO REQUEST DETECTED")
+                print(f"🔧 Using internal tools to fetch worker information")
+                
+                # Get the worker data
+                worker_info_result = self.get_worker_info_response(employer_number, query)
+                
+                if worker_info_result["success"]:
+                    # Generate natural language response based on user query and worker data
+                    response = self.generate_worker_info_response(
+                        query, 
+                        worker_info_result["data"], 
+                        chat_history, 
+                        employer_number
+                    )
+                    agent_used = "super_agent_tools"
+                else:
+                    response = (
+                        "Oh no! I encountered an issue while fetching your worker information. 😔\n\n"
+                        "This might be a temporary problem. Could you please try again in a moment? "
+                        "If the issue persists, I'm here to help troubleshoot!"
+                    )
+                    agent_used = "super_agent_error"
+                
+                print(f"✅ Successfully processed worker information request")
+                print(f"📄 Response preview: {response[:200]}..." if len(response) > 200 else f"📄 Full response: {response}")
+            
             # DYNAMIC ROUTING: Route to specialized agent if intent matches and confidence is high
-            specialized_agents = ["cash_advance", "onboarding"]  # Add more agent names as needed
-            if intent_analysis.primary_intent in specialized_agents and intent_analysis.confidence >= 0.7:
+            elif intent_analysis.primary_intent in ["cash_advance", "onboarding"] and intent_analysis.confidence >= 0.7:
                 print(f"✅ HIGH CONFIDENCE ROUTING: {intent_analysis.confidence:.2f} >= 0.7")
                 print(f"🚀 Candidate agent: {intent_analysis.primary_intent}_agent")
 
@@ -518,28 +738,15 @@ Just tell me what you need help with, and I'll take care of it!"""
             
             print(f"💾 Stored conversation with agent: {agent_used}")
 
-            # Return response - let the calling function handle message type routing
-            # print(f"🎯 FINAL RESPONSE FROM {agent_used}: {response}")
-            # if agent_used == "super_agent":
-            #     if type_of_message=="audio":
-            #         print("MESSAGE SENT SUCCESSFULLY: ", response) 
-            #         return send_audio_message(response, "en-IN", employer_number)
-            #     elif type_of_message=="text":
-            #         print("MESSAGE SENT SUCCESSFULLY: ", response)
-            #         send_message_user(employer_number, response)
-            #         return f"MESSAGE SENT SUCCESSFULLY: {response}"
-            # else:
-            #     # For specialized agents, we assume they handle their own message sending
-            #     print(f"✅ {agent_used.upper()} handled message sending internally")
-            #     print("MESSAGE SENT SUCCESSFULLY: ",response)
-            #     return f"MESSAGE SENT SUCCESSFULLY: {response}"
-           
+            # Send the response based on message type
             if type_of_message=="text":
-                print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                send_message_user(employer_number, response)
+                print("MESSAGE SENT SUCCESSFULLY: ", response)
+                #send_message_user(employer_number, response)
+                return f"MESSAGE SENT SUCCESSFULLY: {response}" 
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
                 send_audio_message(response, "en-IN", employer_number)
+                return f"MESSAGE SENT SUCCESSFULLY: {response}"
                 
         except Exception as e:
             error_message = f"I apologize, but I encountered an error while processing your request. Please try again."

@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from .utility_functions import call_sarvam_api
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..models import CashAdvanceManagement, worker_employer, SalaryDetails
+from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
 
 
 
@@ -122,12 +122,13 @@ def store_cash_advance_data_func(
     frequency: int,
     chat_id: str
 ) -> dict:
-    """Store cash advance data in CashAdvanceManagement table."""
+    """Store cash advance data in CashAdvanceManagement and SalaryManagementRecords tables."""
     db = next(get_db())
     try:
         # Create new cash advance record
+        cash_advance_id = str(uuid.uuid4().hex)
         cash_advance_record = CashAdvanceManagement(
-            id=str(uuid.uuid4().hex),
+            id=cash_advance_id,
             worker_id=worker_id,
             employer_id=employer_id,
             cashAdvance=cash_advance,
@@ -139,12 +140,48 @@ def store_cash_advance_data_func(
         )
         
         db.add(cash_advance_record)
+        
+        # Try to get current monthly salary
+        current_salary = 0
+        try:
+            # Get the latest salary detail for this worker
+            latest_salary = db.query(SalaryDetails).filter(
+                SalaryDetails.worker_id == worker_id,
+                SalaryDetails.employer_id == employer_id
+            ).order_by(SalaryDetails.id.desc()).first()
+            
+            if latest_salary and latest_salary.salary:
+                current_salary = latest_salary.salary
+        except Exception as salary_error:
+            print(f"Warning: Could not retrieve current salary: {salary_error}")
+        
+        # Create a new SalaryManagementRecords entry
+        salary_management_record_id = str(uuid.uuid4())
+        new_salary_management = SalaryManagementRecords(
+            id=salary_management_record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_salary,
+            modifiedMonthlySalary=current_salary,  # No change to salary
+            cashAdvance=cash_advance,
+            repaymentAmount=repayment_amount,
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,
+            bonus=0,  # No bonus for new cash advance
+            deduction=0,  # No deduction for new cash advance
+            chatId=chat_id,
+            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        db.add(new_salary_management)
         db.commit()
         
         return {
             "success": True,
             "message": "Cash advance data stored successfully",
-            "record_id": cash_advance_record.id
+            "record_id": cash_advance_id,
+            "salary_management_record_id": salary_management_record_id
         }
     except Exception as e:
         db.rollback()
@@ -251,13 +288,53 @@ def update_cash_advance_data_func(
             
         if not updated_fields:
             return {"success": False, "error": "No valid fields provided for update"}
+        
+        # Get worker and salary details to store in SalaryManagementRecords
+        worker_id = existing_record.worker_id
+        employer_id = existing_record.employer_id
+        chat_id = existing_record.chatId
+        
+        # Try to get current monthly salary from SalaryDetails
+        current_salary = 0
+        try:
+            # Get the latest salary detail for this worker
+            latest_salary = db.query(SalaryDetails).filter(
+                SalaryDetails.worker_id == worker_id,
+                SalaryDetails.employer_id == employer_id
+            ).order_by(SalaryDetails.id.desc()).first()
             
+            if latest_salary and latest_salary.salary:
+                current_salary = latest_salary.salary
+        except Exception as salary_error:
+            print(f"Warning: Could not retrieve current salary: {salary_error}")
+        
+        # Create a new SalaryManagementRecords entry for the update
+        salary_management_record_id = str(uuid.uuid4())
+        new_salary_management = SalaryManagementRecords(
+            id=salary_management_record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_salary,
+            modifiedMonthlySalary=current_salary,  # No change to salary
+            cashAdvance=existing_record.cashAdvance,
+            repaymentAmount=existing_record.repaymentAmount,
+            repaymentStartMonth=existing_record.repaymentStartMonth,
+            repaymentStartYear=existing_record.repaymentStartYear,
+            frequency=existing_record.frequency,
+            bonus=0,  # No bonus for cash advance updates
+            deduction=0,  # No deduction for cash advance updates
+            chatId=chat_id,
+            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        db.add(new_salary_management)
         db.commit()
         
         return {
             "success": True,
             "message": "Cash advance record updated successfully",
             "record_id": existing_record.id,
+            "salary_management_record_id": salary_management_record_id,
             "changes_made": updated_fields,
             "updated_data": {
                 "cashAdvance": existing_record.cashAdvance,
@@ -284,7 +361,8 @@ def update_salary_details_func(
     bonus: int = None,
     deduction: int = None,
     month: int = None,
-    year: int = None
+    year: int = None,
+    chat_id: str = ""
 ) -> dict:
     """Update bonus/deduction in SalaryDetails table for a specific month/year."""
     db = next(get_db())
@@ -292,6 +370,20 @@ def update_salary_details_func(
         current_date = datetime.now()
         target_month = month or current_date.month
         target_year = year or current_date.year
+        
+        # Get current monthly salary
+        current_salary = 0
+        try:
+            # Get the latest salary detail for this worker
+            latest_salary = db.query(SalaryDetails).filter(
+                SalaryDetails.worker_id == worker_id,
+                SalaryDetails.employer_id == employer_id
+            ).order_by(SalaryDetails.id.desc()).first()
+            
+            if latest_salary and latest_salary.salary:
+                current_salary = latest_salary.salary
+        except Exception as salary_error:
+            print(f"Warning: Could not retrieve current salary: {salary_error}")
         
         # Check if salary details record exists for this month/year
         existing_record = db.query(SalaryDetails).filter(
@@ -308,7 +400,6 @@ def update_salary_details_func(
             if deduction is not None:
                 existing_record.deduction = deduction
             
-            db.commit()
             action = "updated"
         else:
             # Create new record
@@ -322,8 +413,29 @@ def update_salary_details_func(
                 deduction=deduction or 0
             )
             db.add(new_salary_detail)
-            db.commit()
             action = "created"
+        
+        # Create a record in SalaryManagementRecords for tracking all changes
+        salary_management_record_id = str(uuid.uuid4())
+        new_salary_management = SalaryManagementRecords(
+            id=salary_management_record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_salary,
+            modifiedMonthlySalary=current_salary,  # No change to base salary
+            cashAdvance=0,  # No cash advance for bonus/deduction updates
+            repaymentAmount=0,  # No repayment for bonus/deduction updates
+            repaymentStartMonth=None,
+            repaymentStartYear=None,
+            frequency=1,
+            bonus=bonus or 0,
+            deduction=deduction or 0,
+            chatId=chat_id,
+            date_issued_on=current_date.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        db.add(new_salary_management)
+        db.commit()
         
         return {
             "success": True,
@@ -331,7 +443,8 @@ def update_salary_details_func(
             "month": target_month,
             "year": target_year,
             "bonus": bonus,
-            "deduction": deduction
+            "deduction": deduction,
+            "salary_management_record_id": salary_management_record_id
         }
     except Exception as e:
         db.rollback()
@@ -348,68 +461,124 @@ def store_combined_data_func(
     employer_id: str,
     cash_advance_data: dict = None,
     salary_data: dict = None,
-    chat_id: str = ""
+    chat_id: str = "",
+    current_monthly_salary: int = 0
 ) -> dict:
-    """Store data in both CashAdvanceManagement and SalaryDetails tables."""
+    """Store data in both CashAdvanceManagement, SalaryDetails, and SalaryManagementRecords tables."""
     db = next(get_db())
     try:
-        results = []
+        cash_advance_result = None
+        salary_details_result = None
+        salary_management_result = None
         
-        # Store cash advance data if provided
+        # Store in CashAdvanceManagement if data provided
         if cash_advance_data:
-            cash_advance_record = CashAdvanceManagement(
-                id=str(uuid.uuid4().hex),
+            cash_advance_record_id = str(uuid.uuid4())
+            
+            new_cash_advance = CashAdvanceManagement(
+                id=cash_advance_record_id,
                 worker_id=worker_id,
                 employer_id=employer_id,
-                cashAdvance=cash_advance_data.get('cashAdvance', 0),
-                repaymentAmount=cash_advance_data.get('repaymentAmount', 0),
-                repaymentStartMonth=cash_advance_data.get('repaymentStartMonth', 0),
-                repaymentStartYear=cash_advance_data.get('repaymentStartYear', 0),
+                cashAdvance=cash_advance_data.get('cash_advance', 0),
+                repaymentAmount=cash_advance_data.get('repayment_amount', 0),
+                repaymentStartMonth=cash_advance_data.get('repayment_start_month'),
+                repaymentStartYear=cash_advance_data.get('repayment_start_year'),
                 frequency=cash_advance_data.get('frequency', 1),
                 chatId=chat_id
             )
-            db.add(cash_advance_record)
-            results.append("Cash advance data stored")
+            
+            db.add(new_cash_advance)
+            cash_advance_result = {
+                "success": True,
+                "record_id": cash_advance_record_id
+            }
         
-        # Store salary data if provided
+        # Store in SalaryDetails if data provided
         if salary_data:
+            salary_record_id = str(uuid.uuid4())
             current_date = datetime.now()
-            target_month = salary_data.get('month', current_date.month)
-            target_year = salary_data.get('year', current_date.year)
             
-            # Check if record exists
-            existing_salary = db.query(SalaryDetails).filter(
-                SalaryDetails.worker_id == worker_id,
-                SalaryDetails.employer_id == employer_id,
-                SalaryDetails.month == target_month,
-                SalaryDetails.year == target_year
-            ).first()
+            new_salary_details = SalaryDetails(
+                id=salary_record_id,
+                employerNumber=salary_data.get('employer_number', 0),
+                worker_id=worker_id,
+                employer_id=employer_id,
+                totalAmount=salary_data.get('total_amount', 0),
+                salary=salary_data.get('salary', 0),
+                bonus=salary_data.get('bonus', 0),
+                cashAdvance=salary_data.get('cash_advance', 0),
+                repayment=salary_data.get('repayment', 0),
+                attendance=salary_data.get('attendance', 0),
+                month=salary_data.get('month', current_date.strftime('%B')),
+                year=salary_data.get('year', current_date.year),
+                order_id=salary_data.get('order_id', ''),
+                deduction=salary_data.get('deduction', 0)
+            )
             
-            if existing_salary:
-                if salary_data.get('bonus') is not None:
-                    existing_salary.bonus = salary_data['bonus']
-                if salary_data.get('deduction') is not None:
-                    existing_salary.deduction = salary_data['deduction']
-                results.append("Salary details updated")
-            else:
-                new_salary_detail = SalaryDetails(
-                    id=str(uuid.uuid4().hex),
-                    worker_id=worker_id,
-                    employer_id=employer_id,
-                    month=target_month,
-                    year=target_year,
-                    bonus=salary_data.get('bonus', 0),
-                    deduction=salary_data.get('deduction', 0)
-                )
-                db.add(new_salary_detail)
-                results.append("Salary details created")
+            db.add(new_salary_details)
+            salary_details_result = {
+                "success": True,
+                "record_id": salary_record_id
+            }
         
+        # Store in SalaryManagementRecords with combined data from both sources
+        salary_management_record_id = str(uuid.uuid4())
+        current_datetime = datetime.now()
+        
+        # Get cash advance data if provided
+        ca_amount = 0
+        repayment_amount = 0
+        repayment_start_month = None
+        repayment_start_year = None
+        frequency = 1
+        
+        if cash_advance_data:
+            ca_amount = cash_advance_data.get('cash_advance', 0)
+            repayment_amount = cash_advance_data.get('repayment_amount', 0)
+            repayment_start_month = cash_advance_data.get('repayment_start_month')
+            repayment_start_year = cash_advance_data.get('repayment_start_year')
+            frequency = cash_advance_data.get('frequency', 1)
+        
+        # Get bonus/deduction data if provided
+        bonus = 0
+        deduction = 0
+        
+        if salary_data:
+            bonus = salary_data.get('bonus', 0)
+            deduction = salary_data.get('deduction', 0)
+        
+        # Create new comprehensive record
+        new_salary_management = SalaryManagementRecords(
+            id=salary_management_record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_monthly_salary,
+            modifiedMonthlySalary=current_monthly_salary, # Default to current salary if no modification
+            cashAdvance=ca_amount,
+            repaymentAmount=repayment_amount,
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,
+            bonus=bonus,
+            deduction=deduction,
+            chatId=chat_id,
+            date_issued_on=current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        db.add(new_salary_management)
+        salary_management_result = {
+            "success": True,
+            "record_id": salary_management_record_id
+        }
+        
+        # Commit all changes
         db.commit()
         
         return {
-            "success": True,
-            "message": "Data stored successfully",
-            "actions": results
+            "cash_advance_result": cash_advance_result,
+            "salary_details_result": salary_details_result,
+            "salary_management_result": salary_management_result,
+            "overall_success": True
         }
     except Exception as e:
         db.rollback()
@@ -421,17 +590,87 @@ def store_combined_data_func(
     finally:
         db.close()
 
+def store_salary_management_records_func(
+    worker_id: str,
+    employer_id: str,
+    current_monthly_salary: int,
+    modified_monthly_salary: int = None,
+    cash_advance: int = 0,
+    repayment_amount: int = 0,
+    repayment_start_month: int = None,
+    repayment_start_year: int = None,
+    frequency: int = 1,
+    bonus: int = 0,
+    deduction: int = 0,
+    chat_id: str = ""
+) -> dict:
+    """Store salary management records in SalaryManagementRecords table."""
+    db = next(get_db())
+    try:
+        # Generate a unique ID for the record
+        record_id = str(uuid.uuid4())
+        
+        # Get current date as string
+        current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Set modified monthly salary to current if not provided
+        if modified_monthly_salary is None:
+            modified_monthly_salary = current_monthly_salary
+
+        # Create new record
+        new_record = SalaryManagementRecords(
+            id=record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_monthly_salary,
+            modifiedMonthlySalary=modified_monthly_salary,
+            cashAdvance=cash_advance,
+            repaymentAmount=repayment_amount,
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,
+            bonus=bonus,
+            deduction=deduction,
+            chatId=chat_id,
+            date_issued_on=current_date
+        )
+        
+        # Add and commit the record
+        db.add(new_record)
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Salary management record stored successfully",
+            "record_id": record_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error storing salary management record: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to store salary management record: {str(e)}"
+        }
+    finally:
+        db.close()
+
 def mark_advance_as_paid_func(
     worker_id: str,
     employer_id: str,
-    amount_paid: int
+    amount_paid: int,
+    chat_id: str = ""
 ) -> dict:
-    """Mark cash advance as already paid - store with 0 repayment."""
+    """Mark cash advance as already paid - store with 0 repayment and record in SalaryManagementRecords."""
     db = next(get_db())
     try:
+        # Generate unique ID
+        advance_id = str(uuid.uuid4().hex)
+        chat_record_id = chat_id or f"paid_advance_{int(time.time())}"
+        
         # Create record showing advance was paid
         paid_advance_record = CashAdvanceManagement(
-            id=str(uuid.uuid4().hex),
+            id=advance_id,
             worker_id=worker_id,
             employer_id=employer_id,
             cashAdvance=amount_paid,
@@ -439,16 +678,52 @@ def mark_advance_as_paid_func(
             repaymentStartMonth=0,
             repaymentStartYear=0,
             frequency=0,
-            chatId=f"paid_advance_{int(time.time())}"
+            chatId=chat_record_id
         )
         
         db.add(paid_advance_record)
+        
+        # Try to get current monthly salary
+        current_salary = 0
+        try:
+            # Get the latest salary detail for this worker
+            latest_salary = db.query(SalaryDetails).filter(
+                SalaryDetails.worker_id == worker_id,
+                SalaryDetails.employer_id == employer_id
+            ).order_by(SalaryDetails.id.desc()).first()
+            
+            if latest_salary and latest_salary.salary:
+                current_salary = latest_salary.salary
+        except Exception as salary_error:
+            print(f"Warning: Could not retrieve current salary: {salary_error}")
+            
+        # Create a new SalaryManagementRecords entry
+        salary_management_record_id = str(uuid.uuid4())
+        new_salary_management = SalaryManagementRecords(
+            id=salary_management_record_id,
+            worker_id=worker_id,
+            employer_id=employer_id,
+            currentMonthlySalary=current_salary,
+            modifiedMonthlySalary=current_salary,  # No change to salary
+            cashAdvance=amount_paid,
+            repaymentAmount=0,  # Already paid, so no repayment needed
+            repaymentStartMonth=0,
+            repaymentStartYear=0,
+            frequency=0,
+            bonus=0,  # No bonus for paid advance
+            deduction=0,  # No deduction for paid advance
+            chatId=chat_record_id,
+            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        db.add(new_salary_management)
         db.commit()
         
         return {
             "success": True,
             "message": f"₹{amount_paid} marked as paid advance",
-            "record_id": paid_advance_record.id
+            "record_id": advance_id,
+            "salary_management_record_id": salary_management_record_id
         }
     except Exception as e:
         db.rollback()
@@ -500,26 +775,6 @@ def generate_payment_link_func(
         else:
             return {
                 "success": False,
-                "error": f"API call failed with status:####{response.text}####: {response.status_code}: {response.text}"
-            }
-            
-    except Exception as e:
-        print(f"Error generating payment link: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
-        response = requests.get(url, params=payload)
-        
-        if response.status_code == 200:
-            return {
-                "success": True,
-                "message": "Payment link generated and sent successfully",
-                "response": response.json()
-            }
-        else:
-            return {
-                "success": False,
                 "error": f"API call failed with status {response.status_code}: {response.text}"
             }
             
@@ -530,9 +785,10 @@ def generate_payment_link_func(
             "error": str(e)
         }
 
-def update_salary_func(employer_number: int, worker_name: str, new_salary: int) -> dict:
+def update_salary_func(employer_number: int, worker_name: str, new_salary: int, chat_id: str = "") -> dict:
+    db = next(get_db())
     try:
-        # API endpoint
+        # API endpoint for salary update
         url = "https://conv.sampatticards.com/user/update_salary"
         
         # Parameters for the API call
@@ -542,10 +798,71 @@ def update_salary_func(employer_number: int, worker_name: str, new_salary: int) 
             "salary": new_salary
         }
         
-        # Make the API call
+        # Try to find worker in database to get IDs
+        worker_data = None
+        worker_id = None
+        employer_id = None
+        current_salary = 0
+        
+        try:
+            # Get the worker details using employer number and name
+            worker_data = db.query(worker_employer).filter(
+                worker_employer.employer_number == employer_number,
+                worker_employer.worker_name == worker_name
+            ).first()
+            
+            if worker_data:
+                worker_id = worker_data.worker_id
+                employer_id = worker_data.employer_id
+                
+                # Try to get current salary before update
+                latest_salary = db.query(SalaryDetails).filter(
+                    SalaryDetails.worker_id == worker_id
+                ).order_by(SalaryDetails.id.desc()).first()
+                
+                if latest_salary and latest_salary.salary:
+                    current_salary = latest_salary.salary
+        except Exception as db_error:
+            print(f"Warning: Could not retrieve worker data: {db_error}")
+        
+        # Make the API call to update salary
         response = requests.put(url, params=params)
         
         if response.status_code == 200:
+            # If worker data was found, create a SalaryManagementRecords entry
+            if worker_id and employer_id:
+                try:
+                    # Create a record in SalaryManagementRecords for tracking the salary change
+                    salary_management_record_id = str(uuid.uuid4())
+                    new_salary_management = SalaryManagementRecords(
+                        id=salary_management_record_id,
+                        worker_id=worker_id,
+                        employer_id=employer_id,
+                        currentMonthlySalary=current_salary,
+                        modifiedMonthlySalary=new_salary,
+                        cashAdvance=0,  # No cash advance for salary updates
+                        repaymentAmount=0,  # No repayment for salary updates
+                        repaymentStartMonth=None,
+                        repaymentStartYear=None,
+                        frequency=1,
+                        bonus=0,
+                        deduction=0,
+                        chatId=chat_id,
+                        date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                    
+                    db.add(new_salary_management)
+                    db.commit()
+                    
+                    return {
+                        "success": True,
+                        "message": f"Salary updated successfully for {worker_name} to ₹{new_salary}",
+                        "data": response.json() if response.content else {},
+                        "salary_management_record_id": salary_management_record_id
+                    }
+                except Exception as record_error:
+                    print(f"Warning: Could not create salary management record: {record_error}")
+            
             return {
                 "success": True,
                 "message": f"Salary updated successfully for {worker_name} to ₹{new_salary}",
@@ -559,17 +876,22 @@ def update_salary_func(employer_number: int, worker_name: str, new_salary: int) 
             }
             
     except Exception as e:
+        if 'db' in locals():
+            db.rollback()
         return {
             "success": False,
             "message": f"Error updating salary: {str(e)}",
             "error": str(e)
         }
+    finally:
+        if 'db' in locals():
+            db.close()
 
 # Create the tool
 update_salary_tool = StructuredTool.from_function(
     func=update_salary_func,
     name="update_salary_tool",
-    description="Update worker salary using API call. Use this when user wants to change only the salary amount.",
+    description="Update worker's monthly salary and store the change in SalaryManagementRecords using API call. Use this when user wants to change only the salary amount.",
 )
 
 # Create structured tools
@@ -579,10 +901,10 @@ get_worker_by_name_and_employer_tool = StructuredTool.from_function(
     description="Find worker details by name and employer number from worker_employer table. Returns worker information if found."
 )
 
-store_cash_advance_data_tool = StructuredTool.from_function(
+store_cash_advance_data_func_tool = StructuredTool.from_function(
     func=store_cash_advance_data_func,
     name="store_cash_advance_data",
-    description="Store complete cash advance data in CashAdvanceManagement table after all details are confirmed."
+    description="Store cash advance data in both CashAdvanceManagement and SalaryManagementRecords tables for comprehensive record tracking."
 )
 
 get_existing_cash_advance_tool = StructuredTool.from_function(
@@ -597,10 +919,11 @@ update_cash_advance_data_func_tool = StructuredTool.from_function(
     description="Update existing cash advance record with flexible field updates."
 )
 
+# Create tool for updating salary details
 update_salary_details_func_tool = StructuredTool.from_function(
     func=update_salary_details_func,
-    name="update_salary_details",
-    description="Update salary details for a worker."
+    name="update_salary_details_func_tool",
+    description="Update bonus/deduction in SalaryDetails table for a specific month/year and store in SalaryManagementRecords"
 )
 
 store_combined_data_func_tool = StructuredTool.from_function(
@@ -612,11 +935,17 @@ store_combined_data_func_tool = StructuredTool.from_function(
 mark_advance_as_paid_func_tool = StructuredTool.from_function(
     func=mark_advance_as_paid_func,
     name="mark_advance_as_paid",
-    description="Mark cash advance as already paid - store with 0 repayment."
+    description="Mark cash advance as already paid - store with 0 repayment and record in SalaryManagementRecords for comprehensive tracking."
 )
 
 generate_payment_link_func_tool = StructuredTool.from_function(
     func=generate_payment_link_func,
     name="generate_payment_link",
     description="Generate payment link by calling the cash advance API."
+)
+
+store_salary_management_records_tool = StructuredTool.from_function(
+    func=store_salary_management_records_func,
+    name="store_salary_management_records",
+    description="Store complete salary management records in SalaryManagementRecords table with cash advance, repayment, bonus, and deduction details."
 )
