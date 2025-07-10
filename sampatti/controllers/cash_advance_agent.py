@@ -19,8 +19,8 @@ from .whatsapp_message import send_message_user, send_v2v_message
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_groq import ChatGroq
-from ..models import CashAdvanceManagement, worker_employer, SalaryDetails
-from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool
+from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
+from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool, store_salary_management_records_tool
 from ..database import get_db
 
 load_dotenv()
@@ -95,8 +95,28 @@ prompt = ChatPromptTemplate.from_messages([
            FOR CASH ADVANCE:
            - Cash advance amount (₹6000, "advance of 5000", etc.)
            - Repayment amount ("repayment 1000", "monthly 500", etc.)
-           - Start timing ("next month", "from January", "starting February")
-           - Frequency ("monthly", "quarterly", "every 2 months")
+           - Repayment start month/year ("starting next month", "from January")
+           - Frequency ("monthly", "quarterly", "half-yearly")
+
+           If all details not provided upfront, ask only for missing information
+
+           FOR SALARY UPDATE:
+           - New salary amount ("new salary 15000", "change salary to 18000")
+           - Confirmation: "You want to update [Worker Name]'s salary to ₹[New Amount]. Current salary is ₹[Current Amount]. Confirm?"
+
+           FOR BONUS/DEDUCTION:
+           - Amount: Extract bonus or deduction amount
+           - Confirmation: "You want to add ₹[Amount] bonus to [Worker Name]'s salary of ₹[Salary]. Correct?"
+
+           COMPREHENSIVE RECORD KEEPING:
+           - After collecting all required details for any type of transaction (cash advance, bonus, deduction, salary update)
+           - Store a comprehensive record in SalaryManagementRecords using the store_salary_management_records tool
+           - This record should include: current salary, modified salary (if changed), cash advance details, repayment details, bonus/deductionified
+
+           COLLECTION PRIORITY (ask only for missing details):
+           a) Cash advance amount (required)
+           b) Repayment amount: "What should be the monthly repayment amount?"
+           c) Repayment start month: "Which month should the repayment start?"
 
            PARSING INTELLIGENCE:
            - "next month" → current_month + 1 (handle year rollover for December)
@@ -106,11 +126,6 @@ prompt = ChatPromptTemplate.from_messages([
            - "every X months" → frequency = X
            - Default repaymentStartYear to current_year if not specified
 
-           COLLECTION PRIORITY (ask only for missing details):
-           a) Cash advance amount (required)
-           b) Repayment amount: "What should be the monthly repayment amount?"
-           c) Repayment start month: "Which month should the repayment start?"
-           d) Repayment start year: "What year should the repayment start?"
            e) Frequency: "How often should repayments occur? (1 for monthly, 3 for quarterly, etc.)"
 
            FOR BONUS/DEDUCTION:
@@ -130,6 +145,9 @@ prompt = ChatPromptTemplate.from_messages([
 
         8. EXECUTION & PAYMENT LINK:
            - Execute appropriate tool after user confirmation
+           - For any transaction affecting salary (cash advance, bonus, deduction, salary update):
+              * Use store_salary_management_records_tool to create comprehensive record with all details
+              * Include current salary, modified salary, cash advance amount, repayment details, bonus, deduction
            - Always ask: "Would you like me to generate the updated salary payment link?"
            - If yes, use generate_payment_link_func_tool with correct parameters
 
@@ -140,6 +158,7 @@ prompt = ChatPromptTemplate.from_messages([
         - Update existing: update_cash_advance_data_func_tool
         - Store bonus/deduction: update_salary_details_func_tool
         - Combined data: store_combined_data_func_tool
+        - Comprehensive records: store_salary_management_records
         - Mark as paid: mark_advance_as_paid_func_tool
         - Salary update: update_salary_tool
         - Payment link: generate_payment_link_func_tool
@@ -151,6 +170,43 @@ prompt = ChatPromptTemplate.from_messages([
         - Deduction only: (cash_advance=0, deduction=amount, repayment=0, salary_amount=db_salary, worker_name=name)
         - Repayment due: (cash_advance=0, repayment=amount, salary_amount=db_salary, worker_name=name)
         - Combined: Include all applicable amounts
+        
+        SALARY MANAGEMENT RECORDS TOOL USAGE:
+        1. Cash Advance Scenario:
+           - Use store_salary_management_records_tool with parameters:
+             * worker_id = worker's ID from worker lookup
+             * employer_id = employer's ID
+             * currentMonthlySalary = current salary from DB
+             * modifiedMonthlySalary = current salary (unchanged)
+             * cashAdvance = advance amount
+             * repaymentAmount = monthly repayment amount
+             * repaymentStartMonth/Year = start month/year for repayment
+             * frequency = repayment frequency
+             * bonus/deduction = 0 (unless combined with bonus/deduction)
+             * chatId = current chat ID
+             
+        2. Bonus/Deduction Scenario:
+           - Use store_salary_management_records_tool with parameters:
+             * worker_id = worker's ID from worker lookup
+             * employer_id = employer's ID
+             * currentMonthlySalary = current salary from DB
+             * modifiedMonthlySalary = current salary (unchanged)
+             * cashAdvance = 0
+             * repaymentAmount = 0
+             * bonus = bonus amount (if applicable)
+             * deduction = deduction amount (if applicable)
+             * chatId = current chat ID
+             
+        3. Salary Update Scenario:
+           - Use store_salary_management_records_tool with parameters:
+             * worker_id = worker's ID from worker lookup
+             * employer_id = employer's ID
+             * currentMonthlySalary = old salary from DB
+             * modifiedMonthlySalary = new salary amount
+             * cashAdvance = 0
+             * repaymentAmount = 0
+             * bonus/deduction = 0
+             * chatId = current chat ID
 
         ERROR HANDLING:
         - If worker not found: "I couldn't find a worker with that name. Please check the spelling or provide the correct name."
@@ -187,7 +243,8 @@ prompt = ChatPromptTemplate.from_messages([
 # Register tools with the agent
 tools = [get_worker_by_name_and_employer_tool, store_cash_advance_data_tool, get_existing_cash_advance_tool,
             update_cash_advance_data_func_tool, update_salary_details_func_tool, store_combined_data_func_tool,
-            mark_advance_as_paid_func_tool, generate_payment_link_func_tool, update_salary_tool]
+            mark_advance_as_paid_func_tool, generate_payment_link_func_tool, update_salary_tool,
+            store_salary_management_records_tool]
 
 agent = create_tool_calling_agent(
     llm=llm,
