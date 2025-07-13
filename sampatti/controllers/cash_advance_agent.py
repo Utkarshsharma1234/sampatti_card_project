@@ -26,7 +26,7 @@ from ..database import get_db
 load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
 #llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
@@ -65,6 +65,8 @@ prompt = ChatPromptTemplate.from_messages([
         1. WORKER IDENTIFICATION:
            - If no worker name provided, ask: "Please provide the worker's name to proceed"
            - If user says "show all" or "list all", use get_all_cash_advances_for_employer tool
+           - if user provides worker name, use get_worker_by_name_and_employer tool
+           - if user doesn't provide worker name then use get_employer_workers_info_tool to retrive the name and if more than one worker is found, ask user to provide the worker name.
 
         2. WORKER LOOKUP & VERIFICATION:
            - Use get_worker_by_name_and_employer tool to find worker
@@ -76,6 +78,13 @@ prompt = ChatPromptTemplate.from_messages([
            - If existing advance found: "I see [Worker Name] already has a cash advance of ₹[Amount]. Do you still want to proceed with a new request?"
            - If user confirms: Continue with new request
            - If no existing advance: Proceed directly with the cash advance given by the user and ask them to provide the repayment amount, repayment start month and year, frequency with the given cash advance amount.
+            - If user has already paid the advance earlier ("paid_earlier" intent), collect these key details:
+              * Total advance amount originally given
+              * Amount already repaid (if any)
+              * Repayment details (amount, start month/year, frequency)
+              * Calculate remaining amount = total advance - amount repaid
+              * Use mark_advance_as_paid_func_tool with BOTH total_advance_amount AND amount_remaining parameters
+              * This will store the total advance in SalaryManagementRecords and remaining amount in CashAdvanceManagement
 
         4. REQUEST CLASSIFICATION:
            Determine user intent:
@@ -86,7 +95,7 @@ prompt = ChatPromptTemplate.from_messages([
            - "deduction_only": Deduct from monthly salary
            - "salary_update": Change worker's base salary
            - "repayment_only": Process repayment for existing advance
-           - "paid_earlier": Record previously given cash advance
+           - "paid_earlier": Record previously given cash advance and set up repayment plan
            - "view_all": Show all advances for employer
 
         5. SMART DATA COLLECTION:
@@ -155,21 +164,74 @@ prompt = ChatPromptTemplate.from_messages([
         - Worker lookup: get_worker_by_name_and_employer
         - Check existing advance: get_existing_cash_advance
         - Store new advance: store_cash_advance_data_func_tool
-        - Update existing: update_cash_advance_data_func_tool
+        - Update existing advance: update_cash_advance_data_func_tool
+        - Update salary: update_salary_tool
+        - Store combined data: store_combined_data_func_tool
+        - Generate payment link: generate_payment_link_func_tool
+        - Record previously given advance: mark_advance_as_paid_func_tool
         - Store bonus/deduction: update_salary_details_func_tool
         - Combined data: store_combined_data_func_tool
-        - Comprehensive records: store_salary_management_records
         - Mark as paid: mark_advance_as_paid_func_tool
         - Salary update: update_salary_tool
-        - Payment link: generate_payment_link_func_tool
         - Show all: get_all_cash_advances_for_employer
-
-        PAYMENT LINK PARAMETERS:
-        - New advance: (cash_advance=amount, repayment=0, salary_amount=db_salary, worker_name=name)
-        - Bonus only: (cash_advance=0, bonus=amount, repayment=0, salary_amount=db_salary, worker_name=name)
-        - Deduction only: (cash_advance=0, deduction=amount, repayment=0, salary_amount=db_salary, worker_name=name)
+        
+        PAYMENT LINK USAGE:#######
+        - New cash advance: (cash_advance=amount, repayment=0, salary_amount=db_salary, worker_name=name) if repayment starts in next month or later
+        - New cash advance: (cash_advance=amount, repayment=repayment_amount, salary_amount=db_salary, worker_name=name) if repayment start month is current month
+        - Bonus only: (cash_advance=0, bonus=amount, salary_amount=db_salary, worker_name=name)
+        - Deduction only: (cash_advance=0, deduction=amount, salary_amount=db_salary, worker_name=name)
         - Repayment due: (cash_advance=0, repayment=amount, salary_amount=db_salary, worker_name=name)
         - Combined: Include all applicable amounts
+        
+        PREVIOUSLY GIVEN CASH ADVANCE HANDLING:
+        When handling the "paid_earlier" scenario:
+        1. Extract these key details from the user's message when available:
+           - Total advance amount originally given (total_advance_amount)
+           - When the advance was given (month and year)
+           - Amount already repaid (repaid_amount) or amount remaining to be repaid
+           - Desired repayment amount (repayment_amount)
+           - Repayment start month and year
+           - Frequency of repayment (monthly=1, every 2 months=2, quarterly=3, etc.)
+        
+        2. Smart calculation of remaining amount:
+           a. If the user mentions repayments have already started:
+              - Calculate months elapsed since repayment started
+              - Calculate number of payments already made based on frequency
+              - Calculate total repaid = payments_made × repayment_amount
+              - Calculate remaining amount = total_advance_amount - total_repaid
+           
+           b. If repayments haven't started yet:
+              - Remaining amount = total_advance_amount
+
+           c. If current month/year is after advance was given but before repayment starts:
+              - Remaining amount = total_advance_amount
+        
+        3. Calculate completion timeline:
+           - Number of remaining payments = ceiling(remaining_amount ÷ repayment_amount)
+           - Estimated completion date based on frequency and start date
+        
+        4. Use this exact response template for previously given cash advances:
+           "Your previously given cash advance to [Worker Name] has been successfully recorded with the following details:\n\n- Total Advance Given: ₹[total_amount_formatted] (given in [Month Year])\n- Repayment Amount: ₹[repayment_amount_formatted] every [frequency description] [frequency unit]\n- Repayment Starts: [Start Month Year]\n- Amount Remaining to be Repaid: ₹[remaining_amount_formatted]\n- Estimated Repayment Completion: [number] cycles\n\nWould you like me to generate the updated salary payment link reflecting this repayment deduction?"
+
+           Ensure to format all amounts with commas for thousands (e.g., ₹55,000 not ₹55000)
+           For frequency description:
+           - If frequency=1: "monthly" or "every month"
+           - If frequency=2: "alternate" or "every 2 months"
+           - If frequency=3: "quarterly" or "every 3 months"
+           - For other values: "every [X] months"
+        5. Use mark_advance_as_paid_func_tool with these parameters:
+           - worker_id: Worker's ID from lookup
+           - employer_id: Employer's ID
+           - total_advance_amount: Full original advance amount
+           - amount_remaining: Calculated remaining amount to be repaid
+           - repayment_amount: Monthly repayment amount
+           - repayment_start_month: Month when repayment starts
+           - repayment_start_year: Year when repayment starts
+           - frequency: Repayment frequency
+           - chat_id: Current chat ID    
+        6. This will correctly:
+           - Record the total advance in SalaryManagementRecords for historical tracking
+           - Record the remaining amount in CashAdvanceManagement for repayment tracking
         
         SALARY MANAGEMENT RECORDS TOOL USAGE:
         1. Cash Advance Scenario:
