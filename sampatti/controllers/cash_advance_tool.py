@@ -171,7 +171,7 @@ def store_cash_advance_data_func(
             bonus=0,  # No bonus for new cash advance
             deduction=0,  # No deduction for new cash advance
             chatId=chat_id,
-            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M")
         )
         
         db.add(new_salary_management)
@@ -658,26 +658,47 @@ def store_salary_management_records_func(
 def mark_advance_as_paid_func(
     worker_id: str,
     employer_id: str,
-    amount_paid: int,
+    total_advance_amount: int,
+    amount_remaining: int,
+    repayment_amount: int,
+    repayment_start_month: int,
+    repayment_start_year: int,
+    frequency: int,
     chat_id: str = ""
 ) -> dict:
-    """Mark cash advance as already paid - store with 0 repayment and record in SalaryManagementRecords."""
+    """Mark a previously given cash advance and set up repayment details.
+    
+    Args:
+        worker_id: Worker's unique ID
+        employer_id: Employer's unique ID
+        total_advance_amount: Total cash advance amount originally given
+        amount_remaining: Remaining amount to be repaid
+        repayment_amount: Monthly repayment amount
+        repayment_start_month: Month when repayment starts
+        repayment_start_year: Year when repayment starts
+        frequency: Repayment frequency (default=1 for monthly)
+        chat_id: Chat ID for tracking
+    
+    Returns:
+        Dictionary with success status and record IDs
+    """
     db = next(get_db())
     try:
         # Generate unique ID
         advance_id = str(uuid.uuid4().hex)
-        chat_record_id = chat_id or f"paid_advance_{int(time.time())}"
+        chat_record_id = chat_id or f"paid_advance_{employer_id}_{worker_id}"
         
-        # Create record showing advance was paid
+        # Create record showing advance in CashAdvanceManagement
+        # This tracks the REMAINING amount that needs to be repaid
         paid_advance_record = CashAdvanceManagement(
             id=advance_id,
             worker_id=worker_id,
             employer_id=employer_id,
-            cashAdvance=amount_paid,
-            repaymentAmount=0,  # 0 because already paid
-            repaymentStartMonth=0,
-            repaymentStartYear=0,
-            frequency=0,
+            cashAdvance=amount_remaining,  # Remaining amount to be repaid
+            repaymentAmount=repayment_amount,
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,  # Using the provided frequency
             chatId=chat_record_id
         )
         
@@ -696,8 +717,9 @@ def mark_advance_as_paid_func(
                 current_salary = latest_salary.salary
         except Exception as salary_error:
             print(f"Warning: Could not retrieve current salary: {salary_error}")
-            
+        
         # Create a new SalaryManagementRecords entry
+        # This records the TOTAL advance amount given for historical tracking
         salary_management_record_id = str(uuid.uuid4())
         new_salary_management = SalaryManagementRecords(
             id=salary_management_record_id,
@@ -705,11 +727,11 @@ def mark_advance_as_paid_func(
             employer_id=employer_id,
             currentMonthlySalary=current_salary,
             modifiedMonthlySalary=current_salary,  # No change to salary
-            cashAdvance=amount_paid,
-            repaymentAmount=0,  # Already paid, so no repayment needed
-            repaymentStartMonth=0,
-            repaymentStartYear=0,
-            frequency=0,
+            cashAdvance=total_advance_amount,  # TOTAL advance amount given
+            repaymentAmount=repayment_amount,  # Monthly repayment amount
+            repaymentStartMonth=repayment_start_month,
+            repaymentStartYear=repayment_start_year,
+            frequency=frequency,
             bonus=0,  # No bonus for paid advance
             deduction=0,  # No deduction for paid advance
             chatId=chat_record_id,
@@ -719,11 +741,17 @@ def mark_advance_as_paid_func(
         db.add(new_salary_management)
         db.commit()
         
+        # Calculate how many months it will take to repay
+        months_to_repay = 0
+        if repayment_amount > 0:
+            months_to_repay = (amount_remaining + repayment_amount - 1) // repayment_amount
+        
         return {
             "success": True,
-            "message": f"₹{amount_paid} marked as paid advance",
+            "message": f"₹{total_advance_amount} total cash advance recorded with ₹{amount_remaining} remaining to be repaid",
             "record_id": advance_id,
-            "salary_management_record_id": salary_management_record_id
+            "salary_management_record_id": salary_management_record_id,
+            "estimated_months_to_repay": months_to_repay
         }
     except Exception as e:
         db.rollback()
@@ -935,7 +963,7 @@ store_combined_data_func_tool = StructuredTool.from_function(
 mark_advance_as_paid_func_tool = StructuredTool.from_function(
     func=mark_advance_as_paid_func,
     name="mark_advance_as_paid",
-    description="Mark cash advance as already paid - store with 0 repayment and record in SalaryManagementRecords for comprehensive tracking."
+    description="Record a previously given cash advance with both total advance amount and remaining amount to be repaid. Creates records in CashAdvanceManagement (with remaining amount) and SalaryManagementRecords (with total advance amount). Parameters: worker_id, employer_id, total_advance_amount, amount_remaining, repayment_amount, repayment_start_month, repayment_start_year, frequency, chat_id."
 )
 
 generate_payment_link_func_tool = StructuredTool.from_function(
