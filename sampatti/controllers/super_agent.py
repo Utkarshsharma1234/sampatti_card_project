@@ -613,7 +613,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Full traceback: {traceback.format_exc()}")
             return error_msg
 
-    async def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json: Dict[str, Any]) -> str:
+    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json: Dict[str, Any]) -> str:
         """Main method to process user queries"""
         print(f"\n🤖 Super Agent Processing Query for Employer {employer_number}")
         print(f"📝 Query: {query}")
@@ -627,7 +627,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             # If the message is audio, transcribe it first
             if type_of_message == "audio" and media_id:
                 print(f"🔊 Transcribing audio with media ID: {media_id}")
-                transcribed_text_language = await transcribe_audio_tool(media_id)
+                transcribed_text_language = transcribe_audio_tool(media_id)
                 query = transcribed_text_language[0]
                 user_language = transcribed_text_language[1]
                 print(f"🎤 Transcribed text: {query}")
@@ -777,6 +777,6 @@ Just tell me what you need help with, and I'll take care of it!"""
 # Global instance
 super_agent_instance = SuperAgent()
 
-async def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) ->str:
+def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) ->str:
     """Main entry point for the Super Agent"""
-    return await super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
+    return super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
