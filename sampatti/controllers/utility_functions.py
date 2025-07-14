@@ -464,68 +464,68 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         return text
 
 
-def send_audio(output_directory: str, sample_output: str, language: str, employerNumber: int):
-
+async def send_audio(sample_output: str, employerNumber: int):
     
     try:
-        # Using Sarvam API for text-to-speech
-        url = "https://api.sarvam.ai/text-to-speech"
-        payload = {
-                "inputs": [sample_output],
-                "target_language_code": language,     #Adjust as per the expected language code
-                "speaker": "meera",     #Choose the appropriate speaker if required
-                "enable_preprocessing": True,
-                "model": "bulbul:v1"
-            }
-        headers = {
-            "api-subscription-key": sarvam_api_key,     #Replace with your valid API key
-            "Content-Type": "application/json"
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-        response_data = response.json()
-        base64_string = response_data["audios"][0] 
-
+        load_dotenv()
+        
+        # Set up file paths
+        output_directory = os.path.join(os.getcwd(), "output")
         os.makedirs(output_directory, exist_ok=True)
-        id = generate_unique_id()
-
-        mp3_file_path = os.path.join(os.getcwd(), output_directory, f"output_{id}.mp3")
-        ogg_file_path = os.path.join(os.getcwd(), output_directory, f"output_{id}.ogg")
-
-             # Decode the Base64 string to binary data
-        audio_data = base64.b64decode(base64_string)
-
-             # Write the binary data to a file
-        with open(mp3_file_path, "wb") as audio_file:
-            audio_file.write(audio_data)
-
-        print(f"File saved as: {mp3_file_path}")
-                #Generate the audio media ID using your existing WhatsApp logic
-
         
-        convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
-        mediaIdObj = whatsapp_message.generate_audio_media_id(f"output_{id}.ogg", output_directory)
-        audioMediaId = mediaIdObj["id"]
-        whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
-
-        try:
-            os.remove(mp3_file_path)
-            os.remove(ogg_file_path)
-            print(f"Deleted files: {mp3_file_path} and {ogg_file_path}")
-        except Exception as delete_error:
-            print(f"Error deleting files: {delete_error}")
-
-        return {
-            "MESSAGE": "AUDIO SENT SUCCESSFULLY."
+        mp3_file_path = os.path.join(output_directory, "output.mp3")
+        ogg_file_path = os.path.join(output_directory, "output.ogg")
+        
+        # ElevenLabs API endpoint with output format
+        url = "https://api.elevenlabs.io/v1/text-to-speech/2bNrEsM0omyhLiEyOwqY?output_format=mp3_44100_128"
+        
+        headers = {
+            "xi-api-key": os.getenv("ELEVENLABS_API_KEY")
         }
         
-
-    except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
-        raise HTTPException(status_code=502, detail="Failed to communicate with speech service")
+        data = {
+            "text": sample_output,
+            "model_id": "eleven_multilingual_v2"
+        }
+        
+        # Make API request
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            # Save the audio content directly
+            with open(mp3_file_path, 'wb') as f:
+                f.write(response.content)
+            print(f"Audio saved as: {mp3_file_path}")
+            
+            # Convert MP3 to OGG
+            convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
+            
+            # Send via WhatsApp
+            mediaIdObj = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
+            audioMediaId = mediaIdObj["id"]
+            whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+            
+            # Clean up files
+            try:
+                if os.path.exists(mp3_file_path):
+                    os.remove(mp3_file_path)
+                if os.path.exists(ogg_file_path):
+                    os.remove(ogg_file_path)
+                print("Audio files cleaned up successfully")
+            except Exception as e:
+                print(f"Error cleaning up files: {e}")
+            
+            return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+        else:
+            error_message = f"ElevenLabs API error: {response.status_code}"
+            if response.headers.get('content-type') == 'application/json':
+                error_message += f" - {response.json()}"
+            else:
+                error_message += f" - {response.text}"
+            raise Exception(error_message)
+        
     except Exception as e:
-        print(f"Error generating audio: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate audio: {str(e)}")
     
 
 def question_language_audio(output_directory: str, sample_output: str, surveyId : int, questionId : int, language: str):
@@ -815,33 +815,51 @@ class SarvamClient:
         ) as directory_client:
             tasks = []
             for path in local_file_paths:
-                file_name = path.split("/")[-1]
+                file_name = os.path.basename(path)
                 tasks.append(
                     self._upload_file(directory_client, path, file_name, overwrite)
                 )
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            print(
-                f"Upload completed for {sum(1 for r in results if not isinstance(r, Exception))} files"
-            )
+            success_count = sum(1 for r in results if r is True)
+            print(f"Upload completed for {success_count} files")
+            return success_count > 0
 
-    async def _upload_file(
-        self, directory_client, local_file_path, file_name, overwrite=True
-    ):
+    async def _upload_file(self, directory_client, local_file_path, file_name, overwrite=True):
         try:
             async with aiofiles.open(local_file_path, mode="rb") as file_data:
-                mime_type = mimetypes.guess_type(local_file_path)[0] or "audio/wav"
+                # Ensure proper MIME type detection for WAV files
+                mime_type, _ = mimetypes.guess_type(local_file_path)
+                
+                # Force correct MIME type for WAV files
+                if local_file_path.lower().endswith('.wav'):
+                    mime_type = "audio/wav"
+                elif not mime_type:
+                    mime_type = "audio/wav"  # Default to audio/wav
+                
+                print(f"Uploading {file_name} with MIME type: {mime_type}")
+                
                 file_client = directory_client.get_file_client(file_name)
                 data = await file_data.read()
+                
+                # Create file first
+                await file_client.create_file()
+                
+                # Upload data with content settings
                 await file_client.upload_data(
                     data,
                     overwrite=overwrite,
                     content_settings=ContentSettings(content_type=mime_type),
+                    length=len(data)
                 )
+                
                 print(f"✅ File uploaded successfully: {file_name}")
                 print(f"   Type: {mime_type}")
+                print(f"   Size: {len(data)} bytes")
                 return True
         except Exception as e:
             print(f"❌ Upload failed for {file_name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
 
     async def list_files(self):
@@ -862,7 +880,6 @@ class SarvamClient:
         return file_names
 
     async def download_file(self, file_name, destination_dir, new_filename=None):
-
         try:
             async with DataLakeDirectoryClient(
                 account_url=f"{self.account_url}?{self.sas_token}",
@@ -885,11 +902,20 @@ class SarvamClient:
 
 
 async def initialize_job():
-    print("\\n🚀 Initializing job...")
+    print("\n🚀 Initializing job...")
     url = "https://api.sarvam.ai/speech-to-text-translate/job/init"
     headers = {"API-Subscription-Key": sarvam_api_key}
-    response = requests.post(url, headers=headers)
-    print("\\nInitialize Job Response:")
+    
+    # Add job configuration to ensure proper file handling
+    data = {
+        "job_config": {
+            "file_type": "audio/wav",
+            "with_diarization": True
+        }
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    print("\nInitialize Job Response:")
     print(f"Status Code: {response.status_code}")
     print("Response Body:")
     pprint(response.json() if response.status_code == 202 else response.text)
@@ -900,11 +926,11 @@ async def initialize_job():
 
 
 async def check_job_status(job_id):
-    print(f"\\n🔍 Checking status for job: {job_id}")
+    print(f"\n🔍 Checking status for job: {job_id}")
     url = f"https://api.sarvam.ai/speech-to-text-translate/job/{job_id}/status"
     headers = {"API-Subscription-Key": sarvam_api_key}
     response = requests.get(url, headers=headers)
-    print("\\nJob Status Response:")
+    print("\nJob Status Response:")
     print(f"Status Code: {response.status_code}")
     print("Response Body:")
     pprint(response.json() if response.status_code == 200 else response.text)
@@ -915,7 +941,7 @@ async def check_job_status(job_id):
 
 
 async def start_job(job_id):
-    print(f"\\n▶ Starting job: {job_id}")
+    print(f"\n▶ Starting job: {job_id}")
     url = "https://api.sarvam.ai/speech-to-text-translate/job"
     headers = {
         "API-Subscription-Key": sarvam_api_key,
@@ -925,8 +951,8 @@ async def start_job(job_id):
     print("\\nRequest Body:")
     pprint(data)
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    print("\\nStart Job Response:")
+    response = requests.post(url, headers=headers, json=data)
+    print("\nStart Job Response:")
     print(f"Status Code: {response.status_code}")
     print("Response Body:")
     pprint(response.json() if response.status_code == 200 else response.text)
@@ -936,15 +962,14 @@ async def start_job(job_id):
     return None
 
 
-
 async def transcribe_audio_from_file_path(filepath: str):
-    print("\\n=== Starting Speech-to-Text Processing ===")
+    print("\n=== Starting Speech-to-Text Processing ===")
 
     # Step 1: Initialize the job
     job_info = await initialize_job()
     if not job_info:
         print("❌ Job initialization failed")
-        return
+        return None, None
 
     job_id = job_info["job_id"]
     input_storage_path = job_info["input_storage_path"]
@@ -952,24 +977,32 @@ async def transcribe_audio_from_file_path(filepath: str):
     logger.info(f"✅ Job Initialized with ID: {job_id}")
 
     # Step 2: Upload files
-    print(f"\\n📤 Uploading files to input storage: {input_storage_path}")
+    print(f"\n📤 Uploading files to input storage: {input_storage_path}")
     client = SarvamClient(input_storage_path)
-    await client.upload_files([filepath])
-    logger.info(f"✅ Uploaded audio file: {filepath}")
-    print(f"Files to upload: {filepath}")
     
+    # Ensure upload was successful
+    upload_success = await client.upload_files([filepath])
+    if not upload_success:
+        print("❌ File upload failed")
+        return None, None
+    
+    logger.info(f"✅ Uploaded audio file: {filepath}")
+    
+    # Wait a moment to ensure file is fully registered
+    await asyncio.sleep(2)
     
     # Step 3: Start the job
     job_start_response = await start_job(job_id)
     if not job_start_response:
         print("❌ Failed to start job")
-        return
+        return None, None
 
     # Step 4: Monitor job status
-    print("\\n⏳ Monitoring job status...")
+    print("\n⏳ Monitoring job status...")
     attempt = 1
+    status = None
     while True:
-        print(f"\\nStatus check attempt {attempt}")
+        print(f"\nStatus check attempt {attempt}")
         job_status = await check_job_status(job_id)
         if not job_status:
             print("❌ Failed to get job status")
@@ -981,14 +1014,15 @@ async def transcribe_audio_from_file_path(filepath: str):
             break
         elif status == "Failed":
             print("❌ Job failed!")
+            # Get error details if available
+            if "error" in job_status:
+                print(f"Error details: {job_status['error']}")
             break
         else:
             print(f"⏳ Current status: {status}")
             await asyncio.sleep(10)
         attempt += 1
 
-    # Step 5: Download results
-    # Step 5: Download results
     # Step 5: Download results
     if status == "Completed":
         print(f"\n📥 Downloading results from: {output_storage_path}")
@@ -999,9 +1033,10 @@ async def transcribe_audio_from_file_path(filepath: str):
 
         if not files:
             print("❌ No files found to download.")
+            return None, None
         else:
             print(f"Files to download: {files}")
-            destination_dir = "audio/"
+            destination_dir = "audio"
             os.makedirs(destination_dir, exist_ok=True)
 
             try:
@@ -1013,24 +1048,35 @@ async def transcribe_audio_from_file_path(filepath: str):
                 }
 
                 # Download files with original names
+                downloaded_files = []
                 for file in files:
                     # Get original filename from job details
                     file_id = file.split(".")[0]  # e.g., '0' from '0.json'
                     if file_id in file_mapping:
                         original_name = file_mapping[file_id]
                         new_filename = f"{os.path.splitext(original_name)[0]}.json"
-                        await client.download_file(
+                        success = await client.download_file(
                             file,
                             destination_dir=destination_dir,
                             new_filename=new_filename,
                         )
-                        print(f"Downloaded and renamed {file} to {new_filename}")
+                        if success:
+                            downloaded_files.append(os.path.join(destination_dir, new_filename))
+                            print(f"Downloaded and renamed {file} to {new_filename}")
 
                 print(f"Files have been downloaded to: {destination_dir}")
+                
+                # Return the path of the first downloaded file
+                if downloaded_files:
+                    return downloaded_files[0]
+                
             except Exception as e:
                 print(f"❌ Error during file download: {e}")
+                import traceback
+                traceback.print_exc()
 
-        print("\n=== Processing Complete ===")
+    print("\n=== Processing Complete ===")
+    return None
 
 
 def extract_transcript_from_json(file_path):
@@ -1096,7 +1142,7 @@ def get_main_transcript(file_path):
     """
     transcript_data = extract_transcript_from_json(file_path)
     if transcript_data:
-        return transcript_data['main_transcript']
+        return transcript_data['main_transcript'], transcript_data['language_code']
     return ""
 
 

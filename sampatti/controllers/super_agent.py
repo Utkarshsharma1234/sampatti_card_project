@@ -627,8 +627,9 @@ Just tell me what you need help with, and I'll take care of it!"""
             # If the message is audio, transcribe it first
             if type_of_message == "audio" and media_id:
                 print(f"🔊 Transcribing audio with media ID: {media_id}")
-                transcribed_text = transcribe_audio_tool(media_id)
-                query = transcribed_text
+                transcribed_text_language = transcribe_audio_tool(media_id)
+                query = transcribed_text_language[0]
+                user_language = transcribed_text_language[1]
                 print(f"🎤 Transcribed text: {query}")
             
             # Get conversation history
@@ -745,7 +746,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 return f"MESSAGE SENT SUCCESSFULLY: {response}" 
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                send_audio_message(response, "en-IN", employer_number)
+                send_audio_message(response, user_language, employer_number)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}"
                 
         except Exception as e:
