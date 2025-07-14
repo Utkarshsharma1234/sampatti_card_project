@@ -505,9 +505,9 @@ def create_salary_record(employerNumber : int, workerName : str, currentSalary :
     db.refresh(new_salary_record)
 
 
-async def get_transalated_text(file_url: str):
+async def get_transalated_text(file_path: str):
 
-    if not file_url:
+    if not file_path:
         raise HTTPException(status_code=400, detail="File URL is required.")
 
     output_dir = 'audio/'
@@ -518,18 +518,18 @@ async def get_transalated_text(file_url: str):
 
     try:
         # Step 1: Download the file
-        response = requests.get(file_url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to download file from the URL.")
+        #response = requests.get(file_url)
+        #if response.status_code != 200:
+        #    raise HTTPException(status_code=400, detail="Failed to download file from the URL.")
 
         with tempfile.NamedTemporaryFile(delete=False) as temp:
             temp.write(response.content)
             temp_path = temp.name
 
-        print(f"Downloaded temporary file: {temp_path}")
+        print(f"Downloaded temporary file: {file_path}")
 
         # Step 2: Convert to WAV format
-        audio = AudioSegment.from_file(temp_path)
+        audio = AudioSegment.from_file(file_path)
         audio.export(wav_path, format="wav")
 
         print(f"Converted to WAV and saved at: {wav_path}")
@@ -545,16 +545,16 @@ async def get_transalated_text(file_url: str):
             print("Transcript: ",transcript)
             print("User Language: ",user_language)
 
-            return transcript
+            return transcript, user_language
         else:
         # Step 3: Call the transcription function
             await transcribe_audio_from_file_path(wav_path)
             print("await transcribe_audio_from_file_path(wav_path) successfull")
         
-            transcript = get_main_transcript("audio/audio.json")
-            print(transcript)
+            transcript, user_language = get_main_transcript("audio/audio.json")
+            print(transcript, user_language)
 
-            return transcript
+            return transcript, user_language
 
     except PermissionError as e:
         return JSONResponse(content={"error": f"Permission error: {e}"}, status_code=500)
@@ -625,7 +625,7 @@ def send_audio_message(text : str, user_language : str, employerNumber : int):
         return send_audio(static_dir, text, "en-IN", employerNumber)
     else:
         translated_text = translate_text_sarvam(text, "en-IN", user_language)
-        return send_audio(static_dir, translated_text, user_language, employerNumber)
+        return send_audio(translated_text, employerNumber)
 
 
 def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session):
