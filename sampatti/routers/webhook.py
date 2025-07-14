@@ -64,7 +64,7 @@ async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Error processing webhook data")
 
 
-def process_orai_webhook(data: dict):
+async def process_orai_webhook(data: dict):
     try:
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
@@ -104,14 +104,14 @@ def process_orai_webhook(data: dict):
             return
 
         if not message_type:
-            print("None message type")
+            print("None message type")
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
-            super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
+            await super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
 
         else:
-            super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
+            await super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
