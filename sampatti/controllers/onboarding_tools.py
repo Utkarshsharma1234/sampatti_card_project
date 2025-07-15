@@ -104,11 +104,12 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
     return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
 
 
-async def transcribe_audio(mediaId: str):
+def transcribe_audio(mediaId: str):
     """
-    Given a mediaId, calls the first API to get audio info, then fetches the audio file,
-    saves it as WAV, and returns the transcript and language.
+    Given a mediaId, calls the first API to get audio info, then fetches the audio file from another endpoint,
+    saves it to audio_files/{mediaId}_audio.mp3, and returns the file path or a success message.
     """
+
     orai_api_key = os.environ.get("ORAI_API_KEY")  
 
     headers = {
@@ -118,19 +119,19 @@ async def transcribe_audio(mediaId: str):
     response_1 = requests.get(f"https://waba-v2.360dialog.io/{mediaId}", headers=headers)
 
     if response_1.status_code != 200:
-        return f"Failed to get audio info: {response_1.status_code} {response_1.text}", None
+        return f"Failed to get audio info: {response_1.status_code} {response_1.text}"
 
     audio_info = response_1.json()
     audio_url = audio_info.get("url")
     if not audio_url or "whatsapp" not in audio_url:
-        return f"Audio URL not found or does not contain 'whatsapp' in API response.", None
+        return f"Audio URL not found or does not contain 'whatsapp' in API response."
     
     whatsapp_index = audio_url.find("whatsapp")
     whatsapp_path = audio_url[whatsapp_index:]
 
     response_2 = requests.get(f"https://waba-v2.360dialog.io/{whatsapp_path}", headers=headers, stream=True)
     if response_2.status_code != 200:
-        return f"Failed to download audio: {response_2.status_code} {response_2.text}", None
+        return f"Failed to download audio: {response_2.status_code} {response_2.text}"
 
     output_dir = 'audio_files'
     os.makedirs(output_dir, exist_ok=True)
@@ -138,58 +139,26 @@ async def transcribe_audio(mediaId: str):
     temp_path = ""
     wav_path = os.path.join(output_dir, f"{mediaId}_audio.wav")
 
-    try:
-        # Save the downloaded content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp:
-            temp.write(response_2.content)
-            temp_path = temp.name
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        temp.write(response_2.content)
+        temp_path = temp.name
 
-        print(f"Downloaded temporary file: {temp_path}")
+    print(f"Downloaded temporary file: {temp_path}")
 
-        # Convert to WAV format with proper settings
-        audio = AudioSegment.from_file(temp_path)
-        # Ensure the WAV file has proper format
-        audio = audio.set_frame_rate(16000).set_channels(1)  # 16kHz mono
-        audio.export(wav_path, format="wav", codec="pcm_s16le")
+    # Step 2: Convert to WAV format
+    audio = AudioSegment.from_file(temp_path)
+    audio.export(wav_path, format="wav")
 
-        print(f"Converted to WAV and saved at: {wav_path}")
-        print(f"WAV file size: {os.path.getsize(wav_path)} bytes")
+    print(f"Converted to WAV and saved at: {wav_path}")
 
-        duration_seconds = len(audio) / 1000.0
-        print("Duration Second: ",duration_seconds)
-        
-        
-        if duration_seconds < 28.000:
-            result = call_sarvam_api(wav_path)
-            transcript = result["transcript"]
-            user_language = result["language_code"]
-            print("Transcript: ",transcript)
-            print("User Language: ",user_language)
+    result = call_sarvam_api(wav_path)
+    transcript = result["transcript"]
+    user_language = result["language_code"]
+    print("Transcript: ",transcript)
+    print("User Language: ",user_language)
 
-            return transcript, user_language
-        else:
-            # Transcribe the audio
-            result_file = await transcribe_audio_from_file_path(wav_path)
-        
-            if result_file:
-                print(f"Transcript file downloaded: {result_file}")
-                transcript, user_language = get_main_transcript(result_file)
-                print(f"Transcript: {transcript}")
-                print(f"User Language: {user_language}")
-                return transcript, user_language
-            else:
-                print("Failed to get transcript")
-                return None, None
-            
-    except Exception as e:
-        print(f"Error during audio processing: {e}")
-        import traceback
-        traceback.print_exc()
-        return None, None
-    finally:
-        # Clean up temporary file
-        if temp_path and os.path.exists(temp_path):
-            os.unlink(temp_path)
+    return transcript, user_language
+
 
 def send_audio(text: str, employerNumber: int, user_language: str = "en-IN"):
     """
