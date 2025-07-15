@@ -613,7 +613,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Full traceback: {traceback.format_exc()}")
             return error_msg
 
-    def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json: Dict[str, Any]) -> str:
+    async def process_query(self, employer_number: int, type_of_message: str, query: str, media_id: str, formatted_json: Dict[str, Any]) -> str:
         """Main method to process user queries"""
         print(f"\n🤖 Super Agent Processing Query for Employer {employer_number}")
         print(f"📝 Query: {query}")
@@ -627,10 +627,11 @@ Just tell me what you need help with, and I'll take care of it!"""
             # If the message is audio, transcribe it first
             if type_of_message == "audio" and media_id:
                 print(f"🔊 Transcribing audio with media ID: {media_id}")
-                transcribed_text_language = transcribe_audio_tool(media_id)
+                transcribed_text_language = await transcribe_audio_tool(media_id)
                 query = transcribed_text_language[0]
                 user_language = transcribed_text_language[1]
                 print(f"🎤 Transcribed text: {query}")
+                print(f"User Language:##: ", user_language)
             
             # Get conversation history
             chat_history = self.get_sorted_chat_history(employer_number)
@@ -777,6 +778,18 @@ Just tell me what you need help with, and I'll take care of it!"""
 # Global instance
 super_agent_instance = SuperAgent()
 
-def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) ->str:
+# Synchronous version of process_query for contexts where async can't be used directly
+def process_query_sync(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
+    """Synchronous wrapper for the async process_query function"""
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        result = loop.run_until_complete(super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json))
+        return result
+    finally:
+        loop.close()
+
+async def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
     """Main entry point for the Super Agent"""
-    return super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
+    return await super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)

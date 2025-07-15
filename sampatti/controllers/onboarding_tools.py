@@ -9,7 +9,7 @@ from langchain.tools import StructuredTool
 import requests, os, tempfile
 from pydub import AudioSegment
 from urllib.parse import urlparse
-from .utility_functions import transcribe_audio_from_file_path, get_main_transcript
+from .utility_functions import transcribe_audio_from_file_path, get_main_transcript, call_sarvam_api
 from ..database import get_db_session, get_db
 from sqlalchemy.orm import Session
 from ..models import CashAdvanceManagement, worker_employer
@@ -155,18 +155,31 @@ async def transcribe_audio(mediaId: str):
         print(f"Converted to WAV and saved at: {wav_path}")
         print(f"WAV file size: {os.path.getsize(wav_path)} bytes")
 
-        # Transcribe the audio
-        result_file = await transcribe_audio_from_file_path(wav_path)
+        duration_seconds = len(audio) / 1000.0
+        print("Duration Second: ",duration_seconds)
         
-        if result_file:
-            print(f"Transcript file downloaded: {result_file}")
-            transcript, user_language = get_main_transcript(result_file)
-            print(f"Transcript: {transcript}")
-            print(f"User Language: {user_language}")
+        
+        if duration_seconds < 28.000:
+            result = call_sarvam_api(wav_path)
+            transcript = result["transcript"]
+            user_language = result["language_code"]
+            print("Transcript: ",transcript)
+            print("User Language: ",user_language)
+
             return transcript, user_language
         else:
-            print("Failed to get transcript")
-            return None, None
+            # Transcribe the audio
+            result_file = await transcribe_audio_from_file_path(wav_path)
+        
+            if result_file:
+                print(f"Transcript file downloaded: {result_file}")
+                transcript, user_language = get_main_transcript(result_file)
+                print(f"Transcript: {transcript}")
+                print(f"User Language: {user_language}")
+                return transcript, user_language
+            else:
+                print("Failed to get transcript")
+                return None, None
             
     except Exception as e:
         print(f"Error during audio processing: {e}")
