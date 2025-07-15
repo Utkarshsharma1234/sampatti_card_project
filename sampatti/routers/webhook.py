@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from ..controllers import onboarding_agent, userControllers
 from dotenv import load_dotenv
 from ..controllers import whatsapp_message, super_agent
-from ..controllers.super_agent import process_query_sync
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -109,12 +108,11 @@ async def process_orai_webhook(data: dict):
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
-            # Use the synchronous version for webhook processing
-            process_query_sync(employerNumber, message_type, query, "", formatted_json)
+            await super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
 
         else:
-            # Use the synchronous version for webhook processing
-            process_query_sync(employerNumber, message_type, "", media_id, formatted_json)
+            await super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
+            
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")

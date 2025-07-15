@@ -778,18 +778,6 @@ Just tell me what you need help with, and I'll take care of it!"""
 # Global instance
 super_agent_instance = SuperAgent()
 
-# Synchronous version of process_query for contexts where async can't be used directly
-def process_query_sync(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
-    """Synchronous wrapper for the async process_query function"""
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json))
-        return result
-    finally:
-        loop.close()
-
 async def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
     """Main entry point for the Super Agent"""
     return await super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
