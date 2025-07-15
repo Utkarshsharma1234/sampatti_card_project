@@ -2,6 +2,7 @@ import json, os
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
+import asyncio
 from sqlalchemy.orm import Session
 from ..controllers import onboarding_agent, userControllers
 from dotenv import load_dotenv
@@ -54,7 +55,8 @@ async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
         data = await request.json()
 
         # Immediately start background processing
-        background_tasks.add_task(process_orai_webhook, data)
+        # Using create_task for async background processing
+        asyncio.create_task(process_orai_webhook(data))
 
         # Immediate response
         return {"status": "received"}
@@ -104,7 +106,7 @@ async def process_orai_webhook(data: dict):
             return
 
         if not message_type:
-            print("None message type")
+            print("None message type")
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
@@ -112,7 +114,6 @@ async def process_orai_webhook(data: dict):
 
         else:
             await super_agent.super_agent_query(employerNumber, message_type, "", media_id, formatted_json)
-            
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
