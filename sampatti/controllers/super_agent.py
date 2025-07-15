@@ -19,7 +19,7 @@ from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message, send_message_user
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
-from .onboarding_tools import transcribe_audio_tool
+from .onboarding_tools import transcribe_audio
 # Import the employer and worker tools
 from .main_tool import add_employer_tool, get_employer_workers_info_tool, add_employer, get_employer_workers_info
 # Import attendance agent and tools
@@ -627,7 +627,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             # If the message is audio, transcribe it first
             if type_of_message == "audio" and media_id:
                 print(f"🔊 Transcribing audio with media ID: {media_id}")
-                transcribed_text_language = await transcribe_audio_tool(media_id)
+                transcribed_text_language = await transcribe_audio(media_id)
                 query = transcribed_text_language[0]
                 user_language = transcribed_text_language[1]
                 print(f"🎤 Transcribed text: {query}")
@@ -777,18 +777,6 @@ Just tell me what you need help with, and I'll take care of it!"""
 
 # Global instance
 super_agent_instance = SuperAgent()
-
-# Synchronous version of process_query for contexts where async can't be used directly
-def process_query_sync(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
-    """Synchronous wrapper for the async process_query function"""
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json))
-        return result
-    finally:
-        loop.close()
 
 async def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
     """Main entry point for the Super Agent"""
