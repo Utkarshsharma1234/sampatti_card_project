@@ -464,7 +464,7 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         return text
 
 
-async def send_audio(sample_output: str, employerNumber: int):
+def send_audio(sample_output: str, employerNumber: int):
     
     try:
         load_dotenv()
