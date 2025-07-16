@@ -98,6 +98,15 @@ def generate_unique_id(length=8):
         letters_only += ''.join(random.choices(string.ascii_letters, k=length - len(letters_only)))
     return letters_only
 
+def generate_referral_code(length: int = 8, prefix: str = "") -> str:
+    while True:
+        characters = string.ascii_uppercase + string.digits
+        code = ''.join(random.choices(characters, k=length))
+        
+        if prefix:
+            code = f"{prefix}{code}"
+        
+        return code
 
 def fuzzy_match_score(str1, str2):
     return difflib.SequenceMatcher(None, str1, str2).ratio()

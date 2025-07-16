@@ -78,12 +78,50 @@ class WorkerEmployerInput(BaseModel):
 
 
 
-def onboard_worker_employer( worker_number: int, employer_number: int, pan_number: str, salary : int, UPI: Optional[str] = "", bank_account_number: Optional[str]= "", ifsc_code: Optional[str] = "") -> str:
-
+def onboard_worker_employer( worker_number: int, employer_number: int, pan_number: str, salary : int, UPI: Optional[str] = "", bank_account_number: Optional[str]= "", ifsc_code: Optional[str] = "", referral_code: Optional[str] = "") -> str:
     bank_passbook_image = "NA"
     pan_card_image = "NA"
 
     worker_number = int(worker_number)
+    employer_number = int(employer_number)
+
+    data = {
+        "worker_number": worker_number,
+        "employer_number": employer_number,
+        "UPI": UPI or "",
+        "bank_account_number": bank_account_number or "",
+        "ifsc_code": ifsc_code or "",
+        "pan_number": pan_number,
+        "bank_passbook_image": bank_passbook_image,
+        "pan_card_image": pan_card_image,
+        "salary": salary,
+        "referral_code": referral_code or ""
+    }
+
+    url = "https://conv.sampatticards.com/user/ai_agent/onboarding_worker_sheet/create"
+    response = requests.post(url, json=data)
+
+    return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
+    employer_number = int(employer_number)
+
+    data = {
+        "worker_number": worker_number,
+        "employer_number": employer_number,
+        "UPI": UPI or "",
+        "bank_account_number": bank_account_number or "",
+        "ifsc_code": ifsc_code or "",
+        "pan_number": pan_number,
+        "bank_passbook_image": bank_passbook_image,
+        "pan_card_image": pan_card_image,
+        "salary": salary
+    }
+
+    url = "https://conv.sampatticards.com/user/ai_agent/onboarding_worker_sheet/create"
+    response = requests.post(url, json=data)
+
+    return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
+
+    return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
     employer_number = int(employer_number)
 
     data = {

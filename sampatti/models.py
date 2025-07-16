@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
+from langchain_core.load.dump import default
+from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -16,7 +17,8 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('employer_id', String, default=''),
     Column('worker_id', String, default = ''),
     Column('date_of_onboarding', String, default=''),
-    Column('monthly_leaves', Integer, default=0)
+    Column('monthly_leaves', Integer, default=0),
+    Column('referralCode', String, default=None)
 )       
 
 
@@ -39,7 +41,25 @@ class Employer(Base):
     __tablename__ = "Employer"
     id = Column(String, primary_key=True)
     employerNumber = Column(Integer)
+    referralCode = Column(String, nullable=True, default=None)
+    cashbackAmountCredited = Column(Integer, nullable=True, default=0)
+    FirstPaymentDone = Column(Boolean, nullable=True, default=False)
+    accountNumber = Column(String, nullable=True, default=None)
+    ifsc = Column(String, nullable=True, default=None)
+    numberofReferral = Column(Integer, nullable=True, default=0)
+    totalPaymentAmount = Column(Integer, nullable=True, default=0)
     workers = relationship("Domestic_Worker", secondary="worker_employer",back_populates='employers')
+
+class EmployerReferralMapping(Base):
+    __tablename__ = "EmployerReferralMapping"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    employerReferring = Column(String, ForeignKey('Employer.id'), nullable=False)
+    employerReferred = Column(String, ForeignKey('Employer.id'), nullable=False)
+    referralCode = Column(String, nullable=True, default=None)
+    referralStatus = Column(String, nullable=True, default=None)  
+    dateReferredOn = Column(String, nullable=True, default=None)
+    cashbackAmount = Column(Integer, nullable=True, default=None)
+    cashbackStatus = Column(String, nullable=True, default=None)  
 
 class TalkToAgentEmployer(Base):
     __tablename__ = "Talk_To_Agent"
