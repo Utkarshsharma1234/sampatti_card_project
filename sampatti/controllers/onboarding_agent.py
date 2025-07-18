@@ -66,8 +66,6 @@ prompt = ChatPromptTemplate.from_messages(
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
             
-            When asking for the referral code, specifically ask if they have a referral code. If they say they don't have one or respond negatively, pass None or an empty string for the referral code parameter. Do not skip asking about the referral code - it's important to confirm whether they have one or not.
-            
             Once all information is gathered, call the onboarding tool.
 
             When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
