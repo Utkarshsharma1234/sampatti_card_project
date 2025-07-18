@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -16,7 +16,8 @@ worker_employer = Table('worker_employer', Base.metadata,
     Column('employer_id', String, default=''),
     Column('worker_id', String, default = ''),
     Column('date_of_onboarding', String, default=''),
-    Column('monthly_leaves', Integer, default=0)
+    Column('monthly_leaves', Integer, default=0),
+    Column('referralCode', String, default='')
 )       
 
 
@@ -39,7 +40,25 @@ class Employer(Base):
     __tablename__ = "Employer"
     id = Column(String, primary_key=True)
     employerNumber = Column(Integer)
+    referralCode = Column(String, default='')
+    cashbackAmountCredited = Column(Integer, default=0)
+    FirstPaymentDone = Column(Boolean, default=False)
+    accountNumber = Column(String,default='')
+    ifsc = Column(String, default='')
+    numberofReferral = Column(Integer, default=0)
+    totalPaymentAmount = Column(Integer, default=0)
     workers = relationship("Domestic_Worker", secondary="worker_employer",back_populates='employers')
+
+class EmployerReferralMapping(Base):
+    __tablename__ = "EmployerReferralMapping"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    employerReferring = Column(String, ForeignKey('Employer.id'), nullable=False)
+    employerReferred = Column(String, ForeignKey('Employer.id'), nullable=False)
+    referralCode = Column(String, default='')
+    referralStatus = Column(String, default='')  
+    dateReferredOn = Column(String, default='')
+    cashbackAmount = Column(Integer, default=0)
+    cashbackStatus = Column(String, default='') 
 
 class TalkToAgentEmployer(Base):
     __tablename__ = "Talk_To_Agent"
