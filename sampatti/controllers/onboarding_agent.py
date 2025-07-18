@@ -63,7 +63,6 @@ prompt = ChatPromptTemplate.from_messages(
             2. Either UPI or (Bank Account + IFSC)
             3. PAN Number
             4. Salary
-            5. Referral Code (if they have one)
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
             
