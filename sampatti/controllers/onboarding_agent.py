@@ -65,6 +65,39 @@ prompt = ChatPromptTemplate.from_messages(
             4. Salary
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
+
+            VALIDATION RULES:
+            
+            1. WORKER NUMBER:
+               - Must be exactly 10 digits
+               - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
+               - Only call `get_worker_details_tool` after validation passes
+            
+            2. UPI ID (if chosen):
+               - Format: username@bankname (e.g., name@paytm, number@ybl, etc.)
+               - Must contain @ symbol
+               - If invalid, inform: "Please provide a valid UPI ID in the format username@bankname"
+            
+            3. BANK ACCOUNT + IFSC (if chosen):
+               - Bank Account: Must be numeric, typically 8-18 digits
+               - IFSC Code: Must be exactly 11 characters (4 letters + 7 alphanumeric)
+               - Format: First 4 characters must be letters, 5th character must be 0, last 6 can be letters or numbers
+               - If invalid, specify which field is incorrect and the correct format
+            
+            4. PAN NUMBER:
+               - Must be exactly 10 characters
+               - Format: 5 letters + 4 numbers + 1 letter (e.g., ABCDE1234F)
+               - All letters must be uppercase
+               - If invalid, inform: "Please provide a valid PAN number (format: ABCDE1234F)"
+            
+            5. SALARY:
+               - Must be a positive number
+
+            PROCESS FLOW:
+            - Validate each input before proceeding to the next question
+            - Re-ask if validation fails with specific error message
+            - Only proceed to next item after current validation passes
+
             Once all information is gathered, call the onboarding tool.
 
             When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
