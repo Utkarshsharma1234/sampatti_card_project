@@ -63,3 +63,7 @@ def unsettled_balance(db : Session = Depends(get_db)):
 @router.get("/cash_advance_link")
 def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, monthly_salary : int, bonus : int, deduction : int, db : Session = Depends(get_db)):
     return cashfree_api.cash_advance_link(employerNumber, workerName, cash_advance, repayment_amount, monthly_salary, bonus, deduction, db)
+
+@router.get('/fetch_payment_details')
+def fetch_payment_details(orderId : str):
+    return cashfree_api.fetch_payment_details(orderId)
