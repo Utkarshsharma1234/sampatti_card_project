@@ -8,6 +8,7 @@ from ..database import get_db
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation, employment_contract_gen
 from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message, transcribe_audio_from_file_path, get_main_transcript #extract_transcript_from_json_file
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
+from .cashfree_api import fetch_payment_details
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
 from datetime import datetime, date
@@ -1326,3 +1327,66 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
     result = db.execute(stmt).first()
     print(f"Result of employer presence check: {result}")
     return result is not None
+
+
+def populate_db(employer_number: int, worker_number: int, db: Session):
+
+    try:
+        worker_employer_record = db.query(models.worker_employer).where(
+            models.worker_employer.c.employer_number == employer_number,
+            models.worker_employer.c.worker_number == worker_number
+        ).first()
+        
+        if not worker_employer_record:
+            return {"status": "error", "message": f"No relationship found between employer {employer_number} and worker {worker_number}"}
+        
+        order_id = worker_employer_record.order_id
+        
+        if not order_id:
+            return {"status": "error", "message": "No order_id found for this employer-worker relationship"}
+        
+        print("Order_id:", order_id)
+
+        payment_details = fetch_payment_details(order_id)
+
+        print("Payment Details: ", payment_details)
+
+        # Initialize payment_info dictionary
+        payment_info = {
+            "payment_method_type": None,
+            "upi_details": {},
+            "bank_details": {}
+        }
+
+        for payment in payment_details:
+            if payment.get("payment_status") == "SUCCESS":
+                payment_method = payment.get("payment_method", {})
+                
+                # Check for UPI payment method
+                upi_info = payment_method.get("upi", {})
+                if upi_info:
+                    upi_id = upi_info.get("upi_id")
+                    if upi_id:
+                        payment_info["payment_method_type"] = "upi"
+                        payment_info["upi_details"] = {
+                            "upi_id": upi_id
+                        }
+                        print(f"Found UPI ID: {upi_id}")
+                else:
+                    print(f"No UPI payment method found for order {order_id}")
+
+        employer = db.query(models.Employer).filter(
+            models.Employer.employerNumber == employer_number
+        ).first()
+
+        if employer and payment_info["payment_method_type"] == "upi" and "upi_id" in payment_info["upi_details"]:
+            employer.upiId = payment_info["upi_details"]["upi_id"]
+            employer.FirstPaymentDone = True
+            db.commit()
+            db.refresh(employer)
+            print(f"Updated UPI ID for employer {employer_number} and set FirstPaymentDone to True")
+            return {"status": "success", "message": f"Updated UPI ID for employer {employer_number} and set FirstPaymentDone to True", "upi_id": payment_info["upi_details"]["upi_id"]}
+
+    except Exception as e:
+        print(f"Error fetching payment details: {str(e)}")
+        return {"status": "error", "message": f"Error fetching payment details: {str(e)}"}
