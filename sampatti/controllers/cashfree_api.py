@@ -482,3 +482,25 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
 
     except Exception as e:
         print(e)
+
+
+def fetch_payment_details(order_id):
+
+    url = f"https://api.cashfree.com/pg/orders/{order_id}/payments"
+
+    headers = {
+        "accept": "application/json",
+        "x-api-version": "2023-08-01",
+        "x-client-id": pg_id,
+        "x-client-secret": pg_secret
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        response_data = json.loads(response.text)
+        print(response_data)
+        return response_data
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+
