@@ -45,6 +45,7 @@ class Employer(Base):
     FirstPaymentDone = Column(Boolean, default=False)
     accountNumber = Column(String,default='')
     ifsc = Column(String, default='')
+    upiId = Column(String, nullable=True, default='')
     numberofReferral = Column(Integer, default=0)
     totalPaymentAmount = Column(Integer, default=0)
     workers = relationship("Domestic_Worker", secondary="worker_employer",back_populates='employers')
