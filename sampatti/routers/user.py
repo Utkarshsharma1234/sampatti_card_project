@@ -5,7 +5,7 @@ from .. import schemas, models
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import onboarding_agent, rag_funcs, userControllers
-from ..controllers import employment_contract_gen, salary_summary_gen, cash_advance_agent, super_agent, populate_db
+from ..controllers import employment_contract_gen, salary_summary_gen, cash_advance_agent, super_agent
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
 from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
