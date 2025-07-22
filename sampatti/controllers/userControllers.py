@@ -1329,16 +1329,16 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
     return result is not None
 
 
-def populate_db(employer_number: int, worker_number: int, db: Session):
-
+def populate_db(employer_number: int, worker_id: str, db: Session):
+    
     try:
-        worker_employer_record = db.query(models.worker_employer).where(
-            models.worker_employer.c.employer_number == employer_number,
-            models.worker_employer.c.worker_number == worker_number
+        worker_employer_record = db.query(models.SalaryDetails).where(
+            models.SalaryDetails.c.worker_id == worker_id,
+            models.SalaryDetails.c.employerNumber == employer_number
         ).first()
         
         if not worker_employer_record:
-            return {"status": "error", "message": f"No relationship found between employer {employer_number} and worker {worker_number}"}
+            return {"status": "error", "message": f"No relationship found between employer {employer_number} and worker {worker_id}"}
         
         order_id = worker_employer_record.order_id
         

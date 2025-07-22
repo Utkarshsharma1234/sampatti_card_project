@@ -288,5 +288,5 @@ def super_agent_query(employer_number: int, type_of_message: str, query: str, me
     return super_agent.super_agent_query(employer_number, type_of_message, query, media_id)
 
 @router.post("/add_in_employer")
-def populate_db(employer_number: int, worker_number: int, db: Session = Depends(get_db)):
-    return userControllers.populate_db(employer_number, worker_number, db)
+def populate_db(employer_number: int, worker_id: str, db: Session = Depends(get_db)):
+    return userControllers.populate_db(employer_number, worker_id, db)
