@@ -1332,10 +1332,14 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
 def populate_db(employer_number: int, worker_id: str, db: Session):
     
     try:
+        # Query SalaryDetails for records where month is June and matching worker_id and employer_number
         worker_employer_record = db.query(models.SalaryDetails).where(
             models.SalaryDetails.c.worker_id == worker_id,
-            models.SalaryDetails.c.employerNumber == employer_number
+            models.SalaryDetails.c.employerNumber == employer_number,
+            models.SalaryDetails.c.month == "June"
         ).first()
+
+        order_id = worker_employer_record
         
         if not worker_employer_record:
             return {"status": "error", "message": f"No relationship found between employer {employer_number} and worker {worker_id}"}
