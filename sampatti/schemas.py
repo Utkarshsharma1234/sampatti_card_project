@@ -27,6 +27,7 @@ class Worker_Employer(BaseModel):
     worker_name : str
     employer_id : str
     worker_id : str
+    referralCode : str
 
 class Salary(BaseModel):
     workerNumber : int

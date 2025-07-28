@@ -198,11 +198,17 @@ def fetch_bank_ref(order_id):
 
     if response.status_code == 200:
         response_data = json.loads(response.text)
-        bank_ref_no = response_data[0].get('bank_reference')
-        print(bank_ref_no)
-        return bank_ref_no
+        print("Response Data: ",response_data)
+        if response_data and len(response_data) > 0:
+            bank_ref_no = response_data[0].get('bank_reference')
+            print("Bank Reference Number: ",bank_ref_no)
+            return bank_ref_no
+        else:
+            print(f"No payment data found for order_id: {order_id}")
+            return None
     else:
         print(f"Error: {response.status_code}, {response.text}")
+        return None
 
 
 # checking the order status
@@ -499,7 +505,7 @@ def fetch_payment_details(order_id):
 
     if response.status_code == 200:
         response_data = json.loads(response.text)
-        print(response_data)
+        print("Response Data: ",response_data)
         return response_data
     else:
         print(f"Error: {response.status_code}, {response.text}")

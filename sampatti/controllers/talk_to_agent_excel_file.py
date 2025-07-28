@@ -76,12 +76,10 @@ sheet_title = "OpsTeamWorkerDetailsSheet"
 main_sheet = "OnboardingWorkerDetails"
 
 all_columns = [
-    "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary", "date_of_onboarding"
+    "id", "bank_account_name_cashfree", "pan_card_name_cashfree", "worker_number", "employer_number", "UPI", "bank_account_number", "ifsc_code", "PAN_number", "bank_passbook_image", "pan_card_image", "bank_account_validation", "pan_card_validation", "cashfree_vendor_add_status", "vendorId", "confirmation_message", "salary", "date_of_onboarding", "referral_code"
 ]
 
-def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str, salary : int):
-
-
+def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str, salary : int, referral_code : str):
     date = current_date()
     # Input row dictionary
     input_data = {
@@ -95,13 +93,14 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
         "bank_passbook_image": bank_passbook_image,
         "pan_card_image": pan_card_image,
         "salary" : salary,
-        "date_of_onboarding" : f"{date}"
+        "date_of_onboarding" : f"{date}",
+        "referral_code" : referral_code
     }
 
 
     # Setup Google Sheets credentials
     client = get_client()
-    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in']
+    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in', 'om@sampatticard.com', 'nusrath@sampatticard.com']
 
     try:
         spreadsheet = client.open(sheet_title)
@@ -244,6 +243,7 @@ def process_vendor_status(db : Session):
         ifsc_code = row.get("ifsc_code", "").strip()
         salary = row.get("salary", "")
         confirmation_message = row.get("confirmation_message", "").strip()
+        referral_code = row.get("referral_code", "").strip()
 
         if not vendorId:
             print(f"[{idx}] No vendorId found")
@@ -279,7 +279,8 @@ def process_vendor_status(db : Session):
                     upi_id = upi_id if upi_id else "None",
                     accountNumber = bank_account_number if bank_account_number else "None",
                     ifsc = ifsc_code if bank_account_number else "None",
-                    vendorId = vendorId
+                    vendorId = vendorId,
+                    referralCode = referral_code
                 )
             
                 userControllers.create_domestic_worker(worker, db)
@@ -314,6 +315,7 @@ def create_relations_in_db(db : Session):
         ifsc_code = row.get("ifsc_code", "").strip()
         confirmation_message = row.get("confirmation_message", "").strip()
         date_of_onboarding = row.get("date_of_onboarding", "").strip()
+        referral_code = row.get("referral_code", "").strip()
 
 
         if not worker_name:
@@ -333,7 +335,8 @@ def create_relations_in_db(db : Session):
                     vendorId = vendorId,
                     worker_name = worker_name,
                     employer_id = "employer_id",
-                    worker_id = "worker_id"
+                    worker_id = "worker_id",
+                    referralCode = referral_code
                 )
 
                 userControllers.create_relation(relation, db, date_of_onboarding)

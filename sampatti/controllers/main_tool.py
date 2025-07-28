@@ -17,14 +17,25 @@ from .utility_functions import generate_unique_id
 
 
 def add_employer(employer_number: int):
-
-    db=next(get_db())
+  
+    db = next(get_db())
 
     employer = db.query(models.Employer).where(models.Employer.employerNumber == employer_number).first()
 
-    if not employer :
+    if not employer:
         unique_id = generate_unique_id()
-        new_user = models.Employer(id= unique_id, employerNumber = employer_number)
+        new_user = models.Employer(
+            id=unique_id, 
+            employerNumber=employer_number,
+            referralCode = '',
+            accountNumber = '',
+            ifsc = '',
+            upiId = '',
+            cashbackAmountCredited=0,
+            FirstPaymentDone=False,
+            numberofReferral=0,
+            totalPaymentAmount=0
+        )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
