@@ -16,8 +16,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     year = ""
 
     day_only = current_date().day
-    #if(abs(31-day_only) >= abs(1-day_only)):
-    if day_only < 29:
+    if(abs(31-day_only) >= abs(1-day_only)):
         month = ps_month
         if month == "December":
             year = current_year() - 1
