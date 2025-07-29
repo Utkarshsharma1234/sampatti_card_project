@@ -482,7 +482,10 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
 
         send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
 
-        update_statement = update(models.worker_employer).where(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).values(order_id= response["order_id"])
+        update_statement = update(models.worker_employer).where(
+            (models.worker_employer.c.worker_name == workerName) & 
+            (models.worker_employer.c.employer_number == str(employerNumber))
+        ).values(order_id=response["order_id"])
         db.execute(update_statement)
         db.commit()
 
