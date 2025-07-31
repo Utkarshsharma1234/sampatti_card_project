@@ -20,7 +20,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_groq import ChatGroq
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
-from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_func_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool, store_salary_management_records_tool
+from .cash_advance_tool import get_worker_by_name_and_employer_tool, store_cash_advance_data_func_tool, get_existing_cash_advance_tool, update_cash_advance_data_func_tool, update_salary_details_func_tool, mark_advance_as_paid_func_tool, generate_payment_link_func_tool, store_combined_data_func_tool, update_salary_tool, store_salary_management_records_tool, check_workers_for_employer_tool
 from ..database import get_db
 
 load_dotenv()
@@ -56,17 +56,29 @@ prompt = ChatPromptTemplate.from_messages([
         If user input type is 'audio': Use transcribe_audio_tool with mediaId → Extract text → Process as query using chat history → Generate response
         Always analyze type and mediaId fields to decide tool usage autonomously.
 
+        SMART WORKER CONTEXT MANAGEMENT:
+        Use chat history to maintain worker context and avoid excessive tool calls.
+        Only call check_workers_for_employer when absolutely necessary.
+
         CURRENT DATE CONTEXT:
         Today's date: {today} — Current month: {current_month}, Current year: {current_year}
         Employer Number: {employer_number}
 
         CONVERSATION WORKFLOW:
 
-        1. WORKER IDENTIFICATION:
-           - If no worker name provided, ask: "Please provide the worker's name to proceed"
-           - If user says "show all" or "list all", use get_all_cash_advances_for_employer tool
-           - if user provides worker name, use get_worker_by_name_and_employer tool
-           - if user doesn't provide worker name then use get_employer_workers_info_tool to retrive the name and if more than one worker is found, ask user to provide the worker name.
+        1. WORKER CONTEXT CHECK:
+           - First, analyze chat history to see if a worker is already selected for this conversation
+           - Look for patterns like "Found 1 worker", "Working with [Worker Name]", or previous worker selections
+           - If chat history shows a worker is already selected, continue with that worker context
+           - Only call check_workers_for_employer tool in these specific cases:
+             * No chat history exists (first interaction)
+             * Chat history doesn't contain any worker selection
+             * User explicitly asks to "change worker" or "switch worker"
+             * User mentions a different worker name than what's in history
+           - If calling check_workers_for_employer:
+             * Single worker found: Store worker name in conversation context and proceed
+             * Multiple workers found: Ask user to specify worker name, then store selection
+             * No workers found: Inform user and end conversation
 
         2. WORKER LOOKUP & VERIFICATION:
            - Use get_worker_by_name_and_employer tool to find worker
@@ -161,7 +173,8 @@ prompt = ChatPromptTemplate.from_messages([
            - If yes, use generate_payment_link_func_tool with correct parameters
 
         TOOL USAGE MAPPING:
-        - Worker lookup: get_worker_by_name_and_employer
+        - Worker context check: check_workers_for_employer (only when no worker in chat history or user requests change)
+        - Worker lookup: get_worker_by_name_and_employer (when worker name is known from history or user input)
         - Check existing advance: get_existing_cash_advance
         - Store new advance: store_cash_advance_data_func_tool
         - Update existing advance: update_cash_advance_data_func_tool
@@ -306,7 +319,7 @@ prompt = ChatPromptTemplate.from_messages([
 tools = [get_worker_by_name_and_employer_tool, store_cash_advance_data_func_tool, get_existing_cash_advance_tool,
             update_cash_advance_data_func_tool, update_salary_details_func_tool, store_combined_data_func_tool,
             mark_advance_as_paid_func_tool, generate_payment_link_func_tool, update_salary_tool,
-            store_salary_management_records_tool]
+            store_salary_management_records_tool, check_workers_for_employer_tool]
 
 agent = create_tool_calling_agent(
     llm=llm,

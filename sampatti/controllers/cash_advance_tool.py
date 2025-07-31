@@ -53,6 +53,63 @@ class AgentResponse(BaseModel):
     ai_message: str
 
 # Tools for the agent
+def check_workers_for_employer_func(employer_number: int) -> dict:
+    """Check how many workers are linked to an employer and return appropriate response."""
+    db = next(get_db())
+    try:
+        # Fetch all workers for this employer
+        results = db.execute(
+            worker_employer.select().where(
+                worker_employer.c.employer_number == employer_number
+            )
+        ).fetchall()
+        
+        if not results:
+            return {
+                "status": "no_workers",
+                "message": f"No workers found for employer number {employer_number}",
+                "worker_count": 0
+            }
+        
+        worker_count = len(results)
+        
+        if worker_count == 1:
+            # Single worker - return worker details and ask for salary action
+            worker = results[0]
+            return {
+                "status": "single_worker",
+                "message": f"Found 1 worker linked to employer {employer_number}. What would you like to do with {worker.worker_name}'s salary?",
+                "worker_count": 1,
+                "worker_details": {
+                    "worker_id": worker.worker_id,
+                    "employer_id": worker.employer_id,
+                    "worker_name": worker.worker_name,
+                    "salary_amount": worker.salary_amount,
+                    "worker_number": worker.worker_number
+                },
+                "prompt": "Please specify what you want to do:\n- Give bonus (specify amount)\n- Apply deduction (specify amount)\n- Give cash advance (specify amount)\n- Update monthly salary (specify new amount)\n- Other salary-related action"
+            }
+        else:
+            # Multiple workers - ask user to specify worker name
+            worker_names = [row.worker_name for row in results if row.worker_name]
+            return {
+                "status": "multiple_workers",
+                "message": f"Found {worker_count} workers linked to employer {employer_number}. Please specify which worker you want to work with.",
+                "worker_count": worker_count,
+                "worker_names": worker_names,
+                "prompt": f"Available workers: {', '.join(worker_names)}\nPlease provide the worker name to proceed further."
+            }
+            
+    except Exception as e:
+        print(f"Error checking workers for employer: {e}")
+        return {
+            "status": "error",
+            "message": f"Error checking workers: {str(e)}",
+            "worker_count": 0
+        }
+    finally:
+        db.close()
+
 def get_worker_by_name_and_employer_func(worker_name: str, employer_number: int) -> dict:
     """Find worker details by name and employer number from worker_employer table."""
     db = next(get_db())
@@ -976,4 +1033,10 @@ store_salary_management_records_tool = StructuredTool.from_function(
     func=store_salary_management_records_func,
     name="store_salary_management_records",
     description="Store complete salary management records in SalaryManagementRecords table with cash advance, repayment, bonus, and deduction details."
+)
+
+check_workers_for_employer_tool = StructuredTool.from_function(
+    func=check_workers_for_employer_func,
+    name="check_workers_for_employer",
+    description="Check how many workers are linked to an employer. If single worker, returns worker details and prompts for salary action. If multiple workers, asks user to specify worker name."
 )
