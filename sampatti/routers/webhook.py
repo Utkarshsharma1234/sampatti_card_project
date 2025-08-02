@@ -82,7 +82,7 @@ def process_orai_webhook(data: dict):
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
         value = changes.get("value", {})
 
-        contacts = value.get("contacts", [])
+        #contacts = value.get("contacts", [])
         employerNumber = contacts[0].get("wa_id") if contacts else None
 
         messages = value.get("messages", [])
