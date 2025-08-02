@@ -254,16 +254,6 @@ def get_worker_details(workerNumber : int):
     Fetches worker details from the database using the worker number.
     Returns a dictionary with worker details or an error message.
     """
-    
-    if workerNumber.length == 12:
-        workerNumber = workerNumber[2:]
-    elif workerNumber.length == 11:
-        workerNumber = workerNumber[1:]
-    elif workerNumber.length == 10:
-        workerNumber = workerNumber
-    else:
-        return {"error" : "Worker number is invalid."}
-
     url = "https://conv.sampatticards.com/user/check_worker"
     payload = {
         "workerNumber": workerNumber
