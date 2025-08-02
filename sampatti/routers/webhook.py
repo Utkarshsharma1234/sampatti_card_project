@@ -114,6 +114,11 @@ def process_orai_webhook(data: dict):
             query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
             super_agent.super_agent_query(employerNumber, "text", query, "", formatted_json)
 
+        elif message_type == "contacts":
+            contacts = data["entry"][0]["changes"][0]["value"]["messages"][0]["contacts"][0]["phones"][0]["wa_id"]
+            print("Extracted the Contact Number from the Button: ", contacts)
+            super_agent.super_agent_query(employerNumber, "text", contacts, "", formatted_json)
+
         else:
             super_agent.super_agent_query(employerNumber, "text", "Hi", media_id, formatted_json)
 
