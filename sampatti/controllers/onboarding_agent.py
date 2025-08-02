@@ -70,8 +70,9 @@ prompt = ChatPromptTemplate.from_messages(
             
             1. WORKER NUMBER:
                - Must be exactly 10 digits
+               - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number
                - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
-               - Only call `get_worker_details_tool` after validation passes
+               - Only call `get_worker_details_tool` after validation passes   
             
             2. UPI ID (if chosen):
                - Format: username@bankname (e.g., name@paytm, number@ybl, etc.)
@@ -100,7 +101,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             Once all information is gathered, call the onboarding tool.
 
-            When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
+            When the employer inputs the worker number check for the number and if the number is 12 digits then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number. If the number is 10 digits then call `get_worker_details_tool` with the 10 digit worker number. If the number is not 12 or 10 digits then inform the employer that the worker number is invalid. you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
 
             If the employer confirms the worker details the first ask for the salary of the worker from the employer because without salary we cant complete the onboarding and then call the `worker_onboarding_tool` to onboard the worker. Never invoke the onboarding tool without the salary.
 
@@ -189,5 +190,3 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
-
-

@@ -35,6 +35,7 @@ class WorkerOnboardingRequest(BaseModel):
     bank_passbook_image: Optional[str] = ""
     pan_card_image: Optional[str] = ""
     salary: int
+    referral_code : Optional[str] = ""
 
 @router.get("/download_salary_slip")
 def download_worker_salary_slip(workerNumber : int, month : str, year : int, db : Session = Depends(get_db)):
@@ -277,7 +278,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
 
 @router.post("/ai_agent/onboarding_worker_sheet/create")
 def worker_onboarding(payload: WorkerOnboardingRequest):
-    return talk_to_agent_excel_file.create_worker_details_onboarding(payload.worker_number, payload.employer_number, payload.UPI, payload.bank_account_number, payload.ifsc_code, payload.pan_number, payload.bank_passbook_image, payload.pan_card_image, payload.salary)
+    return talk_to_agent_excel_file.create_worker_details_onboarding(payload.worker_number, payload.employer_number, payload.UPI, payload.bank_account_number, payload.ifsc_code, payload.pan_number, payload.bank_passbook_image, payload.pan_card_image, payload.salary, payload.referral_code)
 
 @router.post("/cash_advance_gage")
 def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str = ""):
