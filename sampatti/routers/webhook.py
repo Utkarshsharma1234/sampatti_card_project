@@ -88,7 +88,12 @@ def process_orai_webhook(data: dict):
         messages = value.get("messages", [])
         message = messages[0] if messages else {}
         message_type = message.get("type")
-        media_id = message.get(message_type, {}).get("id")
+        
+        # Safely extract media_id - only for media message types
+        media_id = None
+        if message_type and message_type in ["image", "audio", "video", "document", "sticker"]:
+            media_content = message.get(message_type, {})
+            media_id = media_content.get("id") if isinstance(media_content, dict) else None
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
@@ -109,6 +114,10 @@ def process_orai_webhook(data: dict):
         elif message_type == "text":
             query = message.get("text", {}).get("body")
             super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
+
+        elif message_type == "audio":
+            query = message.get("audio", {}).get("id")
+            super_agent.super_agent_query(employerNumber, message_type, query, media_id, formatted_json)
 
         elif message_type == "button":
             query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
