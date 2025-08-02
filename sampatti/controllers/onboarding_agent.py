@@ -70,8 +70,9 @@ prompt = ChatPromptTemplate.from_messages(
             
             1. WORKER NUMBER:
                - Must be exactly 10 digits
+               - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number
                - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
-               - Only call `get_worker_details_tool` after validation passes
+               - Only call `get_worker_details_tool` after validation passes   
             
             2. UPI ID (if chosen):
                - Format: username@bankname (e.g., name@paytm, number@ybl, etc.)
@@ -189,5 +190,3 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
-
-
