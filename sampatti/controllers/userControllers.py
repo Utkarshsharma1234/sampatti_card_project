@@ -1394,3 +1394,154 @@ def populate_db(employer_number: int, worker_id: str, db: Session):
     except Exception as e:
         print(f"Error fetching payment details: {str(e)}")
         return {"status": "error", "message": f"Error fetching payment details: {str(e)}"}
+
+
+def update_employer_details(employerNumber: int, payload: dict, db: Session):
+    """
+    Process payment webhook and update employer/referral details according to the flow:
+    1. Extract payment data from webhook
+    2. Check if payment is successful
+    3. Find employer and check if it's first payment
+    4. Update employer record with payment details
+    5. Check for referral mapping
+    6. Process cashback for referring employer
+    7. Generate new referral code for paying employer
+    """
+    try:
+        # Extract payment data from webhook
+        order_data = payload['data']['order']
+        payment_data = payload['data']['payment']
+        customer_data = payload['data']['customer_details']
+        
+        order_id = order_data.get('order_id')
+        payment_amount = payment_data.get('payment_amount', 0)
+        payment_status = payment_data.get('payment_status')
+        upi_id = payment_data['payment_method']['upi'].get('upi_id') if 'upi' in payment_data.get('payment_method', {}) else None
+        payment_time = payment_data.get('payment_time')
+        bank_reference = payment_data.get('bank_reference')
+        
+        print(f"Processing payment for employer: {employerNumber}")
+        print(f"Order ID: {order_id}")
+        print(f"Payment Amount: {payment_amount}")
+        print(f"Payment Status: {payment_status}")
+        print(f"UPI ID: {upi_id}")
+        
+        # Find employer
+        employer = db.query(models.Employer).filter(
+            models.Employer.employerNumber == employerNumber
+        ).first()
+        
+        if not employer:
+            return {
+                "status": "error", 
+                "message": f"Employer with number {employerNumber} not found"
+            }
+        
+        # Check if first payment
+        if employer.FirstPaymentDone:
+            # Not first payment - update total payment amount and exit
+            employer.totalPaymentAmount += int(payment_amount)
+            db.commit()
+            return {
+                "status": "success", 
+                "message": "Payment recorded but not first payment - no referral processing"
+            }
+        
+        # First payment processing
+        # Update employer record with payment details
+        employer.FirstPaymentDone = True
+        employer.upiId = upi_id or ''
+        employer.totalPaymentAmount += int(payment_amount)
+        
+        # Generate new referral code for this employer
+        new_referral_code = generate_referral_code()
+        # Ensure the referral code is unique
+        while db.query(models.Employer).filter(models.Employer.referralCode == new_referral_code).first():
+            new_referral_code = generate_referral_code()
+        
+        employer.referralCode = new_referral_code
+        
+        # Check for referral mapping - find if this employer was referred
+        worker_employer_record = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id==order_id).first()
+        
+        if not worker_employer_record or not worker_employer_record.referralCode:
+            # No referral code - skip referral processing
+            db.commit()
+            db.refresh(employer)
+            return {
+                "status": "success",
+                "message": "First payment processed. No referral code found.",
+                "new_referral_code": new_referral_code
+            }
+        
+        
+        # Has referral code - process referral
+        referral_code_used = worker_employer_record.referralCode
+        
+        # Find referring employer
+        referring_employer = db.query(models.Employer).filter(
+            models.Employer.referralCode == referral_code_used
+        ).first()
+        
+        if not referring_employer:
+            # Referral code exists but no matching employer found
+            db.commit()
+            db.refresh(employer)
+            return {
+                "status": "warning",
+                "message": f"Referral code {referral_code_used} found but no matching employer",
+                "new_referral_code": new_referral_code
+            }
+        
+        # Process cashback for referring employer
+        CASHBACK_AMOUNT = 150  # Fixed cashback amount
+        referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
+        referring_employer.numberofReferral += 1
+        
+        # Create or update referral mapping
+        existing_mapping = db.query(models.EmployerReferralMapping).filter(
+            models.EmployerReferralMapping.employerReferring == referring_employer.id,
+            models.EmployerReferralMapping.employerReferred == employer.id
+        ).first()
+        
+        if not existing_mapping:
+            # Create new referral mapping
+            new_mapping = models.EmployerReferralMapping(
+                id=str(uuid.uuid4()),
+                employerReferring=referring_employer.id,
+                employerReferred=employer.id,
+                referralCode=referral_code_used,
+                referralStatus='COMPLETED',
+                dateReferredOn=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                cashbackAmount=CASHBACK_AMOUNT,
+                cashbackStatus='PENDING'  # Can be updated later when cashback is actually credited
+            )
+            db.add(new_mapping)
+        else:
+            # Update existing mapping
+            existing_mapping.referralStatus = 'COMPLETED'
+            existing_mapping.cashbackAmount = CASHBACK_AMOUNT
+            existing_mapping.cashbackStatus = 'PENDING'
+        
+        # Commit all changes
+        db.commit()
+        db.refresh(employer)
+        db.refresh(referring_employer)
+        
+        return {
+            "status": "success",
+            "message": "First payment and referral processed successfully",
+            "employer_id": employer.id,
+            "new_referral_code": new_referral_code,
+            "referring_employer_id": referring_employer.id,
+            "cashback_amount": CASHBACK_AMOUNT,
+            "referring_employer_total_referrals": referring_employer.numberofReferral
+        }
+        
+    except Exception as e:
+        print(f"Error in update_employer_details: {str(e)}")
+        db.rollback()
+        return {
+            "status": "error",
+            "message": f"Error processing employer update: {str(e)}"
+        }
