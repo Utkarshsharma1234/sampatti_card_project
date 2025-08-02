@@ -35,6 +35,7 @@ class WorkerOnboardingRequest(BaseModel):
     bank_passbook_image: Optional[str] = ""
     pan_card_image: Optional[str] = ""
     salary: int
+    referral_code : Optional[str] = ""
 
 @router.get("/download_salary_slip")
 def download_worker_salary_slip(workerNumber : int, month : str, year : int, db : Session = Depends(get_db)):
