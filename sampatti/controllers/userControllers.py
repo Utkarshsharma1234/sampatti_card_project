@@ -6,9 +6,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from .. import models, schemas
 from ..database import get_db
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation, employment_contract_gen
-from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message, transcribe_audio_from_file_path, get_main_transcript #extract_transcript_from_json_file
+from .utility_functions import generate_unique_id, exact_match_case_insensitive, fuzzy_match_score, current_month, previous_month, current_date, current_year, call_sarvam_api, extracted_info_from_llm, send_audio, extracted_info_from_llm, call_sarvam_api, translate_text_sarvam, determine_attendance_period, question_language_audio, systemattic_survey_message, transcribe_audio_from_file_path, get_main_transcript, generate_referral_code #extract_transcript_from_json_file
 from ..controllers import employer_invoice_gen, cashfree_api, uploading_files_to_spaces, whatsapp_message, salary_slip_generation
-from .cashfree_api import fetch_payment_details
+from .cashfree_api import fetch_payment_details, create_cashfree_beneficiary, transfer_cashback_amount
 from sqlalchemy.orm import Session
 from pydub import AudioSegment
 from datetime import datetime, date
@@ -1394,3 +1394,184 @@ def populate_db(employer_number: int, worker_id: str, db: Session):
     except Exception as e:
         print(f"Error fetching payment details: {str(e)}")
         return {"status": "error", "message": f"Error fetching payment details: {str(e)}"}
+
+
+def send_referral_code_to_employer(employer_number: int, referral_code: str) -> dict:
+    try:
+        message = f"""🎉 Congratulations! Your referral code is ready!
+
+                Your Referral Code: *{referral_code}*
+
+                Share this code with friends and family to earn ₹150 cashback for each successful referral!
+
+                How it works:
+                1. Share your referral code with others
+                2. When they onboard their first worker using your code and make their first payment
+                3. You earn ₹150 cashback!
+
+                Start sharing and earning today! 💰"""
+
+        whatsapp_message.send_message_user(
+            employer_number, 
+            message
+        )
+            
+        return {
+            "status": "success",
+            "message": "Referral code sent successfully",
+            "referral_code": referral_code
+        }
+            
+    except Exception as e:
+        return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
+
+
+def update_employer_details(employerNumber: int, payload: dict, db: Session):
+    """
+    Process payment webhook and update employer/referral details according to the flow:
+    1. Extract payment data from webhook
+    2. Check if payment is successful
+    3. Find employer and check if it's first payment
+    4. Update employer record with payment details
+    5. Check for referral mapping
+    6. Process cashback for referring employer
+    7. Generate new referral code for paying employer
+    """
+    try:
+        # Extract payment data from webhook
+        order_data = payload['data']['order']
+        payment_data = payload['data']['payment']
+        customer_data = payload['data']['customer_details']
+        
+        order_id = order_data.get('order_id')
+        payment_amount = payment_data.get('payment_amount', 0)
+        payment_status = payment_data.get('payment_status')
+        upi_id = payment_data['payment_method']['upi'].get('upi_id') if 'upi' in payment_data.get('payment_method', {}) else None
+        payment_time = payment_data.get('payment_time')
+        bank_reference = payment_data.get('bank_reference')
+        
+        print(f"Processing payment for employer: {employerNumber}")
+        print(f"Order ID: {order_id}")
+        print(f"Payment Amount: {payment_amount}")
+        print(f"Payment Status: {payment_status}")
+        print(f"UPI ID: {upi_id}")
+        
+
+        referred_employer = db.query(models.Employer).filter(
+            models.Employer.employerNumber == employerNumber
+        ).first()
+        
+        # Check if first payment
+        if referred_employer.FirstPaymentDone:
+            # Not first payment - update total payment amount and exit
+            referred_employer.totalPaymentAmount += int(payment_amount)
+            db.commit()
+            return {
+                "status": "success", 
+                "message": "Payment recorded but not first payment - no referral processing"
+            }
+        
+        # First payment processing
+        # Update employer record with payment details
+        referred_employer.FirstPaymentDone = True
+        referred_employer.upiId = upi_id or ''
+        referred_employer.totalPaymentAmount += int(payment_amount)
+        
+        # Generate new referral code for this employer
+        new_referral_code = generate_referral_code()
+        # Ensure the referral code is unique
+        while db.query(models.Employer).filter(models.Employer.referralCode == new_referral_code).first():
+            new_referral_code = generate_referral_code()
+        
+        referred_employer.referralCode = new_referral_code
+        
+        # Check for referral mapping - find if this employer was referred
+        worker_employer_record = db.query(models.worker_employer).filter(
+            models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == order_id
+        ).first()
+        
+        if not worker_employer_record or not worker_employer_record.referralCode:
+            # No referral code - skip referral processing
+            db.commit()
+            db.refresh(referred_employer)
+            return {
+                "status": "success",
+                "message": "First payment processed. No referral code found.",
+                "new_referral_code": new_referral_code
+            }
+
+        send_referral_code_to_employer(employerNumber, referred_employer.referralCode)
+        
+        # Has referral code - process referral
+        referral_code_used = worker_employer_record.referralCode
+        
+        # Find referring employer
+        referring_employer = db.query(models.Employer).filter(
+            models.Employer.referralCode == referral_code_used
+        ).first()
+        
+        if not referring_employer:
+            # Referral code exists but no matching employer found
+            db.commit()
+            db.refresh(referred_employer)
+            return {
+                "status": "warning",
+                "message": f"Referral code {referral_code_used} found but no matching employer",
+                "new_referral_code": new_referral_code
+            }
+        
+        # Process cashback for referring employer
+        CASHBACK_AMOUNT = 150  # Fixed cashback amount
+        referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
+        referring_employer.numberofReferral += 1
+        
+        # Create or update referral mapping
+        existing_mapping = db.query(models.EmployerReferralMapping).filter(
+            models.EmployerReferralMapping.employerReferring == referring_employer.id,
+            models.EmployerReferralMapping.employerReferred == referred_employer.id
+        ).first()
+        
+        if not existing_mapping:
+            # Create new referral mapping
+            new_mapping = models.EmployerReferralMapping(
+                id=str(uuid.uuid4()),
+                employerReferring=referring_employer.id,
+                employerReferred=referred_employer.id,
+                referralCode=referral_code_used,
+                referralStatus='COMPLETED',
+                dateReferredOn=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                cashbackAmount=CASHBACK_AMOUNT,
+                cashbackStatus='COMPLETED'  # Can be updated later when cashback is actually credited
+            )
+            db.add(new_mapping)
+        else:
+            # Update existing mapping
+            existing_mapping.referralStatus = 'COMPLETED'
+            existing_mapping.cashbackAmount = CASHBACK_AMOUNT
+            existing_mapping.cashbackStatus = 'COMPLETED'
+        
+        # Commit all changes
+        db.commit()
+        db.refresh(referred_employer)
+        db.refresh(referring_employer)
+        
+        return {
+            "status": "success",
+            "message": "First payment and referral processed successfully",
+            "employer_id": referred_employer.id,
+            "new_referral_code": new_referral_code,
+            "referring_employer_id": referring_employer.id,
+            "cashback_amount": CASHBACK_AMOUNT,
+            "referring_employer_total_referrals": referring_employer.numberofReferral
+        }
+
+        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id)
+        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT)
+        
+    except Exception as e:
+        print(f"Error in update_employer_details: {str(e)}")
+        db.rollback()
+        return {
+            "status": "error",
+            "message": f"Error processing employer update: {str(e)}"
+        }

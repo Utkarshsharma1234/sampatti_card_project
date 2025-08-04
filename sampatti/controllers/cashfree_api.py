@@ -513,3 +513,99 @@ def fetch_payment_details(order_id):
     else:
         print(f"Error: {response.status_code}, {response.text}")
 
+def create_cashfree_beneficiary(employer_number: int, upi_id: str) -> dict:
+    """
+    Create beneficiary on Cashfree for cashback payments
+    """
+    try:
+        db = next(get_db())
+        employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
+                
+        beneficiary_id = employer.id
+            
+        payload = {
+            "beneficiary_id": beneficiary_id,
+            "beneficiary_name": "SAMPATTI CARD USER",
+            "beneficiary_instrument_details": {
+                "vpa": upi_id
+            },
+            "beneficiary_contact_details": {
+                "beneficiary_email": "support@sampatticard.in",
+                "beneficiary_phone": str(employer_number),
+                "beneficiary_country_code": "+91"
+            }
+        }
+
+        header = {
+            "Content-Type": "application/json",
+            "x-api-version": "2024-01-01",
+            "x-client-id": client_id,
+            "x-client-secret": client_secret
+        }
+            
+        response = requests.post(
+            "https://api.cashfree.com/payout/beneficiary",
+            headers=header,
+            json=payload
+        )
+            
+        if response.status_code == 200:
+            return {
+                "status": "success",
+                "beneficiary_id": beneficiary_id,
+                "message": "Beneficiary created successfully"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Failed to create beneficiary: {response.text}"
+            }
+                
+    except Exception as e:
+        return {"status": "error", "message": f"Error creating beneficiary: {str(e)}"}
+
+
+def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_mode: str = "upi") -> dict:
+
+    try:
+        transfer_amount = amount 
+        transfer_id = f"CASHBACK_{beneficiary_id}_{generate_unique_id(6)}"
+            
+        payload = {
+            "transfer_id": transfer_id,
+            "transfer_amount": transfer_amount,
+            "beneficiary_details": {
+                "beneficiary_id": beneficiary_id
+            },
+            "transfer_mode": transfer_mode
+        }
+
+        header = {
+            "Content-Type": "application/json",
+            "x-api-version": "2024-01-01",
+            "x-client-id": client_id,
+            "x-client-secret": client_secret
+        }
+            
+        response = requests.post(
+            "https://api.cashfree.com/payout/transfers",
+            headers=header,
+            json=payload
+        )
+            
+        if response.status_code == 200:
+            return {
+                "status": "success",
+                "transfer_id": transfer_id,
+                "amount": transfer_amount,
+                "message": "Cashback transferred successfully"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Failed to transfer cashback: {response.text}"
+            }
+                
+    except Exception as e:
+        return {"status": "error", "message": f"Error transferring cashback: {str(e)}"}
+
