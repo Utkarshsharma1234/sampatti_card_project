@@ -1329,73 +1329,6 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
     return result is not None
 
 
-def populate_db(employer_number: int, worker_id: str, db: Session):
-    
-    try:
-        # Query SalaryDetails for records where month is June and matching worker_id and employer_number
-        worker_employer_record = db.query(models.SalaryDetails).where(
-            models.SalaryDetails.worker_id == worker_id,
-            models.SalaryDetails.employerNumber == employer_number,
-            models.SalaryDetails.month == "June"
-        ).first()
-
-        order_id = worker_employer_record
-        
-        if not worker_employer_record:
-            return {"status": "error", "message": f"No relationship found between employer {employer_number} and worker {worker_id}"}
-        
-        order_id = worker_employer_record.order_id
-        
-        if not order_id:
-            return {"status": "error", "message": "No order_id found for this employer-worker relationship"}
-        
-        print("Order_id:", order_id)
-
-        payment_details = fetch_payment_details(order_id)
-
-        print("Payment Details: ", payment_details)
-
-        # Initialize payment_info dictionary
-        payment_info = {
-            "payment_method_type": None,
-            "upi_details": {},
-            "bank_details": {}
-        }
-
-        for payment in payment_details:
-            if payment.get("payment_status") == "SUCCESS":
-                payment_method = payment.get("payment_method", {})
-                
-                # Check for UPI payment method
-                upi_info = payment_method.get("upi", {})
-                if upi_info:
-                    upi_id = upi_info.get("upi_id")
-                    if upi_id:
-                        payment_info["payment_method_type"] = "upi"
-                        payment_info["upi_details"] = {
-                            "upi_id": upi_id
-                        }
-                        print(f"Found UPI ID: {upi_id}")
-                else:
-                    print(f"No UPI payment method found for order {order_id}")
-
-        employer = db.query(models.Employer).filter(
-            models.Employer.employerNumber == employer_number
-        ).first()
-
-        if employer and payment_info["payment_method_type"] == "upi" and "upi_id" in payment_info["upi_details"]:
-            employer.upiId = payment_info["upi_details"]["upi_id"]
-            employer.FirstPaymentDone = True
-            db.commit()
-            db.refresh(employer)
-            print(f"Updated UPI ID for employer {employer_number} and set FirstPaymentDone to True")
-            return {"status": "success", "message": f"Updated UPI ID for employer {employer_number} and set FirstPaymentDone to True", "upi_id": payment_info["upi_details"]["upi_id"]}
-
-    except Exception as e:
-        print(f"Error fetching payment details: {str(e)}")
-        return {"status": "error", "message": f"Error fetching payment details: {str(e)}"}
-
-
 def send_referral_code_to_employer(employer_number: int, referral_code: str) -> dict:
     try:
         message = f"""🎉 Congratulations! Your referral code is ready!
@@ -1521,7 +1454,7 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
             }
         
         # Process cashback for referring employer
-        CASHBACK_AMOUNT = 150  # Fixed cashback amount
+        CASHBACK_AMOUNT = 1  # Fixed cashback amount
         referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
         referring_employer.numberofReferral += 1
         
