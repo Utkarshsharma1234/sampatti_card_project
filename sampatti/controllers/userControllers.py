@@ -1487,6 +1487,9 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         db.commit()
         db.refresh(referred_employer)
         db.refresh(referring_employer)
+
+        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id)
+        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT)
         
         return {
             "status": "success",
@@ -1497,9 +1500,6 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
             "cashback_amount": CASHBACK_AMOUNT,
             "referring_employer_total_referrals": referring_employer.numberofReferral
         }
-
-        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id)
-        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT)
         
     except Exception as e:
         print(f"Error in update_employer_details: {str(e)}")
