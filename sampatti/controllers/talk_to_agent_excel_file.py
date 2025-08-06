@@ -265,25 +265,43 @@ def process_vendor_status(db : Session):
             if vendor_status == "ACTIVE":
                 
                 update_sheet_cell(onboarding_sheet, idx, "cashfree_vendor_add_status", "ACTIVE")
-                # make entry in the db.
+                
+                # Check if worker already exists in Domestic_Worker table
+                existing_worker = db.query(models.Domestic_Worker).filter(
+                    models.Domestic_Worker.workerNumber == worker_number
+                ).first()
+                
+                if existing_worker:
+                    print(f"[{idx}] Worker {worker_number} already exists in database. Using existing worker data.")
+                    # Worker already exists, use existing vendorId and worker_id
+                    existing_vendor_id = existing_worker.vendorId
+                    existing_worker_id = existing_worker.id
+                    
+                    # Update the sheet with existing vendorId if different
+                    if existing_vendor_id and existing_vendor_id != vendorId:
+                        update_sheet_cell(onboarding_sheet, idx, "vendorId", existing_vendor_id)
+                        print(f"[{idx}] Updated sheet with existing vendorId: {existing_vendor_id}")
+                        
+                else:
+                    # Worker doesn't exist, create new entry in the db
+                    if not worker_bank_name:
+                        worker_bank_name = worker_pan_name
 
-                if not worker_bank_name:
-                    worker_bank_name = worker_pan_name
-
-                worker = schemas.Domestic_Worker(
-                    name = worker_bank_name,
-                    email = "sample@sample.com",
-                    workerNumber=worker_number,
-                    employerNumber = employer_number,
-                    panNumber = PAN_number,
-                    upi_id = upi_id if upi_id else "None",
-                    accountNumber = bank_account_number if bank_account_number else "None",
-                    ifsc = ifsc_code if bank_account_number else "None",
-                    vendorId = vendorId,
-                    referralCode = referral_code
-                )
-            
-                userControllers.create_domestic_worker(worker, db)
+                    worker = schemas.Domestic_Worker(
+                        name = worker_bank_name,
+                        email = "sample@sample.com",
+                        workerNumber=worker_number,
+                        employerNumber = employer_number,
+                        panNumber = PAN_number,
+                        upi_id = upi_id if upi_id else "None",
+                        accountNumber = bank_account_number if bank_account_number else "None",
+                        ifsc = ifsc_code if bank_account_number else "None",
+                        vendorId = vendorId,
+                        referralCode = referral_code
+                    )
+                
+                    userControllers.create_domestic_worker(worker, db)
+                    print(f"[{idx}] Created new worker {worker_number} in database.")
 
             else:
                 print(f"[{idx}] Vendor {vendorId} status = {vendor_status}. Updating status in sheet and logging failure.")
@@ -328,14 +346,29 @@ def create_relations_in_db(db : Session):
         if vendor_status == "ACTIVE":
 
             try:
+                # Get actual worker_id and vendor_id from Domestic_Worker table
+                existing_worker = db.query(models.Domestic_Worker).filter(
+                    models.Domestic_Worker.workerNumber == worker_number
+                ).first()
+                
+                if existing_worker:
+                    actual_worker_id = existing_worker.id
+                    actual_vendor_id = existing_worker.vendorId
+                    print(f"[{idx}] Using existing worker data - worker_id: {actual_worker_id}, vendor_id: {actual_vendor_id}")
+                else:
+                    # Fallback to sheet values if worker not found in database
+                    actual_worker_id = "worker_id"
+                    actual_vendor_id = vendorId
+                    print(f"[{idx}] Worker not found in database, using sheet values")
+                
                 relation = schemas.Worker_Employer(
                     workerNumber = worker_number,
                     employerNumber = employer_number,
                     salary = salary,
-                    vendorId = vendorId,
+                    vendorId = actual_vendor_id,
                     worker_name = worker_name,
                     employer_id = "employer_id",
-                    worker_id = "worker_id",
+                    worker_id = actual_worker_id,
                     referralCode = referral_code
                 )
 
