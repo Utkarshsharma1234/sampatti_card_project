@@ -8,15 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import (
-    worker_onboarding_tool,  
-    get_worker_details_tool, 
-    process_referral_code_tool,
-    generate_referral_code_tool,
-    validate_referral_code_tool,
-    get_referral_stats_tool,
-    check_payment_status_tool
-)
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -117,11 +109,6 @@ prompt = ChatPromptTemplate.from_messages(
             1. REFERRAL CODE VALIDATION:
                - Ask for referral code after collecting basic worker details and salary
                - If a referral code is provided, call `process_referral_code` to validate and process it
-               - Handle different response scenarios:
-                 * SUCCESS: Continue with onboarding, inform about future cashback
-                 * ALREADY_ONBOARDED: Show message that employer already onboarded and made payment
-                 * INVALID_CODE: Inform about invalid code but continue onboarding
-                 * ERROR: Show error message but continue onboarding
                
             IMPORTANT ONBOARDING SEQUENCE:
             1. Ask for worker number first and validate (10 digits)
@@ -136,6 +123,21 @@ prompt = ChatPromptTemplate.from_messages(
             8. Ask for PAN number
             9. Call onboarding tool with all information including referral code
             10. After successful onboarding, inform about referral benefits if applicable
+
+            ## Response Formatting Rules
+                - Keep responses conversational and natural for text-to-speech conversion
+                - Use short, simple sentences (maximum 15-20 words per sentence)
+                - Avoid special characters, brackets, or formatting marks that don't translate to speech
+                - Don't use bullet points, numbering, or list formatting - speak naturally
+                - Replace "e.g." with "for example" and similar abbreviations with full words
+                - Write numbers as words when they're small (one to ten)
+                - For validation errors, state the issue clearly in one sentence
+                - Avoid repetition - state each point only once
+                - Skip unnecessary phrases like "Please note that" or "I need to inform you"
+                - Get straight to the point without introductory statements
+                - Use simple connecting words instead of complex punctuation
+                - Ensure each response flows smoothly when read aloud
+                - Maximum 2-3 sentences per response unless showing worker details
 
             When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
 
@@ -154,13 +156,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-tools = [
-    worker_onboarding_tool, 
-    get_worker_details_tool, 
-    process_referral_code_tool,
-    get_referral_stats_tool,
-    check_payment_status_tool
-]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
