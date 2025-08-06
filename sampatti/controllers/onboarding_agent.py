@@ -116,13 +116,10 @@ prompt = ChatPromptTemplate.from_messages(
             3. Show worker details to employer for confirmation (exclude vendorId)
             4. If confirmed, ask for salary
             5. Ask for referral code (optional) - "Do you have a referral code from another employer?"
-            6. If referral code provided, process it using `process_referral_code`
-               - If already_onboarded=True, stop onboarding and show appropriate message
-               - Otherwise continue with onboarding process
+            6. If referral code provided, process it using `process_referral_code` and then call the `onboard_worker_employer` tool to onboard the worker
             7. Ask for either UPI or bank details (not both)
             8. Ask for PAN number
-            9. Call onboarding tool with all information including referral code
-            10. After successful onboarding, inform about referral benefits if applicable
+            9. Call `onboard_worker_employer` tool with all information including referral code if present or not after getting all the details.
 
             ## Response Formatting Rules
                 - Keep responses conversational and natural for text-to-speech conversion
