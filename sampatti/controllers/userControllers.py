@@ -1393,6 +1393,8 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         referred_employer = db.query(models.Employer).filter(
             models.Employer.employerNumber == employerNumber
         ).first()
+
+        print(f"Referred employer: {referred_employer}")
         
         # Check if first payment
         if referred_employer.FirstPaymentDone:
@@ -1404,6 +1406,8 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
                 "message": "Payment recorded but not first payment - no referral processing"
             }
         
+        print("First payment processing")
+
         # First payment processing
         # Update employer record with payment details
         referred_employer.FirstPaymentDone = True
@@ -1417,11 +1421,15 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
             new_referral_code = generate_referral_code()
         
         referred_employer.referralCode = new_referral_code
+
+        print("New referral code generated: ", new_referral_code)
         
         # Check for referral mapping - find if this employer was referred
         worker_employer_record = db.query(models.worker_employer).filter(
             models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == order_id
         ).first()
+
+        print("Worker employer record: ", worker_employer_record)
         
         if not worker_employer_record or not worker_employer_record.referralCode:
             # No referral code - skip referral processing
@@ -1433,6 +1441,8 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
                 "new_referral_code": new_referral_code
             }
 
+        print("Referral code used: ", worker_employer_record.referralCode)
+
         send_referral_code_to_employer(employerNumber, referred_employer.referralCode)
         
         # Has referral code - process referral
@@ -1442,6 +1452,8 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         referring_employer = db.query(models.Employer).filter(
             models.Employer.referralCode == referral_code_used
         ).first()
+
+        print("Referring employer: ", referring_employer)
         
         if not referring_employer:
             # Referral code exists but no matching employer found
@@ -1457,12 +1469,16 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         CASHBACK_AMOUNT = 1  # Fixed cashback amount
         referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
         referring_employer.numberofReferral += 1
+
+        print("Cashback Amount: ", CASHBACK_AMOUNT)
         
         # Create or update referral mapping
         existing_mapping = db.query(models.EmployerReferralMapping).filter(
             models.EmployerReferralMapping.employerReferring == referring_employer.id,
             models.EmployerReferralMapping.employerReferred == referred_employer.id
         ).first()
+
+        print("Existing mapping: ", existing_mapping)
         
         if not existing_mapping:
             # Create new referral mapping
@@ -1483,13 +1499,24 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
             existing_mapping.cashbackAmount = CASHBACK_AMOUNT
             existing_mapping.cashbackStatus = 'COMPLETED'
         
+        print("Referring employer total referrals: ", referring_employer.numberofReferral)
+        print("Existing Mapping")
+
         # Commit all changes
         db.commit()
         db.refresh(referred_employer)
         db.refresh(referring_employer)
 
+        print("Benefitiary in Process")
+
         create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id)
-        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT)
+
+        print("Benefitiary Created")
+
+        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT, transfer_mode="upi")
+
+        print("Cashback Processed")
+
         
         return {
             "status": "success",
