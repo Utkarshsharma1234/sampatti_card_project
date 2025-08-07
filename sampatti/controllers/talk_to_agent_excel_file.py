@@ -8,6 +8,7 @@ from ..controllers import utility_functions, cashfree_api, userControllers
 from sqlalchemy.orm import Session
 from .. import schemas
 from .utility_functions import current_date
+from .. import models
 
 # Load environment variables from .env file
 load_dotenv()
