@@ -539,8 +539,8 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str) -> dict:
         header = {
             "Content-Type": "application/json",
             "x-api-version": "2024-01-01",
-            "x-client-id": client_id,
-            "x-client-secret": client_secret
+            "x-client-id": verification_id,
+            "x-client-secret": verification_secret
         }
             
         response = requests.post(
@@ -583,8 +583,8 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
         header = {
             "Content-Type": "application/json",
             "x-api-version": "2024-01-01",
-            "x-client-id": client_id,
-            "x-client-secret": client_secret
+            "x-client-id": verification_id,
+            "x-client-secret": verification_secret
         }
             
         response = requests.post(
