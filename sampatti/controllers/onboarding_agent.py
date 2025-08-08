@@ -29,7 +29,7 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 #llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
