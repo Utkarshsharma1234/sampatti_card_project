@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -29,7 +29,7 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 #llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -137,10 +137,17 @@ prompt = ChatPromptTemplate.from_messages(
                 - Maximum 2-3 sentences per response unless showing worker details
 
             When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
+            IMMEDIATE WORKER CONFIRMATION PROCESS (if the worker details are already present in the database and employer confirms the worker details are correct):
+            1. First ask for the salary of the worker from the employer (this is mandatory)
+            2. Ask if they have a referral code (optional)
+            3. Once you have the salary (and referral code if provided), immediately call the `confirm_worker_and_add_to_employer` tool
+            4. This tool will:
+               - Add the worker to the employer in the worker_employer table
+               - Generate the employment contract automatically
+               - Send the contract via WhatsApp
+            5. Do NOT call the regular `worker_onboarding_tool` after using `confirm_worker_and_add_to_employer
 
-            If the employer confirms the worker details the first ask for the salary of the worker from the employer because without salary we cant complete the onboarding and then call the `worker_onboarding_tool` to onboard the worker. Never invoke the onboarding tool without the salary.
-
-            If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details.
+            If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details and use the regular `worker_onboarding_tool`.
 
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
@@ -153,7 +160,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,

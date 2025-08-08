@@ -16,6 +16,7 @@ from ..models import CashAdvanceManagement, worker_employer
 from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
+from . import userControllers
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -77,6 +78,13 @@ class WorkerEmployerInput(BaseModel):
         if UPI and (bank_account or ifsc):
             raise ValueError("Please provide only one mode of payment: either UPI or bank account details.")
         return values
+
+
+class ConfirmWorkerInput(BaseModel):
+    worker_number: int
+    employer_number: int
+    salary: int
+    referral_code: Optional[str] = None
 
 
 
@@ -329,6 +337,111 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
         }
 
 
+def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str] = None) -> dict:
+    """
+    Immediately adds worker to employer in worker_employer table and generates employment contract
+    when employer confirms the worker details.
+    """
+    try:
+        db = next(get_db())
+        
+        # Get worker details from database
+        worker = db.query(models.Domestic_Worker).filter(
+            models.Domestic_Worker.workerNumber == worker_number
+        ).first()
+        
+        if not worker:
+            return {
+                "success": False,
+                "message": "Worker not found in database"
+            }
+        
+        # Get employer details
+        employer = db.query(models.Employer).filter(
+            models.Employer.employerNumber == employer_number
+        ).first()
+        
+        if not employer:
+            employer = models.Employer(
+                id=generate_unique_id(length=8),
+                employerNumber=employer_number,
+            )
+            db.add(employer)
+            db.commit()
+            db.refresh(employer)
+
+            employer = db.query(models.Employer).filter(
+                models.Employer.employerNumber == employer_number
+            ).first()
+
+        
+        # Check if worker-employer relationship already exists
+        existing_relation = db.query(models.worker_employer).filter(
+            models.worker_employer.c.worker_number == worker_number,
+            models.worker_employer.c.employer_number == employer_number
+        ).first()
+        
+        if existing_relation:
+            return {
+                "success": False,
+                "message": "Worker is already associated with this employer"
+            }
+        
+        # Create worker-employer relationship
+        relation_id = generate_unique_id(length=16)
+        
+        # Insert into worker_employer table
+        insert_stmt = models.worker_employer.insert().values(
+            id=relation_id,
+            worker_number=worker_number,
+            employer_number=employer_number,
+            salary_amount=salary,
+            worker_name=worker.name,
+            employer_id=employer.id,
+            worker_id=worker.id,
+            date_of_onboarding=current_date(),
+            referralCode=referral_code or ""
+        )
+        
+        db.execute(insert_stmt)
+        db.commit()
+        
+        # Generate employment contract
+        try:
+            userControllers.generate_employment_contract(
+                employerNumber=employer_number,
+                workerNumber=worker_number,
+                upi=worker.upi_id or "",
+                accountNumber=worker.accountNumber or "",
+                ifsc=worker.ifsc or "",
+                panNumber=worker.panNumber,
+                name=worker.name,
+                salary=salary,
+                db=db
+            )
+            
+            return {
+                "success": True,
+                "message": f"Worker {worker.name} has been successfully added to your employment and the employment contract has been generated. You will receive the contract via WhatsApp shortly."
+            }
+            
+        except Exception as contract_error:
+            # If contract generation fails, still return success for worker addition
+            return {
+                "success": True,
+                "message": f"Worker {worker.name} has been successfully added to your employment. However, there was an issue generating the contract: {str(contract_error)}"
+            }
+            
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "message": f"Error adding worker to employer: {str(e)}"
+        }
+    finally:
+        db.close()
+
+
 get_worker_details_tool = StructuredTool.from_function(
     func=get_worker_details,
     name="get_worker_details",
@@ -365,4 +478,11 @@ process_referral_code_tool = StructuredTool.from_function(
     func=process_referral_code,
     name="process_referral_code",
     description="Process referral code when employer onboards worker. Validates referral code and updates referral mapping."
+)
+
+confirm_worker_and_add_to_employer_tool = StructuredTool.from_function(
+    func=confirm_worker_and_add_to_employer,
+    name="confirm_worker_and_add_to_employer",
+    description="Immediately adds confirmed worker to employer in worker_employer table and generates employment contract.",
+    args_schema=ConfirmWorkerInput
 )
