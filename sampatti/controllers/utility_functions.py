@@ -98,7 +98,7 @@ def generate_unique_id(length=8):
         letters_only += ''.join(random.choices(string.ascii_letters, k=length - len(letters_only)))
     return letters_only
 
-def generate_referral_code(length: int = 8, prefix: str = "SAMP") -> str:
+def generate_referral_code(length: int = 8, prefix: str = "EMP") -> str:
     # Generate a UUID and convert to string
     uuid_str = str(uuid.uuid4())
     

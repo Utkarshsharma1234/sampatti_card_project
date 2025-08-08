@@ -43,6 +43,7 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
         
         userControllers.send_employer_invoice(employerNumber=customer_phone, orderId=order_id, db=db)
         userControllers.update_salary_details(employerNumber=customer_phone, orderId=order_id, db=db)
+        userControllers.update_employer_details(employerNumber=customer_phone, payload=payload, db=db)
         return {"status": "success"}
     
     except Exception as e:

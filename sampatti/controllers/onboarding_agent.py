@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -29,7 +29,7 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 #llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -63,6 +63,7 @@ prompt = ChatPromptTemplate.from_messages(
             2. Either UPI or (Bank Account + IFSC)
             3. PAN Number
             4. Salary
+            5. Referral Code (if they have one)
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
 
@@ -70,9 +71,9 @@ prompt = ChatPromptTemplate.from_messages(
             
             1. WORKER NUMBER:
                - Must be exactly 10 digits
-               - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number
                - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
-               - Only call `get_worker_details_tool` after validation passes   
+               - Only call `get_worker_details_tool` after validation passes
+               - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number
             
             2. UPI ID (if chosen):
                - Format: username@bankname (e.g., name@paytm, number@ybl, etc.)
@@ -93,19 +94,60 @@ prompt = ChatPromptTemplate.from_messages(
             
             5. SALARY:
                - Must be a positive number
+               
+            6. REFERRAL CODE:
+               - Optional field
+               - If provided, will be used to track referrals
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question
             - Re-ask if validation fails with specific error message
             - Only proceed to next item after current validation passes
 
-            Once all information is gathered, call the onboarding tool.
+            REFERRAL SYSTEM WORKFLOW:
+            
+            1. REFERRAL CODE VALIDATION:
+               - Ask for referral code after collecting basic worker details and salary
+               - If a referral code is provided, call `process_referral_code` to validate and process it
+               
+            IMPORTANT ONBOARDING SEQUENCE:
+            1. Ask for worker number first and validate (10 digits)
+            2. Use `get_worker_details_tool` to fetch worker information
+            3. Show worker details to employer for confirmation (exclude vendorId)
+            4. If confirmed, ask for salary
+            5. Ask for referral code (optional) - "Do you have a referral code from another employer?"
+            6. If referral code provided, process it using `process_referral_code` and then call the `onboard_worker_employer` tool to onboard the worker
+            7. Ask for either UPI or bank details (not both)
+            8. Ask for PAN number
+            9. Call `onboard_worker_employer` tool with all information including referral code if present or not after getting all the details.
 
-            When the employer inputs the worker number check for the number and if the number is 12 digits then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number. If the number is 10 digits then call `get_worker_details_tool` with the 10 digit worker number. If the number is not 12 or 10 digits then inform the employer that the worker number is invalid. you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
+            ## Response Formatting Rules
+                - Keep responses conversational and natural for text-to-speech conversion
+                - Use short, simple sentences (maximum 15-20 words per sentence)
+                - Avoid special characters, brackets, or formatting marks that don't translate to speech
+                - Don't use bullet points, numbering, or list formatting - speak naturally
+                - Replace "e.g." with "for example" and similar abbreviations with full words
+                - Write numbers as words when they're small (one to ten)
+                - For validation errors, state the issue clearly in one sentence
+                - Avoid repetition - state each point only once
+                - Skip unnecessary phrases like "Please note that" or "I need to inform you"
+                - Get straight to the point without introductory statements
+                - Use simple connecting words instead of complex punctuation
+                - Ensure each response flows smoothly when read aloud
+                - Maximum 2-3 sentences per response unless showing worker details
 
-            If the employer confirms the worker details the first ask for the salary of the worker from the employer because without salary we cant complete the onboarding and then call the `worker_onboarding_tool` to onboard the worker. Never invoke the onboarding tool without the salary.
+            When the employer inputs the worker number, you will use the `get_worker_details_tool` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
+            IMMEDIATE WORKER CONFIRMATION PROCESS (if the worker details are already present in the database and employer confirms the worker details are correct):
+            1. First ask for the salary of the worker from the employer (this is mandatory)
+            2. Ask if they have a referral code (optional)
+            3. Once you have the salary (and referral code if provided), immediately call the `confirm_worker_and_add_to_employer` tool
+            4. This tool will:
+               - Add the worker to the employer in the worker_employer table
+               - Generate the employment contract automatically
+               - Send the contract via WhatsApp
+            5. Do NOT call the regular `worker_onboarding_tool` after using `confirm_worker_and_add_to_employer
 
-            If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details.
+            If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details and use the regular `worker_onboarding_tool`.
 
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
@@ -118,7 +160,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-tools = [worker_onboarding_tool, get_worker_details_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,

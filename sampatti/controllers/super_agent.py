@@ -747,6 +747,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 return f"MESSAGE SENT SUCCESSFULLY: {response}" 
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
+                send_message_user(employer_number, response)
                 send_audio_message(response, user_language, employer_number)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}"
                 
