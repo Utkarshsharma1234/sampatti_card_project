@@ -1359,7 +1359,7 @@ def send_referral_code_to_employer(employer_number: int, referral_code: str) -> 
         return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
 
 
-def update_employer_details(employerNumber: int, payload: dict, db: Session):
+def process_employer_cashback_for_first_payment(employerNumber: int, payload: dict, db: Session):
     """
     Process payment webhook and update employer/referral details according to the flow:
     1. Extract payment data from webhook
@@ -1396,11 +1396,13 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
 
         print(f"Referred employer: {referred_employer}")
         
+
         # Check if first payment
         if referred_employer.FirstPaymentDone:
             # Not first payment - update total payment amount and exit
             referred_employer.totalPaymentAmount += int(payment_amount)
             db.commit()
+            db.refresh(referred_employer)
             return {
                 "status": "success", 
                 "message": "Payment recorded but not first payment - no referral processing"
@@ -1408,21 +1410,21 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         
         print("First payment processing")
 
+
+        # Generate new referral code for this employer
+        new_referral_code = generate_referral_code()
+        while db.query(models.Employer).filter(models.Employer.referralCode == new_referral_code).first():
+            new_referral_code = generate_referral_code()
+
         # First payment processing
         # Update employer record with payment details
+        print("New referral code generated: ", new_referral_code)
+        referred_employer.referralCode = new_referral_code
         referred_employer.FirstPaymentDone = True
         referred_employer.upiId = upi_id or ''
         referred_employer.totalPaymentAmount += int(payment_amount)
-        
-        # Generate new referral code for this employer
-        new_referral_code = generate_referral_code()
-        # Ensure the referral code is unique
-        while db.query(models.Employer).filter(models.Employer.referralCode == new_referral_code).first():
-            new_referral_code = generate_referral_code()
-        
-        referred_employer.referralCode = new_referral_code
-
-        print("New referral code generated: ", new_referral_code)
+        send_referral_code_to_employer(employerNumber, new_referral_code)
+        print("Referral code used: ", new_referral_code)
         
         # Check for referral mapping - find if this employer was referred
         worker_employer_record = db.query(models.worker_employer).filter(
@@ -1440,10 +1442,6 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
                 "message": "First payment processed. No referral code found.",
                 "new_referral_code": new_referral_code
             }
-
-        print("Referral code used: ", worker_employer_record.referralCode)
-
-        send_referral_code_to_employer(employerNumber, referred_employer.referralCode)
         
         # Has referral code - process referral
         referral_code_used = worker_employer_record.referralCode
@@ -1454,17 +1452,6 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         ).first()
 
         print("Referring employer: ", referring_employer)
-        
-        if not referring_employer:
-            # Referral code exists but no matching employer found
-            db.commit()
-            db.refresh(referred_employer)
-            return {
-                "status": "warning",
-                "message": f"Referral code {referral_code_used} found but no matching employer",
-                "new_referral_code": new_referral_code
-            }
-        
         # Process cashback for referring employer
         CASHBACK_AMOUNT = 1  # Fixed cashback amount
         referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
@@ -1507,13 +1494,13 @@ def update_employer_details(employerNumber: int, payload: dict, db: Session):
         db.refresh(referred_employer)
         db.refresh(referring_employer)
 
-        print("Benefitiary in Process")
+        print("Beneficiary in Process")
 
-        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id)
+        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id, db=db)
 
-        print("Benefitiary Created")
+        print("Beneficiary Created")
 
-        transfer_cashback_amount(beneficiary_id=employerNumber, amount=CASHBACK_AMOUNT, transfer_mode="upi")
+        transfer_cashback_amount(beneficiary_id=referring_employer.id, amount=CASHBACK_AMOUNT, transfer_mode="upi")
 
         print("Cashback Processed")
 

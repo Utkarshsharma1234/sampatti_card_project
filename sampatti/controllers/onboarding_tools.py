@@ -328,7 +328,7 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
 
         return {
             "success": True,
-            "message": "Referral has been Verified",
+            "message": "Referral Code has been Verified",
         }
     except Exception as e:
         return {
@@ -388,7 +388,7 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
             }
         
         # Create worker-employer relationship
-        relation_id = generate_unique_id(length=16)
+        relation_id = generate_unique_id(length=8)
         
         # Insert into worker_employer table
         insert_stmt = models.worker_employer.insert().values(

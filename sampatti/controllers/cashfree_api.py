@@ -513,12 +513,11 @@ def fetch_payment_details(order_id):
     else:
         print(f"Error: {response.status_code}, {response.text}")
 
-def create_cashfree_beneficiary(employer_number: int, upi_id: str) -> dict:
+def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session) -> dict:
     """
     Create beneficiary on Cashfree for cashback payments
     """
     try:
-        db = next(get_db())
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
                 
         beneficiary_id = employer.id
