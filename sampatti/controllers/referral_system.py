@@ -26,8 +26,8 @@ class ReferralSystemManager:
         self.cashback_amount = 150  # Fixed cashback amount in rupees
         # Cashfree API configuration
         self.cashfree_base_url = "https://api.cashfree.com/payout"
-        self.cashfree_client_id = os.getenv("CASHFREE_CLIENT_ID")
-        self.cashfree_client_secret = os.getenv("CASHFREE_CLIENT_SECRET")
+        self.cashfree_client_id = os.getenv("CASHFREE_VERIFICATION_ID")
+        self.cashfree_client_secret = os.getenv("CASHFREE_VERIFICATION_SECRET")
         self.cashfree_headers = {
             "Content-Type": "application/json",
             "x-api-version": "2024-01-01",
@@ -165,7 +165,7 @@ Start sharing and earning today! 💰"""
         except Exception as e:
             return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
     
-    def create_cashfree_beneficiary(self, employer_number: int, employer_data: dict) -> dict:
+    def create_cashfree_beneficiary(self, employer_number: int, employer_upi_id: str) -> dict:
         """
         Create beneficiary on Cashfree for cashback payments
         """
@@ -182,13 +182,13 @@ Start sharing and earning today! 💰"""
             
             payload = {
                 "beneficiary_id": beneficiary_id,
-                "beneficiary_name": employer_data.get("name", f"Employer {employer_number}"),
+                "beneficiary_name": "Sampatti Card User",
                 "beneficiary_instrument_details": {
-                    "vpa": employer_data.get("upi_id", "")
+                    "vpa": employer_upi_id if employer_upi_id else "",
                 },
                 "beneficiary_contact_details": {
-                    "beneficiary_email": employer_data.get("email", "support@sampatticard.in"),
-                    "beneficiary_phone": str(employer_data.get("phone", employer_number)),
+                    "beneficiary_email": "sample@sampatticard.in",
+                    "beneficiary_phone": f"{employer_number}",
                     "beneficiary_country_code": "+91"
                 }
             }
@@ -228,22 +228,14 @@ Start sharing and earning today! 💰"""
         """
         try:
             transfer_amount = amount or self.cashback_amount
-            transfer_id = f"CASHBACK_{generate_unique_id()}"
+            transfer_id = f"CASHBACK_{beneficiary_id}_{generate_unique_id()}"
             
-            # Fetch beneficiary details to get the name
-            db = next(get_db())
-            employer = db.query(models.Employer).filter(
-                models.Employer.id == beneficiary_id
-            ).first()
-            
-            beneficiary_name = f"Employer {employer.employerNumber}" if employer else "Sampatti Card User"
             
             payload = {
                 "transfer_id": transfer_id,
                 "transfer_amount": transfer_amount,
                 "beneficiary_details": {
-                    "beneficiary_id": beneficiary_id,
-                    "beneficiary_name": beneficiary_name
+                    "beneficiary_id": beneficiary_id
                 },
                 "transfer_mode": transfer_mode
             }
