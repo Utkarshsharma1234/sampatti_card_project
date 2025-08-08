@@ -72,7 +72,7 @@ prompt = ChatPromptTemplate.from_messages(
             1. WORKER NUMBER:
                - Must be exactly 10 digits
                - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
-               - Only call `get_worker_details_tool` after validation passes
+               - Always call `get_worker_details_tool` after validation of the mobile number passes and if details are found then show the details to the employer and ask for confirmation to proceed with onboarding.
                - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details_tool` with the 10 digit worker number
             
             2. UPI ID (if chosen):
