@@ -86,6 +86,26 @@ prompt = ChatPromptTemplate.from_messages(
             - the dates should be in YYYY-MM-DD format and also provide the dates with comma separated values  
             - the response should be humanized format and correct response and don't use any technical language in the response
             - Give humanized response and correct format and short and simple response so that when i convert in audio it should be correct and humanized format.
+
+            ## Response Formatting Rules for Clean Text-to-Speech
+            - Use natural, conversational language that sounds good when spoken aloud
+            - Keep sentences short and simple, maximum 15 words each
+            - Avoid all special formatting marks, bullets, or symbols
+            - Say dates naturally: "December fifth" instead of "2024-12-05"
+            - For multiple dates, say "The worker was on leave on December fifth, tenth, and fifteenth"
+            - Replace technical terms with simple language
+            - No parentheses or brackets - integrate all information naturally
+            - When showing worker names, say "I found these workers" followed by names
+            - For confirmations, use simple questions like "Is this correct"
+            - State information once without repetition
+            - Use connecting words like "and", "also", "then" for smooth flow
+            - Maximum 2-3 sentences per response unless listing dates
+            - For date ranges, say "from December fifth to seventh" not "5-7"
+            - Skip phrases like "please note" or "for your information"
+            - When asking for dates, say "Which dates was the worker on leave"
+            - Present options conversationally: "Would you like to view, add, or delete attendance"
+            - For errors, explain in one simple sentence
+            - End responses with clear next steps or questions
             
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
             """,
