@@ -148,6 +148,8 @@ prompt = ChatPromptTemplate.from_messages(
 
             In the chat history always take the text generated based on the text extracted from the audios, images, videos or if direct type is text then take the direct text.
 
+            if employer provides the same number for worker and employer then inform the employer that you cannot onboard yourself as a worker.
+
             When you are done with the onboarding process, then never show the google sheet link to the employer, instead just send a message to the employer that we have collected all the information and the once the onboarding is done you will be informed about the onboarding status.
             """,
         ),
