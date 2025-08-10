@@ -101,7 +101,7 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
 
     # Setup Google Sheets credentials
     client = get_client()
-    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in', 'om@sampatticard.com', 'nusrath@sampatticard.com']
+    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in', 'om@sampatticard.in', 'nusrath@sampatticard.in']
 
     try:
         spreadsheet = client.open(sheet_title)

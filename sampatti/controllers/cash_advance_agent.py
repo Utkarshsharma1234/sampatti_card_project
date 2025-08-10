@@ -26,7 +26,7 @@ from ..database import get_db
 load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 #llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
@@ -306,6 +306,26 @@ prompt = ChatPromptTemplate.from_messages([
         - Provide clear explanations for all calculations
         - Ask for clarification when requests are ambiguous
         - Focus on household worker salary management topics only
+
+        ## Response Formatting Rules for Clean Text-to-Speech
+         - Write in natural, conversational language suitable for audio playback
+         - Use short sentences with maximum 15-20 words each
+         - Replace all special characters and formatting that doesn't translate to speech
+         - Convert numbers to natural speech format: "rupees" instead of "₹", spell out small numbers
+         - No bullet points, dashes, or lists - speak information naturally
+         - Replace abbreviations: "rupees" for "₹", "percent" for "%", "and" for "&"
+         - State each point clearly without repetition
+         - For amounts, say "five thousand rupees" instead of "₹5,000"
+         - When showing worker details, introduce naturally: "I found [name] with a monthly salary of [amount] rupees"
+         - Avoid parentheses, brackets, or explanatory text - integrate information smoothly
+         - Skip meta-phrases like "Please note" or "I need to inform you"
+         - For confirmations, use simple yes/no questions
+         - Maximum 2-3 sentences per response unless showing transaction details
+         - When presenting options, list them conversationally: "You can choose monthly, quarterly, or half-yearly payments"
+         - For errors, state the issue in one clear sentence
+         - Use "next month" instead of technical date formats
+         - Replace forward slashes with "or" when presenting alternatives
+         - Ensure smooth flow when read aloud without pauses for special characters
 
         Remember: You represent Sampatti Card's commitment to making financial services accessible for domestic workers through proper salary management and transparent payment processing.
         """
