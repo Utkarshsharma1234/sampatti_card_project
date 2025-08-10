@@ -3,7 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import onboarding_agent, userControllers
+from ..controllers import onboarding_agent, userControllers, survey_agent
 from dotenv import load_dotenv
 from ..controllers import whatsapp_message, super_agent
 
@@ -110,6 +110,14 @@ def process_orai_webhook(data: dict):
                 print(f"Error forwarding to ngrok: {e}")
             # Return early to skip super_agent processing
             return
+
+        if employerNumber == "919731011117" or employerNumber == "917665292549":
+            if message_type == "text":
+                query = message.get("text", {}).get("body")
+                survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
+            elif message_type == "audio":
+                query = message.get("audio", {}).get("id")
+                survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
 
         if not message_type:
             print("None message type")
