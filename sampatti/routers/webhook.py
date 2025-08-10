@@ -115,9 +115,11 @@ def process_orai_webhook(data: dict):
             if message_type == "text":
                 query = message.get("text", {}).get("body")
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
+                return
             elif message_type == "audio":
                 query = message.get("audio", {}).get("id")
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
+                return
 
         if not message_type:
             print("None message type")
