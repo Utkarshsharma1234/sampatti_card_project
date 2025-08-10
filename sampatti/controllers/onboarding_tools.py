@@ -95,6 +95,15 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
 
     worker_number = int(worker_number)
     employer_number = int(employer_number)
+    
+    # Validation: Prevent employer from onboarding themselves as worker
+    # Remove +91 prefix from employer_number for comparison
+    employer_without_prefix = str(employer_number)
+    if employer_without_prefix.startswith('91'):
+        employer_without_prefix = employer_without_prefix[2:]
+    
+    if str(worker_number) == employer_without_prefix:
+        return "Error: You cannot onboard yourself as a worker. Please provide a different worker number."
 
     data = {
         "worker_number": worker_number,
@@ -257,11 +266,19 @@ def get_worker_by_name_and_employer(worker_name: str, employer_number: int) -> d
         db.close()
 
 
-def get_worker_details(workerNumber : int):
+def get_worker_details(workerNumber : int, employer_number: int):
     """
     Fetches worker details from the database using the worker number.
     Returns a dictionary with worker details or an error message.
     """    
+    # Validation: Prevent employer from onboarding themselves as worker
+    # Remove +91 prefix from employer_number for comparison
+    employer_without_prefix = str(employer_number)
+    if employer_without_prefix.startswith('91'):
+        employer_without_prefix = employer_without_prefix[2:]
+    
+    if str(workerNumber) == employer_without_prefix:
+        return "Error: You cannot onboard yourself as a worker. Please provide a different worker number."
     url = "https://conv.sampatticards.com/user/check_worker"
     payload = {
         "workerNumber": workerNumber
@@ -342,6 +359,18 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
     Immediately adds worker to employer in worker_employer table and generates employment contract
     when employer confirms the worker details.
     """
+    # Validation: Prevent employer from onboarding themselves as worker
+    # Remove +91 prefix from employer_number for comparison
+    employer_without_prefix = str(employer_number)
+    if employer_without_prefix.startswith('91'):
+        employer_without_prefix = employer_without_prefix[2:]
+    
+    if str(worker_number) == employer_without_prefix:
+        return {
+            "success": False,
+            "message": "Error: You cannot onboard yourself as a worker. Please provide a different worker number."
+        }
+    
     try:
         db = next(get_db())
         
