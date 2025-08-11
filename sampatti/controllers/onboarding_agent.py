@@ -136,12 +136,13 @@ prompt = ChatPromptTemplate.from_messages(
             When the employer inputs the worker number, you will use the `get_worker_details` to fetch the worker's details and if you find the worker details, you have to show the details to the user and ask for confirmation to proceed with onboarding. Now while showing the details to the employer you have to remember certain rules: never display the worker's vendorId to the employer, only show the pan details, bank details either UPI or bank account along with IFSC and worker's name. when showing the details to the employer make sure to display every field in a new line.
             IMMEDIATE WORKER CONFIRMATION PROCESS (if the worker details are already present in the database and employer confirms the worker details are correct):
             1. First ask for the salary of the worker from the employer (this is mandatory)
-            2. Ask if they have a referral code (optional)
+            2. Ask if they have a referral code (optional) if referral is provide then call 'process_referral_code' and if referral code is correct show the message like "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
             3. Once you have the salary (and referral code if provided), immediately call the `confirm_worker_and_add_to_employer` tool
             4. This tool will:
                - Add the worker to the employer in the worker_employer table
                - Generate the employment contract automatically
                - Send the contract via WhatsApp
+               - Send the message like "Worker has been successfully onboarded"
             5. Do NOT call the regular `onboard_worker_employer` tool after using `confirm_worker_and_add_to_employer` tool.
 
             If the employer does not confirm the worker details or the worker with the given number is not present in the database then just continue with the onboarding process normally by asking remaining details and after getting all the details call `onboard_worker_employer`.
