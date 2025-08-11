@@ -96,8 +96,8 @@ prompt = ChatPromptTemplate.from_messages(
                - Must be a positive number
                
             6. REFERRAL CODE:
-               - Optional field
-               - If provided, will be used to track referrals
+               - Optional field but always ask for if any referral code to employer
+               - If provided, user 'process_referral_code' to validate the referral code.
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question
@@ -107,8 +107,8 @@ prompt = ChatPromptTemplate.from_messages(
             REFERRAL SYSTEM WORKFLOW:
             
             1. REFERRAL CODE VALIDATION:
-               - Ask for referral code after collecting basic worker details and salary
-               - If a referral code is provided, call `process_referral_code` to validate and process it
+               - Always ask for referral code after collecting basic worker details and salary
+               - If a referral code is provided, call `process_referral_code` to validate and process it and if referral is valid show message like "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral".
                
             IMPORTANT ONBOARDING SEQUENCE:
             1. Ask for worker number first and validate (10 digits)
