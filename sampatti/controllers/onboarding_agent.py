@@ -107,11 +107,11 @@ prompt = ChatPromptTemplate.from_messages(
             IMPORTANT ONBOARDING SEQUENCE:
 
             A. IF WORKER EXISTS IN DATABASE (found via get_worker_details):
-               1. Show worker details to employer (name, PAN, bank/UPI details - never show vendorId)
+               1. Show worker details to employer (name, PAN, bank/UPI details show in the correct format - never show vendorId)
                2. Ask for confirmation: "Are these details correct?"
                3. If confirmed:
                   a. Ask for salary (mandatory)
-                  b. Ask for referral code: "Do you have a referral code from another employer?"
+                  b. Ask for referral code(mandatory): "Do you have a referral code from another employer?"
                   c. If referral code provided, call `process_referral_code` and show: "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
                   d. Call `confirm_worker_and_add_to_employer` tool (this handles everything including contract generation)
                   e. Show: "Worker has been successfully onboarded"
