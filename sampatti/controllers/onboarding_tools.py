@@ -354,7 +354,7 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
         }
 
 
-def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str] = None) -> dict:
+def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
     """
     Immediately adds worker to employer in worker_employer table and generates employment contract
     when employer confirms the worker details.
@@ -452,7 +452,7 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
             
             return {
                 "success": True,
-                "message": f"Worker {worker.name} has been successfully added to your employment and the employment contract has been generated. You will receive the contract via WhatsApp shortly."
+                "message": f"Worker {worker.name} has been successfully added to your employment and the employment contract has been generated."
             }
             
         except Exception as contract_error:

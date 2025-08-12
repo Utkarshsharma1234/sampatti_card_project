@@ -29,7 +29,7 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 #llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 
 
 # parser = PydanticOutputParser(pydantic_object=ResearchResponse)
@@ -63,7 +63,7 @@ prompt = ChatPromptTemplate.from_messages(
             2. Either UPI or (Bank Account + IFSC)
             3. PAN Number
             4. Salary
-            5. Referral Code (if they have one)
+            5. Referral Code
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
 
@@ -93,11 +93,11 @@ prompt = ChatPromptTemplate.from_messages(
                - If invalid, inform: "Please provide a valid PAN number (format: ABCDE1234F)"
             
             5. SALARY:
-               - Must be a positive number
+               - Must be a positive number and greater than 500 rupees.
                
             6. REFERRAL CODE:
-               - Optional field but always ask for if any referral code to employer
-               - If provided, use 'process_referral_code' to validate the referral code
+               - Always ask for referral code from employer
+               - if employer provide the referral code then 'process_referral_code' this tool will validate the referral code.
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question
@@ -112,7 +112,7 @@ prompt = ChatPromptTemplate.from_messages(
                3. If confirmed:
                   a. Ask for salary (mandatory)
                   b. Ask for referral code(mandatory): "Do you have a referral code from another employer?"
-                  c. If referral code provided, call `process_referral_code` and show: "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
+                  c. If referral code provided, call `process_referral_code` and show if referral code is sucessufully validated: "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
                   d. Call `confirm_worker_and_add_to_employer` tool (this handles everything including contract generation)
                   e. Show: "Worker has been successfully onboarded"
                4. If not confirmed, continue with normal onboarding process (B)
@@ -121,7 +121,7 @@ prompt = ChatPromptTemplate.from_messages(
                1. Ask for UPI or bank details (not both)
                2. Ask for PAN number
                3. Ask for salary
-               4. Ask for referral code (optional)
+               4. Ask for referral code(mandatory)
                5. If referral code provided, validate with `process_referral_code`
                6. Call `onboard_worker_employer` with all collected information
 
