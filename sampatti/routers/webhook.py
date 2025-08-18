@@ -114,7 +114,7 @@ def process_orai_webhook(data: dict):
         if employerNumber == "917665292549":
             if message_type == "text":
                 test = "This is testing"
-                whatsapp_message.send_whatsapp_text(employerNumber, test)
+                whatsapp_message.display_user_message_on_xbotic(employerNumber, test)
                 return
 
         if employerNumber == "919731011117":
