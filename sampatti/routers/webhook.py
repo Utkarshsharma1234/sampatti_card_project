@@ -115,6 +115,7 @@ def process_orai_webhook(data: dict):
             if message_type == "text":
                 test = "This is testing"
                 whatsapp_message.send_whatsapp_text(employerNumber, test)
+                return
 
         if employerNumber == "919731011117":
             if message_type == "text":
