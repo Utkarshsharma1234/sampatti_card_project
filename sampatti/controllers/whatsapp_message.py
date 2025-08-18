@@ -8,6 +8,7 @@ from sampatti.models import Employer
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
+authourization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
 
 # send template messages - payment link, invoice message and worker salary slip message
 
@@ -305,3 +306,44 @@ def send_message_user(employer_number, body):
     response = requests.request("POST", url, headers=headers, data=payload)
 
     print(response.text)
+    
+    
+def send_whatsapp_message(employee_number, text):
+
+    # API endpoint
+    url = 'https://api-xbotic.cbots.live/bot-api/v2.0/customer/71029/bot/732e12160d6e4598/flow/B9DA9D396B2343AFBF5E33420107E9B6'
+    
+    # Headers
+    headers = {
+        'Authorization': authourization_message,  # Use the authorization message from .env
+        'Content-Type': 'application/json'
+    }
+    
+    # Payload
+    payload = {
+        "user.channel": "whatsapp",
+        "user.phone_no": employee_number,
+        "random_text": text
+    }
+    
+    try:
+        # Make the POST request
+        response = requests.post(url, headers=headers, json=payload)
+        
+        # Check if request was successful
+        response.raise_for_status()
+        
+        # Return the response as JSON
+        return {
+            'success': True,
+            'status_code': response.status_code,
+            'data': response.json() if response.content else None
+        }
+        
+    except requests.exceptions.RequestException as e:
+        # Handle any request errors
+        return {
+            'success': False,
+            'error': str(e),
+            'status_code': response.status_code if 'response' in locals() else None
+        }

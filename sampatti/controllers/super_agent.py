@@ -16,7 +16,7 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message
-from .whatsapp_message import send_v2v_message, send_message_user
+from .whatsapp_message import send_v2v_message, send_message_user, send_whatsapp_message
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
@@ -234,6 +234,21 @@ class SuperAgent:
             return True
         except Exception as e:
             print(f"❌ Error ensuring employer exists: {e}")
+            return False
+
+    def check_employer_exists(employer_number: int) -> bool:
+        """
+        Check if employer exists in the database
+        Returns True if employer exists, False otherwise
+        """
+        try:
+            # Try to get employer workers info - this will fail if employer doesn't exist
+            result = get_employer_workers_info(employer_number)
+            # If we get here without exception, employer exists
+            return True
+        except Exception as e:
+            # If there's an error (likely employer not found), return False
+            print(f"Employer {employer_number} not found: {e}")
             return False
 
     def get_worker_info_response(self, employer_number: int, user_message: str) -> Dict[str, Any]:
@@ -743,11 +758,13 @@ Just tell me what you need help with, and I'll take care of it!"""
             # Send the response based on message type
             if type_of_message=="text":
                 print("MESSAGE SENT SUCCESSFULLY: ", response)
-                send_message_user(employer_number, response)
+                #send_message_user(employer_number, response)
+                send_whatsapp_message(employer_number, response)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}" 
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                send_message_user(employer_number, response)
+                #send_message_user(employer_number, response)
+                send_whatsapp_message(employer_number, response)
                 send_audio_message(response, user_language, employer_number)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}"
                 
