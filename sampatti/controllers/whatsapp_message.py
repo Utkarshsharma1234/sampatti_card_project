@@ -8,7 +8,7 @@ from sampatti.models import Employer
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
-authourization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
+#authourization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
 
 # send template messages - payment link, invoice message and worker salary slip message
 
@@ -315,7 +315,7 @@ def send_whatsapp_text(employee_number, text: str):
     
     # Headers
     headers = {
-        'Authorization': authourization_message,  # Use the authorization message from .env
+        'Authorization': 'Basic bf93eeb0-3f6c-462c-8cd7-7d9a02fb2880-IeFBBLO',  # Use the authorization message from .env
         'Content-Type': 'application/json'
     }
     

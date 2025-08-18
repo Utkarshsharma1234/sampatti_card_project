@@ -110,6 +110,11 @@ def process_orai_webhook(data: dict):
                 print(f"Error forwarding to ngrok: {e}")
             # Return early to skip super_agent processing
             return
+        
+        if employerNumber == "917665292549":
+            if message_type == "text":
+                test = "This is testing"
+                whatsapp_message.send_whatsapp_text(employerNumber, test)
 
         if employerNumber == "919731011117":
             if message_type == "text":
