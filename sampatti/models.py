@@ -48,6 +48,7 @@ class Employer(Base):
     upiId = Column(String, nullable=True, default='')
     numberofReferral = Column(Integer, default=0)
     totalPaymentAmount = Column(Integer, default=0)
+    beneficiaryId = Column(String, default='')
     workers = relationship("Domestic_Worker", secondary="worker_employer",back_populates='employers')
 
 class EmployerReferralMapping(Base):

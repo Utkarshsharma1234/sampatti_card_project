@@ -291,3 +291,9 @@ def super_agent_query(employer_number: int, type_of_message: str, query: str, me
 @router.post("/add_in_employer")
 def populate_db(employer_number: int, worker_id: str, db: Session = Depends(get_db)):
     return userControllers.populate_db(employer_number, worker_id, db)
+
+
+@router.post("/send_referral_code")
+def generate_and_send_referral_code_to_employers(db: Session = Depends(get_db)):
+    return userControllers.generate_and_send_referral_code_to_employers(db)
+

@@ -20,35 +20,10 @@ from .whatsapp_message import send_message_user
 
 load_dotenv()
 
-# class ResearchResponse(BaseModel):
-#     topic: str
-#     summary: str
-#     sources: list[str]
-#     tools_used: list[str]
-
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-#llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
-llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-5", api_key=openai_api_key)
 
-
-# parser = PydanticOutputParser(pydantic_object=ResearchResponse)
-
-# prompt = ChatPromptTemplate.from_messages(
-#     [
-#         (
-#             "system",
-#             """
-#             You are a research assistant that will help generate a research paper.
-#             Answer the user query and use neccessary tools. 
-#             Wrap the output in this format and provide no other text\n{format_instructions}
-#             """,
-#         ),
-#         ("placeholder", "{chat_history}"),
-#         ("human", "{query}"),
-#         ("placeholder", "{agent_scratchpad}"),
-#     ]
-# ).partial(format_instructions=parser.get_format_instructions())
 
 
 prompt = ChatPromptTemplate.from_messages(
@@ -70,8 +45,7 @@ prompt = ChatPromptTemplate.from_messages(
             VALIDATION RULES:
             
             1. WORKER NUMBER:
-               - Must be exactly 10 digits
-               - If invalid, inform the employer: "Please provide a valid 10-digit worker number"
+               - Must be exactly 10 digits. If not then ask the employer to provide a valid mobile number.
                - Always call `get_worker_details` after validation of the mobile number passes
                - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number
             
@@ -97,7 +71,7 @@ prompt = ChatPromptTemplate.from_messages(
                
             6. REFERRAL CODE:
                - Always ask for referral code from employer
-               - if employer provide the referral code then 'process_referral_code' this tool will validate the referral code.
+               - if employer provide the referral code then call tool 'process_referral_code'.
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question

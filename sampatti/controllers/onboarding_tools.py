@@ -365,7 +365,7 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
     if employer_without_prefix.startswith('91'):
         employer_without_prefix = employer_without_prefix[2:]
     
-    if str(worker_number) == employer_without_prefix:
+    if int(worker_number) == int(employer_without_prefix):
         return {
             "success": False,
             "message": "Error: You cannot onboard yourself as a worker. Please provide a different worker number."

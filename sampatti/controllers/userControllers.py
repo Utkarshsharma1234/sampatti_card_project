@@ -1329,7 +1329,7 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
     return result is not None
 
 
-def send_referral_code_to_employer(employer_number: int, referral_code: str) -> dict:
+def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, referral_code: str, upiId : str, db: Session) -> dict:
     try:
         message = f"""🎉 Congratulations! Your referral code is ready!
 
@@ -1348,6 +1348,10 @@ def send_referral_code_to_employer(employer_number: int, referral_code: str) -> 
             employer_number, 
             message
         )
+
+        print("Beneficiary in Process")
+        create_cashfree_beneficiary(employer_number=employer_number, upi_id=upiId, db=db)
+        print("Beneficiary Created")
             
         return {
             "status": "success",
@@ -1423,16 +1427,13 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         referred_employer.FirstPaymentDone = True
         referred_employer.upiId = upi_id or ''
         referred_employer.totalPaymentAmount += int(payment_amount)
-        send_referral_code_to_employer(employerNumber, new_referral_code)
-        print("Referral code used: ", new_referral_code)
+        send_referral_code_to_employer_and_create_beneficiary(employerNumber, new_referral_code, upi_id, db)
         
-        # Check for referral mapping - find if this employer was referred
+        # Check whether this worker was onboarded using some referral code or not.
         worker_employer_record = db.query(models.worker_employer).filter(
             models.worker_employer.c.employer_number == employerNumber, models.worker_employer.c.order_id == order_id
         ).first()
 
-        print("Worker employer record: ", worker_employer_record)
-        
         if not worker_employer_record or not worker_employer_record.referralCode:
             # No referral code - skip referral processing
             db.commit()
@@ -1494,13 +1495,7 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         db.refresh(referred_employer)
         db.refresh(referring_employer)
 
-        print("Beneficiary in Process")
-
-        create_cashfree_beneficiary(employer_number=employerNumber, upi_id=upi_id, db=db)
-
-        print("Beneficiary Created")
-
-        transfer_cashback_amount(beneficiary_id=referring_employer.id, amount=CASHBACK_AMOUNT, transfer_mode="upi")
+        transfer_cashback_amount(beneficiary_id=referring_employer.beneficiaryId, amount=CASHBACK_AMOUNT, transfer_mode="upi")
 
         print("Cashback Processed")
 
@@ -1522,3 +1517,24 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
             "status": "error",
             "message": f"Error processing employer update: {str(e)}"
         }
+    
+
+def generate_and_send_referral_code_to_employers(db : Session) :
+     
+    total_employers = db.query(models.Employer).all()
+
+    for employer in total_employers:
+
+        if not employer.FirstPaymentDone:
+            continue
+
+        # Generate a new referral code
+        new_referral_code = str(uuid.uuid4())
+
+        # Update the employer record with the new referral code
+        employer.referralCode = new_referral_code
+        db.commit()
+        db.refresh(employer)
+
+        # Send the referral code to the employer
+        send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, new_referral_code, employer.upiId, db)
