@@ -311,7 +311,7 @@ def send_message_user(employer_number, body: str):
 def send_whatsapp_text(employee_number, text: str):
 
     # API endpoint
-    url = 'https://api-xbotic.cbots.live/bot-api/v2.0/customer/71029/bot/732e12160d6e4598/flow/B9DA9D396B2343AFBF5E33420107E9B6'
+    url = "https://api-xbotic.cbots.live/bot-api/v2.0/customer/71029/bot/732e12160d6e4598/flow/B9DA9D396B2343AFBF5E33420107E9B6"
     
     # Headers
     headers = {
@@ -320,16 +320,18 @@ def send_whatsapp_text(employee_number, text: str):
     }
     
     # Payload
-    payload = {
+    data = json.dumps({
         "user.channel": "whatsapp",
         "user.phone_no": employee_number,
         "random_text": text
-    }
+    })
     
     try:
         # Make the POST request
-        response = requests.post(url, headers=headers, data=payload)
-        
+        response = requests.post(url, headers=headers, data=data)
+        print("Response:", response.text)
+        print("Status Code:", response.status_code)
+
         # Check if request was successful
         response.raise_for_status()
         
