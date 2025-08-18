@@ -9,7 +9,7 @@ load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
 #authourization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
-authorization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
+authorization_message = os.environ.get('ORAI_AUTHORIZATION_MESSAGE')
 
 # send template messages - payment link, invoice message and worker salary slip message
 
@@ -309,7 +309,7 @@ def send_message_user(employer_number, body: str):
     print(response.text)
     
     
-def send_whatsapp_text(employee_number, text: str):
+def display_user_message_on_xbotic(employee_number, text: str):
 
     # API endpoint
     url = "https://api-xbotic.cbots.live/bot-api/v2.0/customer/71029/bot/732e12160d6e4598/flow/B9DA9D396B2343AFBF5E33420107E9B6"

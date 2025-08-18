@@ -16,7 +16,7 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message
-from .whatsapp_message import send_v2v_message, send_message_user, send_whatsapp_text
+from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
@@ -758,13 +758,13 @@ Just tell me what you need help with, and I'll take care of it!"""
             # Send the response based on message type
             if type_of_message=="text":
                 print("MESSAGE SENT SUCCESSFULLY: ", response)
-                send_message_user(employer_number, response)
-                #send_whatsapp_text(employer_number, response)
+                #send_message_user(employer_number, response)
+                display_user_message_on_xbotic(employer_number, response)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}" 
             if type_of_message=="audio":
                 print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                send_message_user(employer_number, response)
-                #send_whatsapp_text(employer_number, response)
+                #send_message_user(employer_number, response)
+                display_user_message_on_xbotic(employer_number, response)
                 send_audio_message(response, user_language, employer_number)
                 return f"MESSAGE SENT SUCCESSFULLY: {response}"
                 
