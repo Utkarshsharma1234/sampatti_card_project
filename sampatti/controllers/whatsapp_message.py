@@ -284,7 +284,7 @@ def send_intro_video(employerNumber,template_name):
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 
 
-def send_message_user(employer_number, body):
+def send_message_user(employer_number, body: str):
 
     url = "https://waba-v2.360dialog.io/messages"
 
@@ -308,7 +308,7 @@ def send_message_user(employer_number, body):
     print(response.text)
     
     
-def send_whatsapp_message(employee_number, text):
+def send_whatsapp_text(employee_number, text: str):
 
     # API endpoint
     url = 'https://api-xbotic.cbots.live/bot-api/v2.0/customer/71029/bot/732e12160d6e4598/flow/B9DA9D396B2343AFBF5E33420107E9B6'
@@ -328,7 +328,7 @@ def send_whatsapp_message(employee_number, text):
     
     try:
         # Make the POST request
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, data=payload)
         
         # Check if request was successful
         response.raise_for_status()
