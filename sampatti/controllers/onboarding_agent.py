@@ -22,7 +22,7 @@ load_dotenv()
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-5", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-5", api_key=openai_api_key, temperature=1)
 
 
 
