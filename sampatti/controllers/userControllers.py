@@ -1333,32 +1333,32 @@ def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, 
     try:
         message1 = f"""🎉 Your Referral Code is Ready!
 
-                Your referral code is live! 🎉
+Your referral code is live! 🎉
 
-                Referral Code: *{referral_code}*
+Referral Code: *{referral_code}*
 
-                Here's the deal. Share this. Friends get their workers on Sampatti for verified salary slips + benefits like affordable credit, insurance etc. You get ₹150.
+Here's the deal. Share this. Friends get their workers on Sampatti for verified salary slips + benefits like affordable credit, insurance etc. You get ₹150.
 
-                Simple math! 💰
+Simple math! 💰
 
-                Plus you're literally helping workers build financial futures. Win-win energy right there.
+Plus you're literally helping workers build financial futures. Win-win energy right there.
 
-                Ready? Forwarding the perfect message next! 🚀
+Ready? Forwarding the perfect message next! 🚀
             """
             
         message2 = f"""So. I started using Sampatti for my house help.
 
-                Game changer! 🔥
+Game changer! 🔥
 
-                She gets real salary slips now. Building Social Security. The confidence boost? Unreal.
+She gets real salary slips now. Building Social Security. The confidence boost? Unreal.
 
-                Your worker deserves this too, no?
+Your worker deserves this too, no?
 
-                My code: *{referral_code}*
+My code: *{referral_code}*
 
-                Try it: https://wa.me/919880081292?text=Hi
+Try it: https://wa.me/919880081292?text=Hi
 
-                Let's upgrade this whole thing! ✨
+Let's upgrade this whole thing! ✨
         """
 
         whatsapp_message.send_message_user(
