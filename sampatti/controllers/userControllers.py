@@ -524,7 +524,7 @@ async def get_transalated_text(file_path: str):
         #    raise HTTPException(status_code=400, detail="Failed to download file from the URL.")
 
         with tempfile.NamedTemporaryFile(delete=False) as temp:
-            temp.write(response.content)
+            #temp.write(response.content)
             temp_path = temp.name
 
         print(f"Downloaded temporary file: {file_path}")
@@ -1331,22 +1331,43 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
 
 def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, referral_code: str, upiId : str, db: Session) -> dict:
     try:
-        message = f"""🎉 Congratulations! Your referral code is ready!
+        message1 = f"""🎉 Your Referral Code is Ready!
 
-                Your Referral Code: *{referral_code}*
+                Your referral code is live! 🎉
 
-                Share this code with friends and family to earn ₹150 cashback for each successful referral!
+                Referral Code: *{referral_code}*
 
-                How it works:
-                1. Share your referral code with others
-                2. When they onboard their first worker using your code and make their first payment
-                3. You earn ₹150 cashback!
+                Here's the deal. Share this. Friends get their workers on Sampatti for verified salary slips + benefits like affordable credit, insurance etc. You get ₹150.
 
-                Start sharing and earning today! 💰"""
+                Simple math! 💰
+
+                Plus you're literally helping workers build financial futures. Win-win energy right there.
+
+                Ready? Forwarding the perfect message next! 🚀
+            """
+            
+        message2 = f"""So. I started using Sampatti for my house help.
+
+                Game changer! 🔥
+
+                She gets real salary slips now. Building Social Security. The confidence boost? Unreal.
+
+                Your worker deserves this too, no?
+
+                My code: *{referral_code}*
+
+                Try it: https://wa.me/919880081292?text=Hi
+
+                Let's upgrade this whole thing! ✨
+        """
 
         whatsapp_message.send_message_user(
             employer_number, 
-            message
+            message1
+        )
+        whatsapp_message.send_message_user(
+            employer_number, 
+            message2
         )
 
         print("Beneficiary in Process")

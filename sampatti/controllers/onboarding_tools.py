@@ -361,18 +361,25 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
     """
     # Validation: Prevent employer from onboarding themselves as worker
     # Remove +91 prefix from employer_number for comparison
-    employer_without_prefix = str(employer_number)
-    if employer_without_prefix.startswith('91'):
-        employer_without_prefix = employer_without_prefix[2:]
-    
-    if int(worker_number) == int(employer_without_prefix):
-        return {
-            "success": False,
-            "message": "Error: You cannot onboard yourself as a worker. Please provide a different worker number."
-        }
     
     try:
         db = next(get_db())
+        
+        employer_number_str = str(employer_number)
+        worker_number_str = str(worker_number)
+        
+        # Remove 91 prefix if present
+        if employer_number_str.startswith('91') and len(employer_number_str) > 10:
+            employer_number_cleaned = employer_number_str[2:]
+        else:
+            employer_number_cleaned = employer_number_str
+            
+        # Check if employer is trying to onboard themselves
+        if employer_number_cleaned == worker_number_str:
+            return {
+                "success": False,
+                "message": "You cannot onboard yourself as a worker"
+            }
         
         # Get worker details from database
         worker = db.query(models.Domestic_Worker).filter(
@@ -471,6 +478,47 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
     finally:
         db.close()
 
+def employer_details(employer_number: int) -> dict:
+
+    try:
+        db = next(get_db())
+        employer = db.query(models.Employer).filter(
+            models.Employer.employerNumber == employer_number
+        ).first()
+        
+        if not employer:
+            return {
+                "success": False,
+                "error": f"No employer found with employer number: {employer_number}"
+            }
+        
+        # Convert employer object to dictionary
+        employer_data = {
+            "success": True,
+            "data": {
+                "id": employer.id,
+                "employerNumber": employer.employerNumber,
+                "referralCode": employer.referralCode,
+                "cashbackAmountCredited": employer.cashbackAmountCredited,
+                "firstPaymentDone": employer.FirstPaymentDone,
+                "accountNumber": employer.accountNumber,
+                "ifsc": employer.ifsc,
+                "upiId": employer.upiId,
+                "numberOfReferral": employer.numberofReferral,
+                "totalPaymentAmount": employer.totalPaymentAmount,
+                "beneficiaryId": employer.beneficiaryId
+            }
+        }
+        
+        return employer_data
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Database error: {str(e)}"
+        }
+    finally:
+        db.close()
 
 get_worker_details_tool = StructuredTool.from_function(
     func=get_worker_details,
@@ -515,4 +563,10 @@ confirm_worker_and_add_to_employer_tool = StructuredTool.from_function(
     name="confirm_worker_and_add_to_employer",
     description="Immediately adds confirmed worker to employer in worker_employer table and generates employment contract.",
     args_schema=ConfirmWorkerInput
+)
+
+employer_details_tool = StructuredTool.from_function(
+    func=employer_details,
+    name="employer_details",
+    description="Get employer Deatils from employer Number",   
 )
