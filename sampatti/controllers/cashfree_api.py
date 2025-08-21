@@ -526,6 +526,15 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
         db.commit()
         db.refresh(employer)
         
+        employer_number_str = str(employer_number)
+        if employer_number_str.startswith('91') and len(employer_number_str) > 10:
+            phone_number = employer_number_str[2:]  # Remove first 2 digits (91)
+        else:
+            phone_number = employer_number_str
+
+        print("Phone Number: ", phone_number)
+
+        
         payload = {
             "beneficiary_id": beneficiary_id,
             "beneficiary_name": "SAMPATTI CARD USER",
@@ -534,7 +543,7 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
             },
             "beneficiary_contact_details": {
                 "beneficiary_email": "support@sampatticard.in",
-                "beneficiary_phone": str(employer_number),
+                "beneficiary_phone": phone_number,
                 "beneficiary_country_code": "+91"
             }
         }
