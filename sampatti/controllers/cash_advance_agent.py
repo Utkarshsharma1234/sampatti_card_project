@@ -26,7 +26,7 @@ from ..database import get_db
 load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4o", api_key=openai_api_key)
 #llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
