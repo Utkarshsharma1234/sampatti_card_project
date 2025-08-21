@@ -86,7 +86,7 @@ prompt = ChatPromptTemplate.from_messages(
                3. If confirmed:
                   a. Ask for salary (mandatory)
                   b. Ask for referral code(mandatory): "Do you have a referral code from another employer?"
-                  c. If referral code provided, call `process_referral_code` and show if referral code is sucessufully validated: "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
+                  c. If referral code provided, call `process_referral_code` and show if referral code is sucessufully.
                   d. Call `confirm_worker_and_add_to_employer` tool (this handles everything including contract generation)
                   e. Show: "Worker has been successfully onboarded"
                4. If not confirmed, continue with normal onboarding process (B)
@@ -102,7 +102,11 @@ prompt = ChatPromptTemplate.from_messages(
             REFERRAL SYSTEM:
             - Always ask for referral code after collecting salary
             - If provided, validate using `process_referral_code`
-            - Show cashback message if valid: "Worker Referral Code has been Verified and after making your first payment you will receive your referral code and after that when you refer someone they will you will get the cashback amount of one hundred fifty rupees on every successful referral"
+            - Show cashback message if valid: ✅ Great News! Your Worker Referral Code is Verified!
+🎊 What happens next:
+Step 1: Make your first payment
+Step 2: Receive YOUR referral code
+Step 3: Start earning ₹150 for every friend you refer!"
 
             ## Response Formatting Rules
                 - Keep responses conversational and natural for text-to-speech conversion
