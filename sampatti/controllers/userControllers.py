@@ -1383,6 +1383,32 @@ def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, 
     except Exception as e:
         return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
 
+def send_message_to_referring_employee(employer_number: int, referral_code: str, employerNumber: int):
+    message = f"""
+        🎉 Great News! Your Referral Worked!
+
+        Your referral code *{referral_code}* was just used by {employerNumber}! 
+
+        ✅ *Cashback Alert*: ₹150 has been credited to your account!
+
+        You're making a real difference! By sharing Sampatti, you're helping domestic workers:
+        • Get verified salary slips
+        • Build their financial identity
+        • Access banking services
+        • Become financially independent
+
+        *Keep the momentum going!* 🚀
+        Share your code *{referral_code}* with more friends and employers. 
+
+        Every referral = ₹150 for you + A brighter future for a domestic worker 💪
+
+        Together, let's empower more workers and build a financially inclusive society!
+    """
+
+    whatsapp_message.send_message_user(
+        employer_number, message
+    )
+
 
 def process_employer_cashback_for_first_payment(employerNumber: int, payload: dict, db: Session):
     """
@@ -1517,6 +1543,10 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         db.refresh(referring_employer)
 
         transfer_cashback_amount(beneficiary_id=referring_employer.beneficiaryId, amount=CASHBACK_AMOUNT, transfer_mode="upi")
+        
+        referring_employee_number = referring_employer.employerNumber
+        referral_code = referring_employer.referralCode
+        send_message_to_referring_employee(referring_employee_number, referral_code, employerNumber)
 
         print("Cashback Processed")
 

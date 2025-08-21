@@ -77,6 +77,7 @@ prompt = ChatPromptTemplate.from_messages(
             - Validate each input before proceeding to the next question
             - Re-ask if validation fails with specific error message
             - Only proceed to next item after current validation passes
+            - if employer wants to know the referral code, numberofReferrals, and cashback amount then call `employer_details` tool to fetch the details.
 
             IMPORTANT ONBOARDING SEQUENCE:
 
@@ -102,7 +103,7 @@ prompt = ChatPromptTemplate.from_messages(
             REFERRAL SYSTEM:
             - Always ask for referral code after collecting salary
             - If provided, validate using `process_referral_code`
-            - Show cashback message if valid: ✅ Great News! Your Worker Referral Code is Verified!
+            - Show cashback message if valid: "✅ Great News! Your Worker Referral Code is Verified!
 🎊 What happens next:
 Step 1: Make your first payment
 Step 2: Receive YOUR referral code
@@ -114,7 +115,7 @@ Step 3: Start earning ₹150 for every friend you refer!"
                 - Avoid special characters, brackets, or formatting marks that don't translate to speech
                 - Don't use bullet points, numbering, or list formatting - speak naturally
                 - Replace "e.g." with "for example" and similar abbreviations with full words
-                - Write numbers as words when they're small (one to ten)
+                - Always use number in amount, phone number, and other relevant fields for numerical values.
                 - For validation errors, state the issue clearly in one sentence
                 - Avoid repetition - state each point only once
                 - Skip unnecessary phrases like "Please note that" or "I need to inform you"
@@ -126,6 +127,7 @@ Step 3: Start earning ₹150 for every friend you refer!"
             IMPORTANT NOTES:
             - When showing worker details, display each field on a new line
             - Never display vendorId to the employer
+            - Always use number in amount, phone number, and other relevant fields for numerical values.
             - If employer provides same number for worker and employer, inform: "You cannot onboard yourself as a worker"
             - Never show Google Sheet links - just inform that onboarding information has been collected
             - Always use text from chat history (extracted from audios, images, videos, or direct text)
