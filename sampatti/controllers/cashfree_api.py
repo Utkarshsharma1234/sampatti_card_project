@@ -520,7 +520,7 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
     try:
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
                 
-        beneficiary_id = uuid.uuid4()
+        beneficiary_id = str(uuid.uuid4()).replace('-', '_')
         employer.beneficiaryId = str(beneficiary_id)
         
         db.commit()
