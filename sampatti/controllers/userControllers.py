@@ -1361,6 +1361,9 @@ Try it: https://wa.me/919880081292?text=Hi
 Let's upgrade this whole thing! ✨
         """
 
+        employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
+        beneficiary_id = employer.beneficiaryId
+
         whatsapp_message.send_message_user(
             employer_number, 
             message1
@@ -1371,8 +1374,11 @@ Let's upgrade this whole thing! ✨
         )
 
         print("Beneficiary in Process")
-        create_cashfree_beneficiary(employer_number=employer_number, upi_id=upiId, db=db)
-        print("Beneficiary Created")
+        if beneficiary_id is None or beneficiary_id == "":
+            create_cashfree_beneficiary(employer_number=employer_number, upi_id=upiId, db=db)
+            print("Beneficiary Created")
+        else:
+            print("Beneficiary Already Present")
             
         return {
             "status": "success",
