@@ -291,15 +291,29 @@ def get_worker_details(workerNumber : int, employer_number: int):
     except requests.RequestException as e:
         return {"error": str(e)}
 
+# Updated Pydantic model for the tool
+class ProcessReferralCodeInput(BaseModel):
+    employer_number: int
+    referral_code: str
+    worker_number: Optional[int] = None
+    salary: Optional[int] = None
 
-
-def process_referral_code(employer_number: int, referral_code: str) -> dict:
+def process_referral_code(employer_number: int, referral_code: str, worker_number: Optional[int] = None, salary: Optional[int] = None) -> dict:
+    """
+    Process referral code and optionally add worker to employer if worker already exists.
+    
+    Args:
+        employer_number: Employer's phone number
+        referral_code: Referral code to validate
+        worker_number: Optional - Worker's phone number (if worker exists in DB)
+        salary: Optional - Worker's salary (if worker exists in DB)
+    """
     try:
         print(f"Starting referral processing for employer {employer_number} with code {referral_code}")
         
-        # STEP 1: Validate referral code
         db = next(get_db())
 
+        # STEP 1: Validate referral code
         referring_employer = db.query(models.Employer).where(
             models.Employer.referralCode == referral_code
         ).first()
@@ -316,8 +330,11 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
                 "step_failed": "validation"
             }
         
+        # Check if referral code already used
         referral_mapping = db.query(models.EmployerReferralMapping).where(
-            models.EmployerReferralMapping.referralCode == referral_code, models.EmployerReferralMapping.employerReferring == referring_employer.id, models.EmployerReferralMapping.employerReferred == referred_employer.id
+            models.EmployerReferralMapping.referralCode == referral_code, 
+            models.EmployerReferralMapping.employerReferring == referring_employer.id, 
+            models.EmployerReferralMapping.employerReferred == referred_employer.id
         ).first()
 
         if referral_mapping:
@@ -328,6 +345,7 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
                 "step_failed": "validation"
             }
 
+        # Create referral mapping
         new_referral = models.EmployerReferralMapping(
             id=generate_unique_id(length=16),
             employerReferring=referring_employer.id,
@@ -343,15 +361,116 @@ def process_referral_code(employer_number: int, referral_code: str) -> dict:
         db.commit()
         db.refresh(new_referral)
 
+        # STEP 2: If worker details provided, add worker to employer
+        if worker_number and salary:
+            # Validation: Prevent employer from onboarding themselves
+            employer_number_str = str(employer_number)
+            worker_number_str = str(worker_number)
+            
+            if employer_number_str.startswith('91') and len(employer_number_str) > 10:
+                employer_number_cleaned = employer_number_str[2:]
+            else:
+                employer_number_cleaned = employer_number_str
+                
+            if employer_number_cleaned == worker_number_str:
+                return {
+                    "success": True,
+                    "referral_verified": True,
+                    "worker_added": False,
+                    "message": "Referral Code has been Verified. However, you cannot onboard yourself as a worker."
+                }
+            
+            # Get worker details
+            worker = db.query(models.Domestic_Worker).filter(
+                models.Domestic_Worker.workerNumber == worker_number
+            ).first()
+            
+            if not worker:
+                return {
+                    "success": True,
+                    "referral_verified": True,
+                    "worker_added": False,
+                    "message": "Referral Code has been Verified. Worker not found in database."
+                }
+            
+            # Check if worker-employer relationship already exists
+            existing_relation = db.query(models.worker_employer).filter(
+                models.worker_employer.c.worker_number == worker_number,
+                models.worker_employer.c.employer_number == employer_number
+            ).first()
+            
+            if existing_relation:
+                return {
+                    "success": True,
+                    "referral_verified": True,
+                    "worker_added": False,
+                    "message": "Referral Code has been Verified. Worker is already associated with this employer."
+                }
+            
+            # Create worker-employer relationship
+            relation_id = generate_unique_id(length=8)
+            
+            insert_stmt = models.worker_employer.insert().values(
+                id=relation_id,
+                worker_number=worker_number,
+                employer_number=employer_number,
+                salary_amount=salary,
+                vendor_id=worker.vendorId,
+                worker_name=worker.name,
+                employer_id=referred_employer.id,
+                worker_id=worker.id,
+                date_of_onboarding=current_date(),
+                referralCode=referral_code
+            )
+            
+            db.execute(insert_stmt)
+            db.commit()
+            
+            # Generate employment contract
+            try:
+                userControllers.generate_employment_contract(
+                    employerNumber=employer_number,
+                    workerNumber=worker_number,
+                    upi=worker.upi_id or "",
+                    accountNumber=worker.accountNumber or "",
+                    ifsc=worker.ifsc or "",
+                    panNumber=worker.panNumber,
+                    name=worker.name,
+                    salary=salary,
+                    db=db
+                )
+                
+                return {
+                    "success": True,
+                    "referral_verified": True,
+                    "worker_added": True,
+                    "message": f"✅ Great News! Your Worker Referral Code is Verified!\n🎊 Worker {worker.name} has been successfully onboarded.\n\nWhat happens next:\nStep 1: Make your first payment\nStep 2: Receive YOUR referral code\nStep 3: Start earning ₹150 for every friend you refer!"
+                }
+                
+            except Exception as contract_error:
+                return {
+                    "success": True,
+                    "referral_verified": True,
+                    "worker_added": True,
+                    "message": f"✅ Referral Code Verified and Worker {worker.name} added successfully. However, there was an issue generating the contract: {str(contract_error)}"
+                }
+        
+        # If only referral code provided (no worker details)
         return {
             "success": True,
-            "message": "Referral Code has been Verified",
+            "referral_verified": True,
+            "worker_added": False,
+            "message": "✅ Great News! Your Worker Referral Code is Verified!\n🎊 What happens next:\nStep 1: Make your first payment\nStep 2: Receive YOUR referral code\nStep 3: Start earning ₹150 for every friend you refer!"
         }
+        
     except Exception as e:
+        db.rollback()
         return {
             "success": False,
             "message": f"Error processing referral code: {str(e)}"
         }
+    finally:
+        db.close()
 
 
 def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
@@ -555,7 +674,8 @@ get_worker_by_name_and_employer_tool = StructuredTool.from_function(
 process_referral_code_tool = StructuredTool.from_function(
     func=process_referral_code,
     name="process_referral_code",
-    description="Process referral code when employer onboards worker. Validates referral code and updates referral mapping."
+    description="Process referral code and optionally add worker to employer if worker already exists. Pass worker_number and salary only when confirming an existing worker.",
+    args_schema=ProcessReferralCodeInput
 )
 
 confirm_worker_and_add_to_employer_tool = StructuredTool.from_function(
