@@ -507,27 +507,19 @@ class SuperAgent:
         """Fallback response generation"""
         if intent_analysis.primary_intent in ["greeting", "general_conversation"]:
             if any(word in user_message.lower() for word in ["hello", "hi", "hey"]):
-                response_text = """Hello! 👋 I'm your domestic worker management assistant. 
-
-I can help you with:
-• **View Your Workers** - See all your workers and their details
-• **Worker Onboarding** - Add new workers, collect their details (UPI, bank info, PAN, salary)
-• **Cash Advances** - Manage advances, repayments, bonuses, and deductions
-• **Payment Links** - Generate salary payment links
-• **Worker Management** - Update and track worker information
-
-What would you like to do today?"""
+                response_text = """Hello! 😊 Think of me as your household staff-management buddy. Whether you need to pay the cook, onboard the new driver, or sort out an advance - I'm here to help! What can I do for you?"""
+            
             elif any(word in user_message.lower() for word in ["help", "what can you do"]):
                 response_text = """I'm here to help with your domestic worker management needs! Here's what I can assist you with:
-
-🔹 **Worker Information**
-   - View all your workers and their current status
-   - Check worker details like salary, leaves, and onboarding dates
 
 🔹 **Worker Onboarding**
    - Add new workers to your system
    - Collect UPI or bank account details
    - Gather PAN numbers and salary information
+   
+🔹 **Worker Information**
+   - View all your workers and their current status
+   - Check worker details like salary, leaves, and onboarding dates
 
 🔹 **Cash Advance Management**
    - Process cash advance requests
@@ -542,7 +534,7 @@ What would you like to do today?"""
 
 Just tell me what you need help with, and I'll take care of it!"""
             else:
-                response_text = "I understand you'd like to chat! While I'm here to help with domestic worker management tasks, feel free to let me know if you need assistance with viewing your workers, worker onboarding, cash advances, or payment processing."
+                response_text = "I understand you'd like to chat! While I'm here to help with domestic worker management tasks, feel free to let me know if you need assistance with worker onboarding, viewing your workers, cash advances, or payment processing."
         else:
             response_text = "I'm here to help! Please let me know what you'd like assistance with regarding domestic worker management, viewing worker details, onboarding, or cash advances."
 
