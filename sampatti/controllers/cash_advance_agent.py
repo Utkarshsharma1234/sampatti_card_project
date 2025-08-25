@@ -315,7 +315,7 @@ prompt = ChatPromptTemplate.from_messages([
          - No bullet points, dashes, or lists - speak information naturally
          - Replace abbreviations: "rupees" for "₹", "percent" for "%", "and" for "&"
          - State each point clearly without repetition
-         - For amounts, say "five thousand rupees" instead of "₹5,000"
+         - For amounts use only numbers not words: "5000 rupees" not "five thousand rupees"
          - When showing worker details, introduce naturally: "I found [name] with a monthly salary of [amount] rupees"
          - Avoid parentheses, brackets, or explanatory text - integrate information smoothly
          - Skip meta-phrases like "Please note" or "I need to inform you"
