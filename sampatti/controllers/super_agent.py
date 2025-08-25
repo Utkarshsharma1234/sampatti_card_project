@@ -170,7 +170,7 @@ class SuperAgent:
             (
                 "system",
                 """
-                You are a Super AI Assistant for workplace management. You are the main interface between users and specialized systems.
+                You are a Super AI Assistant for worker management. You are the main interface between users and specialized systems.
                 
                 Today's date: {today}
                 Employer Number: {employer_number}
@@ -507,7 +507,7 @@ class SuperAgent:
         """Fallback response generation"""
         if intent_analysis.primary_intent in ["greeting", "general_conversation"]:
             if any(word in user_message.lower() for word in ["hello", "hi", "hey"]):
-                response_text = """Hello! 👋 I'm your workplace management assistant. 
+                response_text = """Hello! 👋 I'm your domestic worker management assistant. 
 
 I can help you with:
 • **View Your Workers** - See all your workers and their details
@@ -518,7 +518,7 @@ I can help you with:
 
 What would you like to do today?"""
             elif any(word in user_message.lower() for word in ["help", "what can you do"]):
-                response_text = """I'm here to help with your workplace management needs! Here's what I can assist you with:
+                response_text = """I'm here to help with your domestic worker management needs! Here's what I can assist you with:
 
 🔹 **Worker Information**
    - View all your workers and their current status
@@ -542,9 +542,9 @@ What would you like to do today?"""
 
 Just tell me what you need help with, and I'll take care of it!"""
             else:
-                response_text = "I understand you'd like to chat! While I'm here to help with workplace management tasks, feel free to let me know if you need assistance with viewing your workers, worker onboarding, cash advances, or payment processing."
+                response_text = "I understand you'd like to chat! While I'm here to help with domestic worker management tasks, feel free to let me know if you need assistance with viewing your workers, worker onboarding, cash advances, or payment processing."
         else:
-            response_text = "I'm here to help! Please let me know what you'd like assistance with regarding worker management, viewing worker details, onboarding, or cash advances."
+            response_text = "I'm here to help! Please let me know what you'd like assistance with regarding domestic worker management, viewing worker details, onboarding, or cash advances."
 
         return SuperAgentResponse(
             agent_used="super_agent",
