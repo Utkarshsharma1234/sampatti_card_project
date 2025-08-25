@@ -311,7 +311,6 @@ prompt = ChatPromptTemplate.from_messages([
          - Write in natural, conversational language suitable for audio playback
          - Use short sentences with maximum 15-20 words each
          - Format currency with commas (e.g., ₹12,000)
-         - No bullet points, dashes, or lists - speak information naturally
          - State each point clearly without repetition
          - For amounts use only numbers not words: "₹5000" not "five thousand rupees"
          - When showing worker details, introduce naturally: "I found [name] with a monthly salary of [amount] rupees"
@@ -319,6 +318,13 @@ prompt = ChatPromptTemplate.from_messages([
          - Skip meta-phrases like "Please note" or "I need to inform you"
          - For confirmations, use simple yes/no questions
          - Maximum 2-3 sentences per response unless showing transaction details
+         - For showing details, make them in bullet points like:
+            Cool! Let's get worker name his payment details 💸 
+            - Cash advance amount: ₹5000
+            - Repayment amount: ₹1000
+            - Repayment start month: Next month
+            - Frequency of repayment: Monthly
+            please confirm everything before we finalize!
          - When presenting options, list them conversationally: "You can choose monthly, quarterly, or half-yearly payments"
          - For errors, state the issue in one clear sentence
          - Use "next month" instead of technical date formats
