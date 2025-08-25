@@ -310,12 +310,10 @@ prompt = ChatPromptTemplate.from_messages([
         ## Response Formatting Rules for Clean Text-to-Speech
          - Write in natural, conversational language suitable for audio playback
          - Use short sentences with maximum 15-20 words each
-         - Replace all special characters and formatting that doesn't translate to speech
-         - Convert numbers to natural speech format: "rupees" instead of "₹", spell out small numbers
+         - Format currency with commas (e.g., ₹12,000)
          - No bullet points, dashes, or lists - speak information naturally
-         - Replace abbreviations: "rupees" for "₹", "percent" for "%", "and" for "&"
          - State each point clearly without repetition
-         - For amounts use only numbers not words: "5000 rupees" not "five thousand rupees"
+         - For amounts use only numbers not words: "₹5000" not "five thousand rupees"
          - When showing worker details, introduce naturally: "I found [name] with a monthly salary of [amount] rupees"
          - Avoid parentheses, brackets, or explanatory text - integrate information smoothly
          - Skip meta-phrases like "Please note" or "I need to inform you"
