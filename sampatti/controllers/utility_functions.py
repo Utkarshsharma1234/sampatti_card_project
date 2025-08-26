@@ -475,6 +475,78 @@ def translate_text_sarvam(text: str, source_language: str, target_language: str)
         print(f"Translation error: {e}")
         return text
 
+def send_audio_sarvam(sample_output: str, employerNumber: int, user_language: str):
+    try:
+        load_dotenv()
+
+        # Set up file paths
+        output_directory = os.path.join(os.getcwd(), "output")
+        os.makedirs(output_directory, exist_ok=True)
+
+        mp3_file_path = os.path.join(output_directory, "output.mp3")
+        ogg_file_path = os.path.join(output_directory, "output.ogg")
+
+        # Sarvam.ai TTS API endpoint
+        url = "https://api.sarvam.ai/text-to-speech"
+
+        headers = {
+            "api-subscription-key": os.getenv("SARVAM_API_KEY")  # <-- store key in .env
+        }
+
+        data = {
+            "text": sample_output,
+            "target_language_code": user_language,
+            "speaker": "manisha",
+            "pitch": 0.1,
+            "pace": 0.9,
+            "loudness": 0.6,
+            "speech_sample_rate": "22050",
+            "enable_preprocessing": True,
+            "model": "bulbul:v2"
+        }
+
+        # Make API request
+        response = requests.post(url, headers=headers, json=data)
+
+        if response.status_code == 200:
+            # Sarvam.ai returns audio content directly (binary)
+            with open(mp3_file_path, 'wb') as f:
+                f.write(response.content)
+            print(f"Audio saved as: {mp3_file_path}")
+
+            # Convert MP3 to OGG
+            convert_mp3_to_ogg(mp3_file_path, ogg_file_path)
+
+            # Send via WhatsApp
+            mediaIdObj = whatsapp_message.generate_audio_media_id("output.ogg", output_directory)
+            audioMediaId = mediaIdObj["id"]
+            whatsapp_message.send_whatsapp_audio(audioMediaId, employerNumber)
+
+            # Clean up files
+            try:
+                if os.path.exists(mp3_file_path):
+                    os.remove(mp3_file_path)
+                if os.path.exists(ogg_file_path):
+                    os.remove(ogg_file_path)
+                print("Audio files cleaned up successfully")
+            except Exception as e:
+                print(f"Error cleaning up files: {e}")
+
+            return {"MESSAGE": "AUDIO SENT SUCCESSFULLY."}
+
+        else:
+            error_message = f"Sarvam.ai API error: {response.status_code}"
+            if response.headers.get('content-type') == 'application/json':
+                error_message += f" - {response.json()}"
+            else:
+                error_message += f" - {response.text}"
+            raise Exception(error_message)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate audio: {str(e)}")
+
+
+
 
 def send_audio(sample_output: str, employerNumber: int):
     
