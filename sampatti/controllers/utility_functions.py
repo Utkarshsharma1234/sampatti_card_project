@@ -490,7 +490,7 @@ def send_audio_sarvam(sample_output: str, employerNumber: int, user_language: st
         url = "https://api.sarvam.ai/text-to-speech"
 
         headers = {
-            "api-subscription-key": os.getenv("SARVAM_API_KEY")  # <-- store key in .env
+            "api-subscription-key": sarvam_api_key
         }
 
         data = {
