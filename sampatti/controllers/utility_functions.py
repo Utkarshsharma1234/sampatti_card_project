@@ -509,9 +509,18 @@ def send_audio_sarvam(sample_output: str, employerNumber: int, user_language: st
         response = requests.post(url, headers=headers, json=data)
 
         if response.status_code == 200:
-            # Sarvam.ai returns audio content directly (binary)
+            result = response.json()
+
+            if "audios" not in result or len(result["audios"]) == 0:
+                raise Exception("Sarvam.ai response missing 'audios'")
+
+            # Decode base64 audio
+            audio_base64 = result["audios"][0]
+            audio_bytes = base64.b64decode(audio_base64)
+
+            # Save as MP3
             with open(mp3_file_path, 'wb') as f:
-                f.write(response.content)
+                f.write(audio_bytes)
             print(f"Audio saved as: {mp3_file_path}")
 
             # Convert MP3 to OGG
