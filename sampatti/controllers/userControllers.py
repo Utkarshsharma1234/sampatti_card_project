@@ -287,6 +287,8 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     decoded_string = html.unescape(order_note_string)
     order_note = json.loads(decoded_string)
 
+    print("Order Note:", order_note)
+
     new_entry = models.SalaryDetails(id = generate_unique_id(), employerNumber = employerNumber, worker_id = item.worker_id, employer_id = item.employer_id, totalAmount = order_info["order_amount"], salary = order_note["salary"], bonus = order_note["bonus"], cashAdvance = order_note["cashAdvance"], repayment = order_note["repayment"], attendance = order_note["attendance"], month = month, year = year, order_id = orderId, deduction= order_note["deduction"])
 
     db.add(new_entry)
@@ -624,10 +626,12 @@ def send_audio_message(text : str, user_language : str, employerNumber : int):
     static_dir = "audio_files"
     print(f"user_language in send_audio_message: {user_language}")
     if user_language == "en-IN" or user_language is None:
-        return send_audio_sarvam(text, employerNumber, user_language=="en-IN")
+        return send_audio(text, employerNumber)
+        #return send_audio_sarvam(text, employerNumber, user_language=="en-IN")
     else:
         translated_text = translate_text_sarvam(text, "en-IN", user_language)
-        return send_audio_sarvam(translated_text, employerNumber, user_language)
+        return send_audio(translated_text, employerNumber)
+        #return send_audio_sarvam(translated_text, employerNumber, user_language)
 
 
 def update_worker_salary(employerNumber : int, workerName : str, salary : int, db : Session):
