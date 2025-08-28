@@ -489,6 +489,10 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
         db.execute(update_statement)
         db.commit()
 
+        print("Order created successfully: ", response)
+        print("JSON Response: ", response.json())
+        return response
+
     except Exception as e:
         print(e)
 
