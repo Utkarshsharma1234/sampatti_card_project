@@ -850,6 +850,7 @@ def generate_payment_link_func(
         
         # Make API call
         response = requests.get(url, params=payload)
+        print("JSON Response: ", response.json())
         
         if response.status_code == 200:
             return {
