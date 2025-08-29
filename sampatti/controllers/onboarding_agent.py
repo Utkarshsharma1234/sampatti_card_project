@@ -81,7 +81,7 @@ prompt = ChatPromptTemplate.from_messages(
             IMPORTANT ONBOARDING SEQUENCE:
 
             A. IF WORKER EXISTS IN DATABASE (found via get_worker_details):
-            1. Show worker details to employer with masked sensitive information:
+            1. Show worker details to employer with masked sensitive information(very sensitive):
                 - Name: Show full name
                 - PAN: Show only last 4 characters (e.g., ******1234)
                 - Bank Account: Show only last 4 digits (e.g., ******7890)
@@ -98,7 +98,7 @@ prompt = ChatPromptTemplate.from_messages(
                     - Show the success message returned by the tool
                     - if user provide the
                 d. If no referral code provided:
-                    - Call `confirm_worker_and_add_to_employer` tool (without referral)
+                    - Call `confirm_worker_and_add_to_employer` tool (if no referral code is provided then for referral_code use empty string)
                     - Show: "Worker has been successfully onboarded"
             4. If not confirmed, continue with normal onboarding process (B)
 
