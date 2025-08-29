@@ -289,36 +289,109 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
 
     print("Order Note:", order_note)
 
-    new_entry = models.SalaryDetails(id = generate_unique_id(), employerNumber = employerNumber, worker_id = item.worker_id, employer_id = item.employer_id, totalAmount = order_info["order_amount"], salary = order_note["salary"], bonus = order_note["bonus"], cashAdvance = order_note["cashAdvance"], repayment = order_note["repayment"], attendance = order_note["attendance"], month = month, year = year, order_id = orderId, deduction= order_note["deduction"])
+    new_entry = models.SalaryDetails(
+        id=generate_unique_id(),
+        employerNumber=employerNumber,
+        worker_id=item.worker_id,
+        employer_id=item.employer_id,
+        totalAmount=order_info["order_amount"],
+        salary=order_note["salary"],
+        bonus=order_note["bonus"],
+        cashAdvance=order_note["cashAdvance"],
+        repayment=order_note["repayment"],
+        attendance=order_note["attendance"],
+        month=month,
+        year=year,
+        order_id=orderId,
+        deduction=order_note["deduction"]
+    )
 
     db.add(new_entry)
     db.commit()
     db.refresh(new_entry)
 
+    # Also record this month's adjustment in SalaryManagementRecords for traceability
+    try:
+        existing_ca = db.query(models.CashAdvanceManagement).filter(
+            models.CashAdvanceManagement.worker_id == item.worker_id,
+            models.CashAdvanceManagement.employer_id == item.employer_id
+        ).first()
 
-    if order_note["repayment"] > 0:
-
-        existing_cash_advance_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
-
-
-        existing_repayment = existing_cash_advance_entry.monthlyRepayment
-        existing_advance = existing_cash_advance_entry.cashAdvance
-
-        cash = existing_advance - order_note["repayment"]
-        repayment = existing_repayment
-        startMonth = existing_cash_advance_entry.repaymentStartMonth
-        startYear = existing_cash_advance_entry.repaymentStartYear
-
-        if cash <= 0:
-            cash = 0
-            repayment = 0
-            startMonth = "sampatti"
-            startYear = 0
-
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).values(cashAdvance = cash, monthlyRepayment = repayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear)
-
-        db.execute(update_statement)
+        smr = models.SalaryManagementRecords(
+            id=generate_unique_id(),
+            worker_id=item.worker_id,
+            employer_id=item.employer_id,
+            currentMonthlySalary=order_note["salary"],
+            modifiedMonthlySalary=order_note["salary"],
+            cashAdvance=order_note["cashAdvance"],
+            repaymentAmount=order_note["repayment"],
+            repaymentStartMonth=(order_note.get("repaymentStartMonth") if order_note.get("repaymentStartMonth") is not None else (existing_ca.repaymentStartMonth if existing_ca else None)),
+            repaymentStartYear=(order_note.get("repaymentStartYear") if order_note.get("repaymentStartYear") is not None else (existing_ca.repaymentStartYear if existing_ca else None)),
+            frequency=(order_note.get("frequency") if order_note.get("frequency") is not None else (existing_ca.frequency if existing_ca else 1)),
+            bonus=order_note["bonus"],
+            deduction=order_note["deduction"],
+            chatId="",
+            date_issued_on=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        db.add(smr)
         db.commit()
+    except Exception as e:
+        print(f"Warning creating SalaryManagementRecords: {e}")
+        db.rollback()
+
+    # If this payment includes a new cash advance and no existing record, create it now
+    try:
+        existing_ca_check = db.query(models.CashAdvanceManagement).filter(
+            models.CashAdvanceManagement.worker_id == item.worker_id,
+            models.CashAdvanceManagement.employer_id == item.employer_id
+        ).first()
+        if order_note.get("cashAdvance") > 0 and existing_ca_check is None:
+            new_ca = models.CashAdvanceManagement(
+                id=generate_unique_id(),
+                worker_id=item.worker_id,
+                employer_id=item.employer_id,
+                cashAdvance=order_note.get("cashAdvance", 0),
+                repaymentAmount=order_note.get("repayment", 0),
+                repaymentStartMonth=order_note.get("repaymentStartMonth"),
+                repaymentStartYear=order_note.get("repaymentStartYear"),
+                frequency=order_note.get("frequency", 1),
+                chatId=""
+            )
+            db.add(new_ca)
+            db.commit()
+    except Exception as e:
+        print(f"Warning creating CashAdvanceManagement: {e}")
+        db.rollback()
+
+    # If repayment happened, decrement outstanding cash advance correctly
+    if order_note["repayment"] > 0:
+        existing_cash_advance_entry = db.query(models.CashAdvanceManagement).filter(
+            models.CashAdvanceManagement.worker_id == item.worker_id,
+            models.CashAdvanceManagement.employer_id == item.employer_id
+        ).first()
+
+        if existing_cash_advance_entry:
+            existing_repayment = existing_cash_advance_entry.repaymentAmount or 0
+            existing_advance = existing_cash_advance_entry.cashAdvance or 0
+
+            remaining_cash = max(existing_advance - order_note["repayment"], 0)
+            # If fully paid, reset repayment params; else keep as is
+            new_repayment = existing_repayment if remaining_cash > 0 else 0
+            new_start_month = existing_cash_advance_entry.repaymentStartMonth if remaining_cash > 0 else None
+            new_start_year = existing_cash_advance_entry.repaymentStartYear if remaining_cash > 0 else None
+
+            update_statement = update(models.CashAdvanceManagement).where(
+                models.CashAdvanceManagement.worker_id == item.worker_id,
+                models.CashAdvanceManagement.employer_id == item.employer_id
+            ).values(
+                cashAdvance=remaining_cash,
+                repaymentAmount=new_repayment,
+                repaymentStartMonth=new_start_month,
+                repaymentStartYear=new_start_year
+            )
+
+            db.execute(update_statement)
+            db.commit()
 
 
 
@@ -627,7 +700,7 @@ def send_audio_message(text : str, user_language : str, employerNumber : int):
     print(f"user_language in send_audio_message: {user_language}")
     if user_language == "en-IN" or user_language is None:
         return send_audio(text, employerNumber)
-        #return send_audio_sarvam(text, employerNumber, user_language=="en-IN")
+        #return send_audio_sarvam(text, employerNumber, user_language=="en-IN")f
     else:
         translated_text = translate_text_sarvam(text, "en-IN", user_language)
         return send_audio(translated_text, employerNumber)

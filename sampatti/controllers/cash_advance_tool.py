@@ -828,10 +828,18 @@ def generate_payment_link_func(
     deduction: int = 0,
     repayment: int = 0,
     monthly_salary: int = 0,
+    repayment_start_month: int | None = None,
+    repayment_start_year: int | None = None,
+    frequency: int = 1,
+    attendance: int = 30,
 ) -> dict:
-    """Generate payment link by calling the cash advance API."""
+    """Generate payment link by calling the cash advance API.
+
+    IMPORTANT: Do not write to DB before payment. This only creates a Cashfree order
+    embedding all details (cash advance, repayment, schedule, bonus, deduction)
+    in the order_note for webhook processing after payment.
+    """
     try:
-        worker_name = worker_name.lower()
 
         # API endpoint
         url = "https://conv.sampatticards.com/cashfree/cash_advance_link"
@@ -844,15 +852,22 @@ def generate_payment_link_func(
             "repayment_amount": repayment,
             "monthly_salary": monthly_salary,
             "bonus": bonus,
-            "deduction": deduction
+            "deduction": deduction,
+            "repayment_start_month": repayment_start_month,
+            "repayment_start_year": repayment_start_year,
+            "frequency": frequency,
+            "attendance": attendance
         }
+        # Drop None values to avoid FastAPI parse issues
+        payload = {k: v for k, v in payload.items() if v is not None}
         print("Print Payload: ", payload)
         
         # Make API call
         response = requests.get(url, params=payload)
-        print("JSON Response: ", response.json())
         
         if response.status_code == 200:
+            
+            
             return {
                 "success": True,
                 "message": "Payment link generated and sent successfully",
@@ -1027,7 +1042,11 @@ mark_advance_as_paid_func_tool = StructuredTool.from_function(
 generate_payment_link_func_tool = StructuredTool.from_function(
     func=generate_payment_link_func,
     name="generate_payment_link",
-    description="Generate payment link by calling the cash advance API."
+    description=(
+        "Generate payment link (no DB writes). Provide: employer_number, worker_name, "
+        "cash_advance, repayment, repayment_start_month, repayment_start_year, frequency, "
+        "monthly_salary, bonus, deduction, attendance. The webhook updates DB on payment."
+    ),
 )
 
 store_salary_management_records_tool = StructuredTool.from_function(

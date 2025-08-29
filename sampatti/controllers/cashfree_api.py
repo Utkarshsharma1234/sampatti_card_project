@@ -432,7 +432,20 @@ def bank_account_verification(account_number : str, ifsc_code : str):
     return response_data
 
 
-def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int, repayment_amount : int, monthly_salary : int, bonus : int, deduction : int, db : Session):
+def cash_advance_link(
+    employerNumber: int,
+    workerName: str,
+    cash_advance: int,
+    repayment_amount: int,
+    monthly_salary: int,
+    bonus: int,
+    deduction: int,
+    repayment_start_month: int | None,
+    repayment_start_year: int | None,
+    frequency: int,
+    attendance: int,
+    db: Session,
+):
 
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -461,7 +474,17 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
 
     item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
 
-    note = {'salary' : monthly_salary, 'cashAdvance' : cash_advance, 'bonus' : bonus, 'repayment' : repayment_amount, 'deduction' : deduction, 'attendance' : 30}
+    note = {
+        'salary': monthly_salary,
+        'cashAdvance': cash_advance,
+        'bonus': bonus,
+        'repayment': repayment_amount,
+        'deduction': deduction,
+        'attendance': attendance,
+        'repaymentStartMonth': repayment_start_month,
+        'repaymentStartYear': repayment_start_year,
+        'frequency': frequency,
+    }
 
     order_splits = [
         {
@@ -479,19 +502,28 @@ def cash_advance_link(employerNumber : int, workerName : str, cash_advance : int
         api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
         response = dict(api_response.data)
         payment_session_id = response["payment_session_id"]
+        
+        # Extract values that are JSON serializable
+        clean_response = {
+            "cf_order_id": str(response.get("cf_order_id", "")),
+            "order_id": str(response.get("order_id", "")),
+            "order_amount": float(response.get("order_amount", 0)),
+            "order_status": response.get("order_status", ""),
+            "payment_session_id": response.get("payment_session_id", ""),
+            "order_note": response.get("order_note", ""),
+        }
 
         send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
 
         update_statement = update(models.worker_employer).where(
-            (models.worker_employer.c.worker_name == workerName) & 
-            (models.worker_employer.c.employer_number == str(employerNumber))
+            (models.worker_employer.c.worker_name == workerName) &
+            (models.worker_employer.c.employer_number == employerNumber)
         ).values(order_id=response["order_id"])
         db.execute(update_statement)
         db.commit()
 
-        print("Order created successfully: ", response)
-        print("JSON Response: ", response.json())
-        return response
+        print("Order created successfully:", clean_response)
+        return clean_response   # ✅ Always return clean JSON dict
 
     except Exception as e:
         print(e)
