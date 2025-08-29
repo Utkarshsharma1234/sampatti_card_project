@@ -570,7 +570,7 @@ def send_audio(sample_output: str, employerNumber: int):
         ogg_file_path = os.path.join(output_directory, "output.ogg")
         
         # ElevenLabs API endpoint with output format
-        url = "https://api.elevenlabs.io/v1/text-to-speech/2bNrEsM0omyhLiEyOwqY?output_format=mp3_44100_128"
+        url = "https://api.elevenlabs.io/v1/text-to-speech/6JsmTroalVewG1gA6Jmw?output_format=mp3_44100_128"
         
         headers = {
             "xi-api-key": os.getenv("ELEVENLABS_API_KEY")
