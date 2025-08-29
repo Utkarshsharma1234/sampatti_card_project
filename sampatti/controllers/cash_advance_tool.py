@@ -255,30 +255,30 @@ def get_existing_cash_advance_func(worker_id: str, employer_id: str) -> dict:
     """Get existing cash advance record for a worker and employer."""
     db = next(get_db())
     try:
-        existing_record = db.query(models.CashAdvanceManagement).where(
+        cash_advance_record = db.query(models.CashAdvanceManagement).filter(
             models.CashAdvanceManagement.worker_id == worker_id,
             models.CashAdvanceManagement.employer_id == employer_id
         ).first()
 
-        monthly_salary = db.query(worker_employer).where(
-            worker_employer.c.worker_id == worker_id,
-            worker_employer.c.employer_id == employer_id
+        worker_employer = db.query(models.worker_employer).filter(
+            models.worker_employer.c.worker_id == worker_id,
+            models.worker_employer.c.employer_id == employer_id
         ).first()
-        
-        print("Existing Record:", existing_record)
-        print("monthly_salary:", monthly_salary)
 
-        if existing_record:
+        print("Cash Advance Record:", cash_advance_record)
+        print("monthly_salary:", worker_employer.salary_amount)
+
+        if cash_advance_record:
             return {
                 "found": True,
-                "record_id": existing_record.id,
-                "cashAdvance": existing_record.cashAdvance,
-                "repaymentAmount": existing_record.repaymentAmount,
-                "repaymentStartMonth": existing_record.repaymentStartMonth,
-                "repaymentStartYear": existing_record.repaymentStartYear,
-                "frequency": existing_record.frequency,
-                "chatId": existing_record.chatId,
-                "monthly_salary": monthly_salary.monthly_salary
+                "record_id": cash_advance_record.id,
+                "cashAdvance": cash_advance_record.cashAdvance,
+                "repaymentAmount": cash_advance_record.repaymentAmount,
+                "repaymentStartMonth": cash_advance_record.repaymentStartMonth,
+                "repaymentStartYear": cash_advance_record.repaymentStartYear,
+                "frequency": cash_advance_record.frequency,
+                "chatId": cash_advance_record.chatId,
+                "monthly_salary": worker_employer.salary_amount
             }
         else:
             return {"found": False}
