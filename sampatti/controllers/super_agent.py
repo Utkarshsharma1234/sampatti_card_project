@@ -755,7 +755,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 if word_count > 20:
                     #send_message_user(employer_number, response)
                     display_user_message_on_xbotic(employer_number, response)
-                    send_audio_message(response, user_language, employer_number)
+                    send_audio_message(response, user_language=None, employer_number=employer_number)
                     return f"MESSAGE SENT SUCCESSFULLY: {response}" 
                 else:
                     # Send as regular text message for shorter responses
