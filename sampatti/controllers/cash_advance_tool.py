@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from .utility_functions import call_sarvam_api
 from ..database import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
 from .. import models
 
@@ -870,12 +871,97 @@ def generate_payment_link_func(
         response = requests.get(url, params=payload)
         
         if response.status_code == 200:
+            response_data = response.json()
+            order_id = response_data.get("order_id")
+            order_amount = int(response_data.get("order_amount"))
             
+            # Calculate total salary (should match what cash_advance_link calculates)
+            total_salary = cash_advance + bonus + monthly_salary - repayment - deduction
             
+            print(f"Order Amount & Order ID: {order_amount}, {order_id}")
+
+            if order_id:
+                # If order_id is present, store it in the database
+                db = next(get_db())
+                try:
+                    # Get worker and employer details
+                    worker_employer = db.query(models.worker_employer).filter(
+                        models.worker_employer.c.employer_number == employer_number,
+                        func.lower(models.worker_employer.c.worker_name) == func.lower(worker_name)
+                    ).first()
+                    
+                    if not worker_employer:
+                        return {
+                            "success": False,
+                            "error": "Worker-Employer relationship not found"
+                        }
+                    
+                    # Get current date for date_issued_on
+                    from datetime import datetime
+                    current_date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    # Create new salary management record
+                    new_salary_management = SalaryManagementRecords(
+                        id=str(uuid.uuid4()),
+                        worker_id=worker_employer.worker_id,
+                        employer_id=worker_employer.employer_id,
+                        currentMonthlySalary=monthly_salary,  # Original monthly salary
+                        modifiedMonthlySalary=order_amount,  # Total amount to be paid
+                        cashAdvance=cash_advance,
+                        repaymentAmount=repayment,
+                        repaymentStartMonth=repayment_start_month,
+                        repaymentStartYear=repayment_start_year,
+                        frequency=frequency,
+                        bonus=bonus,
+                        deduction=deduction,
+                        date_issued_on=current_date_str,
+                        order_id=order_id,
+                        payment_status="pending"  # Initial status is pending
+                    )
+                    
+                    db.add(new_salary_management)
+                    
+                    # If there's cash advance or repayment, also create CashAdvanceManagement record
+                    if cash_advance > 0 or repayment > 0:
+                        new_cash_advance_record = CashAdvanceManagement(
+                            id=str(uuid.uuid4()),
+                            worker_id=worker_employer.worker_id,
+                            employer_id=worker_employer.employer_id,
+                            cashAdvance=cash_advance,
+                            repaymentAmount=repayment,
+                            repaymentStartMonth=repayment_start_month,
+                            repaymentStartYear=repayment_start_year,
+                            frequency=frequency,
+                            chatId=None,  # Set this if you have chat context
+                            order_id=order_id,
+                            payment_status="PENDING",
+                            date_issued_on=current_date_str
+                        )
+                        db.add(new_cash_advance_record)
+                        print(f"Cash advance record created with advance: {cash_advance}, repayment: {repayment}")
+                    
+                    db.commit()
+                    print(f"Records saved successfully with order_id: {order_id}")
+                    
+                except Exception as e:
+                    db.rollback()
+                    print(f"Error saving records: {e}")
+                    return {
+                        "success": False,
+                        "error": f"Failed to save records: {str(e)}"
+                    }
+                finally:
+                    db.close()
+
             return {
                 "success": True,
                 "message": "Payment link generated and sent successfully",
-                "response": response.json()
+                "order_id": order_id,
+                "order_amount": order_amount,
+                "total_salary": total_salary,
+                "cash_advance": cash_advance,
+                "repayment": repayment,
+                "response": response_data
             }
         else:
             return {
