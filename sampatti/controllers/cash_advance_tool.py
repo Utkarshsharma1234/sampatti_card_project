@@ -13,6 +13,7 @@ from .utility_functions import call_sarvam_api
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
+from .. import models
 
 
 
@@ -254,9 +255,9 @@ def get_existing_cash_advance_func(worker_id: str, employer_id: str) -> dict:
     """Get existing cash advance record for a worker and employer."""
     db = next(get_db())
     try:
-        existing_record = db.query(CashAdvanceManagement).filter(
-            CashAdvanceManagement.worker_id == worker_id,
-            CashAdvanceManagement.employer_id == employer_id
+        existing_record = db.query(models.CashAdvanceManagement).where(
+            models.CashAdvanceManagement.worker_id == worker_id,
+            models.CashAdvanceManagement.employer_id == employer_id
         ).first()
 
         monthly_salary = db.query(worker_employer).where(
@@ -264,6 +265,9 @@ def get_existing_cash_advance_func(worker_id: str, employer_id: str) -> dict:
             worker_employer.c.employer_id == employer_id
         ).first()
         
+        print("Existing Record:", existing_record)
+        print("monthly_salary:", monthly_salary)
+
         if existing_record:
             return {
                 "found": True,
