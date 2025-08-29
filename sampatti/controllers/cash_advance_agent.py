@@ -68,26 +68,28 @@ prompt = ChatPromptTemplate.from_messages([
         CONVERSATION WORKFLOW:
 
         1. WORKER CONTEXT CHECK:
-           - First, analyze chat history to see if a worker is already selected for this conversation
-           - Look for patterns like "Found 1 worker", "Working with [Worker Name]", or previous worker selections
-           - If chat history shows a worker is already selected, continue with that worker context
-           - Only call check_workers_for_employer tool in these specific cases:
+           - First, analyze chat history to see if a worker is already selected
+           - Only call check_workers_for_employer tool in these cases:
              * No chat history exists (first interaction)
              * Chat history doesn't contain any worker selection
-             * User explicitly asks to "change worker" or "switch worker" or similar type phrases.
+             * User explicitly asks to "change worker" or "switch worker"
              * User mentions a different worker name than what's in history
-           - If calling check_workers_for_employer:
-             * Single worker found: Store worker name in conversation context and proceed
-             * Multiple workers found: Ask user to specify worker name, then store selection
-             * No workers found: Inform user and end conversation
+           - Tool returns:
+             * Single worker: Proceed with that worker
+             * Multiple workers: Ask user to specify
+             * No workers: End conversation politely
 
-        2. WORKER LOOKUP & VERIFICATION:
-           - Use get_worker_by_name_and_employer tool to find worker
-           - Extract current monthly salary from database for all calculations
-           - Confirm worker identity: "I found [Worker Name] with monthly salary of ₹[Amount]. Is this correct?"
+         2. WORKER LOOKUP & ID EXTRACTION:
+           CRITICAL: Always use get_worker_by_name_and_employer to get worker_id and employer_id
+           - Input: worker_name (from user or history), employer_number
+           - Returns: worker_id, employer_id, worker_name, salary_amount
+           - STORE these IDs for all subsequent tool calls
+           - Display to user: "I found [worker_name] with monthly salary of ₹[salary_amount]"
+           - NEVER show worker_id or employer_id to user
+
 
         3. EXISTING CASH ADVANCE CHECK:
-           - ALWAYS use get_existing_cash_advance tool after finding worker
+            ALWAYS use get_existing_cash_advance after getting worker_id and employer_id (Input: worker_id, employer_id (NOT employer_number))
            - If existing advance found: "I see [Worker Name] already has a cash advance of ₹[Amount]. Do you still want to proceed with a new request?"
            - If user confirms: Continue with new request
            - If no existing advance: Proceed directly with the cash advance given by the user and ask them to provide the repayment amount, repayment start month and year, frequency with the given cash advance amount.
@@ -173,21 +175,33 @@ prompt = ChatPromptTemplate.from_messages([
            - Always ask: "Would you like me to generate the updated salary payment link?"
            - If yes, use generate_payment_link_func_tool with correct parameters
 
-        TOOL USAGE MAPPING:
-        - Worker context check: check_workers_for_employer (only when no worker in chat history or user requests change)
-        - Worker lookup: get_worker_by_name_and_employer (when worker name is known from history or user input)
-        - Check existing advance: get_existing_cash_advance
-        - Store new advance: store_cash_advance_data_func tool
-        - Update existing advance: update_cash_advance_data_func tool
-        - Update salary: update_salary tool
-        - Store combined data: store_combined_data_func tool
-        - Generate payment link: generate_payment_link_func tool
-        - Record previously given advance: mark_advance_as_paid_func tool
-        - Store bonus/deduction: update_salary_details_func tool
-        - Combined data: store_combined_data_func tool
-        - Mark as paid: mark_advance_as_paid_func tool
-        - Salary update: update_salary tool
-        - Show all: get_all_cash_advances_for_employer
+        TOOL USAGE MAPPING - WHEN TO USE EACH TOOL:
+           A. check_workers_for_employer:
+              - Use ONLY when: No worker in chat history OR user wants to change worker
+              - Input: employer_number
+              - Returns: worker count and details
+              - Action: Identify which worker to work with
+           B. get_worker_by_name_and_employer:
+              - Use ALWAYS after worker is identified
+              - Input: worker_name, employer_number
+              - Returns: worker_id, employer_id, salary_amount
+              - Action: Extract IDs for other tools
+           C. get_existing_cash_advance:
+              - Use ALWAYS after getting worker_id and employer_id
+              - Input: worker_id, employer_id (NOT employer_number)
+              - Returns: Cash advance details with payment_status
+              - payment_status: "SUCCESS" means payment has been successfully processed and "PENDING" means the payment is yet to be processed.
+              - Action: Check existing advances before new operations
+           D. update_salary:
+              - Use ONLY for base salary changes
+              - Input: employer_number, worker_name, new_salary
+              - Action: Updates worker's monthly salary
+              - Note: This creates SalaryManagementRecords entry
+           E. generate_payment_link:
+              - Use for ALL payment operations (advances, bonuses, deductions)
+              - Input: employer_number, worker_name, amounts, dates
+              - Action: Creates payment order
+              - Note: Webhook updates CashAdvanceManagement and SalaryManagementRecords after payment
         
         PAYMENT LINK USAGE:#######
         - New cash advance: (cash_advance=amount, repayment=0, salary_amount=db_salary, worker_name=name) if repayment starts in next month or later
