@@ -486,6 +486,8 @@ def send_audio_sarvam(sample_output: str, employerNumber: int, user_language: st
         mp3_file_path = os.path.join(output_directory, "output.mp3")
         ogg_file_path = os.path.join(output_directory, "output.ogg")
 
+        print("User Language: ", user_language)
+
         # Sarvam.ai TTS API endpoint
         url = "https://api.sarvam.ai/text-to-speech"
 
