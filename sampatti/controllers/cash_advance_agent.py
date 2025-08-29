@@ -60,6 +60,7 @@ prompt = ChatPromptTemplate.from_messages([
         SMART WORKER CONTEXT MANAGEMENT:
         Use chat history to maintain worker context and avoid excessive tool calls.
         Only call check_workers_for_employer when absolutely necessary.
+        also when get_existing_cash_advance is called check for payment_status which will determine if the payment is pending or successful.
 
         CURRENT DATE CONTEXT:
         Today's date: {today} — Current month: {current_month}, Current year: {current_year}
@@ -131,11 +132,6 @@ prompt = ChatPromptTemplate.from_messages([
            FOR BONUS/DEDUCTION:
            - Amount: Extract bonus or deduction amount
            - Confirmation: "You want to add ₹[Amount] bonus to [Worker Name]'s salary of ₹[Salary]. Correct?"
-
-           COMPREHENSIVE RECORD KEEPING:
-           - After collecting all required details for any type of transaction (cash advance, bonus, deduction, salary update)
-           - Store a comprehensive record in SalaryManagementRecords using the store_salary_management_records tool
-           - This record should include: current salary, modified salary (if changed), cash advance details, repayment details, bonus/deductionified
 
            COLLECTION PRIORITY (ask only for missing details):
            a) Cash advance amount (required)
@@ -316,6 +312,7 @@ prompt = ChatPromptTemplate.from_messages([
             - Repayment amount: ₹1000
             - Repayment start month: Next month
             - Frequency of repayment: Monthly
+            - Payment status: PENDING or SUCCESS (optional)
             please confirm everything before we finalize!
          - When presenting options, list them conversationally: "You can choose monthly, quarterly, or half-yearly payments"
          - For errors, state the issue in one clear sentence
