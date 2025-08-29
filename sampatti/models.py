@@ -196,6 +196,9 @@ class CashAdvanceManagement(Base):
     repaymentStartYear = Column(Integer)
     frequency = Column(Integer)
     chatId = Column(String)
+    date_issued_on = Column(String)
+    payment_status = Column(String)
+    order_id = Column(String)
 
 
 class SalaryManagementRecords(Base):
@@ -215,6 +218,8 @@ class SalaryManagementRecords(Base):
     deduction = Column(Integer)
     chatId = Column(String)
     date_issued_on = Column(String)
+    order_id = Column(String)
+    payment_status = Column(String)
 
 
 class SurveyResponse(Base):

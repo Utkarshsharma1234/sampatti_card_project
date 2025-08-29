@@ -320,11 +320,11 @@ prompt = ChatPromptTemplate.from_messages([
 
 # Register tools with the agent (no pre-payment DB writes)
 tools = [
-    check_workers_for_employer_tool,
-    get_worker_by_name_and_employer_tool,
-    get_existing_cash_advance_tool,
-    generate_payment_link_func_tool,
-    update_salary_tool,
+   check_workers_for_employer_tool,
+   get_worker_by_name_and_employer_tool,
+   get_existing_cash_advance_tool,
+   generate_payment_link_func_tool,
+   update_salary_tool,
 ]
 
 agent = create_tool_calling_agent(
