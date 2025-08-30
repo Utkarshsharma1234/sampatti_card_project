@@ -284,7 +284,10 @@ def payment_link_generation(db : Session):
             total_salary = item.salary_amount
             number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
 
-            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days}
+            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days,
+            'repaymentStartMonth': "September",
+            'repaymentStartYear': 2025,
+            'frequency': 1}
 
             order_splits = [
                 {

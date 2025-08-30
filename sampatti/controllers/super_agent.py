@@ -747,27 +747,25 @@ Just tell me what you need help with, and I'll take care of it!"""
             )
             
             print(f"💾 Stored conversation with agent: {agent_used}")
-
+            display_user_message_on_xbotic(employer_number, response)
             # Send the response based on message type
             if type_of_message=="text":
-                print("MESSAGE SENT SUCCESSFULLY: ", response)
+                
                 word_count = len(response.split())
-                if word_count > 20:
+                if word_count > 30:
                     #send_message_user(employer_number, response)
-                    display_user_message_on_xbotic(employer_number, response)
                     send_audio_message(response, "en-IN", employer_number)
-                    return f"MESSAGE SENT SUCCESSFULLY: {response}" 
+                    print("MESSAGE SENT SUCCESSFULLY: ", response)
+                    return response
                 else:
                     # Send as regular text message for shorter responses
-                    display_user_message_on_xbotic(employer_number, response)
-                    return f"MESSAGE SENT SUCCESSFULLY: {response}"
+                    print("MESSAGE SENT SUCCESSFULLY: ", response)
+                    return response
 
             if type_of_message=="audio":
-                print("MESSAGE SENT SUCCESSFULLY: ", response) 
-                #send_message_user(employer_number, response)
-                display_user_message_on_xbotic(employer_number, response)
                 send_audio_message(response, user_language, employer_number)
-                return f"MESSAGE SENT SUCCESSFULLY: {response}"
+                print("MESSAGE SENT SUCCESSFULLY: ", response) 
+                return response
                 
         except Exception as e:
             error_message = f"I apologize, but I encountered an error while processing your request. Please try again."

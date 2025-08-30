@@ -21,9 +21,9 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_groq import ChatGroq
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
 from .cash_advance_tool import (
-    check_workers_for_employer_tool,
-    get_worker_by_name_and_employer_tool,
-    get_existing_cash_advance_tool,
+    fetch_all_workers_linked_to_employer_tool,
+    fetch_worker_employer_relation_tool,
+    fetch_existing_cash_advance_details_tool,
     generate_payment_link_func_tool,
     update_salary_tool,
 )
@@ -67,7 +67,7 @@ prompt = ChatPromptTemplate.from_messages([
 
         1. INITIAL WORKER CHECK (MANDATORY FIRST STEP):
            When user starts conversation or changes topic:
-           - ALWAYS call check_workers_for_employer_tool first
+           - ALWAYS call fetch_all_workers_linked_to_employer_tool first
            - This returns number of workers linked to employer
            - Response patterns:
              * No workers: "No workers found. Please add workers first."
@@ -77,7 +77,7 @@ prompt = ChatPromptTemplate.from_messages([
 
         2. WORKER SELECTION & DETAILS FETCH:
            After user confirms or selects worker:
-           - Call get_worker_by_name_and_employer_tool with selected worker name
+           - Call fetch_worker_employer_relation_tool with selected worker name
            - This returns: worker_id, employer_id, worker_name, salary_amount
            - Store worker_name in conversation context for future use
            - Display: "Great! I'm working with [worker_name] who has a monthly salary of ₹[salary_amount]"
@@ -90,7 +90,7 @@ prompt = ChatPromptTemplate.from_messages([
         3. CASH ADVANCE FLOW:
            When user wants to give cash advance:
            a) First check existing advances:
-              - Call get_existing_cash_advance_tool (use worker_id and employer_id from step 2)
+              - Call fetch_existing_cash_advance_details_tool (use worker_id and employer_id from step 2)
               - Check payment_status field:
                 * If payment_status="PENDING": "There's a pending cash advance of ₹[amount] awaiting payment. Please complete that first."
                 * If payment_status="SUCCESS": "There's an active cash advance of ₹[amount]. Do you want to give additional advance?"
@@ -182,17 +182,17 @@ prompt = ChatPromptTemplate.from_messages([
 
         TOOL USAGE RULES:
 
-        1. check_workers_for_employer_tool:
+        1. fetch_all_workers_linked_to_employer_tool:
            - ALWAYS call this FIRST for any new conversation
            - Input: employer_number
            - Use to identify available workers
 
-        2. get_worker_by_name_and_employer_tool:
+        2. fetch_worker_employer_relation_tool:
            - Call AFTER worker is selected/confirmed
            - Input: worker_name, employer_number
            - Returns IDs needed for other tools
 
-        3. get_existing_cash_advance_tool:
+        3. fetch_existing_cash_advance_details_tool:
            - Call BEFORE creating new cash advance
            - Input: worker_id, employer_id (from step 2)
            - Check payment_status field:
@@ -243,7 +243,7 @@ prompt = ChatPromptTemplate.from_messages([
         - Confirm each detail before proceeding
 
         CRITICAL REMINDERS:
-        - ALWAYS start with check_workers_for_employer_tool
+        - ALWAYS start with fetch_all_workers_linked_to_employer_tool
         - ALWAYS check payment_status before new advances
         - ALWAYS ask about monthly salary inclusion
         - For "paid earlier": Set cash_advance=0 in payment link
@@ -268,9 +268,9 @@ prompt = ChatPromptTemplate.from_messages([
 
 # Register tools with the agent (no pre-payment DB writes)
 tools = [
-   check_workers_for_employer_tool,
-   get_worker_by_name_and_employer_tool,
-   get_existing_cash_advance_tool,
+   fetch_all_workers_linked_to_employer_tool,
+   fetch_worker_employer_relation_tool,
+   fetch_existing_cash_advance_details_tool,
    generate_payment_link_func_tool,
    update_salary_tool,
 ]
@@ -314,6 +314,7 @@ def get_sorted_chat_history(employer_number: int) -> str:
 
     return sorted_text
 
+
 def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str):
     """Main function to execute cash advance queries using AI agent"""
     sorted_history = get_sorted_chat_history(employer_number)
@@ -356,22 +357,13 @@ def queryE(employer_number: int, typeofMessage: str, query: str, mediaId: str):
         # Store conversation in memory
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         # Send response based on message type
-        if typeofMessage == "text":
-            print("Assistant Response: ", assistant_response)
-            return assistant_response 
-        elif typeofMessage == "audio":
-            return assistant_response
-            
+        return assistant_response 
+    
     except Exception as e:
         error_message = "I encountered an error while processing your request. Please try again."
         print("Error in queryE:", e)
         
         # Store error in conversation memory
         store_conversation(employer_number, f"User: {full_query}\nAssistant: ERROR - {str(e)}")
-        
-        if typeofMessage == "text":
-            print("Error Response: ", error_message)
-            return error_message
-        elif typeofMessage == "audio":
-            return send_audio_message(error_message, "en-IN", employer_number)
+        return error_message
 
