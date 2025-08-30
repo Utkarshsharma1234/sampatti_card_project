@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import update
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from sqlalchemy import update
 from .. import schemas
 
@@ -472,7 +473,7 @@ def cash_advance_link(
 
     total_salary = cash_advance + bonus + monthly_salary - repayment_amount - deduction
 
-    item = db.query(models.worker_employer).filter(models.worker_employer.c.worker_name == workerName, models.worker_employer.c.employer_number == employerNumber).first()
+    item = db.query(models.worker_employer).filter(func.lower(models.worker_employer.c.worker_name) == workerName.strip().lower(), models.worker_employer.c.employer_number == employerNumber).first()
 
     note = {
         'salary': monthly_salary,
