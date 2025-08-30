@@ -239,10 +239,12 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     print("Order Note:", order_note)
     print("Order Info Bonus:", order_note["bonus"])
     print("Order Info Deduction:", order_note["deduction"])
-    print("Order Info Salary:", order_info["salary"])
-    print("Order Info Cash Advance:", order_info["cashAdvance"])
-    print("Order Info Repayment:", order_info["repayment"])
+    print("Order Info Salary:", order_note["salary"])
+    print("Order Info Cash Advance:", order_note["cashAdvance"])
+    print("Order Info Repayment:", order_note["repayment"])
     employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, order_note["salary"], order_note["cashAdvance"], order_note["bonus"], order_note["repayment"], order_note["attendance"], order_info["order_amount"], order_note["deduction"], db)
+
+    print("generated employer invoice")
 
     employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{month}_{year}.pdf"
     object_name = f"employerInvoices/{employer_invoice_name}"
@@ -254,6 +256,7 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
 
     print("uploaded")
+    print("Order Info: ", order_info)
     whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=transaction.worker_name, param3=order_info["order_amount"], link_param=employer_invoice_name, template_name="employer_invoice_message")
 
     print("message")
