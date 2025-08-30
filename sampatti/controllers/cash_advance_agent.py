@@ -56,6 +56,7 @@ prompt = ChatPromptTemplate.from_messages([
         - Each employer has a unique employer number for identification
         - Worker details are stored in worker_employer database table
         - Cash advances are tracked in CashAdvanceManagement table with payment_status ("SUCCESS" or "PENDING")
+        - If employer have already payment_status="PENDING" and employer wanted to create or update a new cash advance, inform them about the pending status first and ask for confirmation to proceed and create a new cash advance according to their requirements.
         - All salary changes are recorded in SalaryManagementRecords table
         - Payment links generate orders that update payment_status after completion
 
