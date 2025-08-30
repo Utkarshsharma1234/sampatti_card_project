@@ -887,7 +887,7 @@ def generate_payment_link_func(
                     # Get worker and employer details
                     worker_employer = db.query(models.worker_employer).filter(
                         models.worker_employer.c.employer_number == employer_number,
-                        func.lower(models.worker_employer.c.worker_name) == func.lower(worker_name)
+                        func.lower(models.worker_employer.c.worker_name) == worker_name.strip().lower()
                     ).first()
                     
                     if not worker_employer:
