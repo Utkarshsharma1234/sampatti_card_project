@@ -236,6 +236,12 @@ def send_employer_invoice(employerNumber : int, orderId : str, db : Session):
     decoded_string = html.unescape(order_note_string)
     order_note = json.loads(decoded_string)
 
+    print("Order Note:", order_note)
+    print("Order Info Bonus:", order_note["bonus"])
+    print("Order Info Deduction:", order_note["deduction"])
+    print("Order Info Salary:", order_info["salary"])
+    print("Order Info Cash Advance:", order_info["cashAdvance"])
+    print("Order Info Repayment:", order_info["repayment"])
     employer_invoice_gen.employer_invoice_generation(transaction.employer_number, transaction.worker_number, transaction.employer_id, transaction.worker_id, order_note["salary"], order_note["cashAdvance"], order_note["bonus"], order_note["repayment"], order_note["attendance"], order_info["order_amount"], order_note["deduction"], db)
 
     employer_invoice_name = f"{transaction.employer_number}_INV_{transaction.worker_number}_{month}_{year}.pdf"
