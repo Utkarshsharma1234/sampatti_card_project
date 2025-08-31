@@ -654,7 +654,7 @@ def send_audio_message(text : str, user_language : str, employerNumber : int):
     static_dir = "audio_files"
     print(f"user_language in send_audio_message: {user_language}")
     if user_language == "en-IN" or user_language is None:
-        return send_audio(text, employerNumber, user_language)
+        return send_audio(text, employerNumber)
         #return send_audio_sarvam(text, employerNumber, "en-IN")
     else:
         translated_text = translate_text_sarvam(text, "en-IN", user_language)
