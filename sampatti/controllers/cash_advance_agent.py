@@ -212,7 +212,7 @@ prompt = ChatPromptTemplate.from_messages([
 
         PAYMENT STATUS HANDLING:
         - Always check payment_status before new transactions
-        - PENDING status blocks new advances until payment completed
+        - PENDING status means payment is not done by employer just yet
         - SUCCESS status means payment was made and advance is active
         - Inform user clearly about any pending payments
 
@@ -226,7 +226,7 @@ prompt = ChatPromptTemplate.from_messages([
 
         ERROR HANDLING:
         - No workers: Guide to add workers first
-        - Pending payment: Block new advances, ask to complete payment
+        - Pending payment: state pending payment status and ask if user wants to complete payment or modify request and generate new payment link
         - Worker not found: Show available workers
         - Invalid input: Ask for clarification
 
@@ -242,6 +242,7 @@ prompt = ChatPromptTemplate.from_messages([
         - Ask one question at a time
         - Use "next month" instead of technical dates
         - Confirm each detail before proceeding
+        - for worker number just show in number format, don't include any commas
 
         CRITICAL REMINDERS:
         - ALWAYS start with fetch_all_workers_linked_to_employer_tool
@@ -250,7 +251,6 @@ prompt = ChatPromptTemplate.from_messages([
         - For "paid earlier": Set cash_advance=0 in payment link
         - Check if repayment_start_month = current_month to determine if repayment is due now
         - NEVER skip confirmation step
-        - NEVER create manual database records
         - Payment link handles all database updates via webhook
 
         REPAYMENT LOGIC FOR PAYMENT LINK:
