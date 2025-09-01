@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field, root_validator
 import uuid
 from typing import Optional
 from langchain.tools import StructuredTool
-import requests, os, tempfile
+import requests, os, tempfile, json
+import asyncio
 from pydub import AudioSegment
 from urllib.parse import urlparse
 from .utility_functions import call_sarvam_api
@@ -62,13 +63,9 @@ def get_employer_workers_info(employer_number: int):
         workers_data.append({
             "worker_number": row.worker_number,
             "worker_name": row.worker_name,
-            "worker_id": row.worker_id,
             "salary_amount": row.salary_amount,
             "monthly_leaves": row.monthly_leaves,
             "date_of_onboarding": row.date_of_onboarding,
-            "status": row.status,
-            "order_id": row.order_id,
-            "vendor_id": row.vendor_id
         })
 
     response = {
