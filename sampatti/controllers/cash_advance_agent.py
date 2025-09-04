@@ -132,7 +132,7 @@ prompt = ChatPromptTemplate.from_messages([
         5. PAYMENT LINK GENERATION:
            After confirmation:
            - Call generate_payment_link_func_tool with correct parameters based on scenario
-           - Response: "Payment link has been sent to your WhatsApp!"
+           - Response: "Payment link has been sent!"
            - Note: Database records are created with payment_status="PENDING"
 
         PAYMENT LINK USAGE PATTERNS:

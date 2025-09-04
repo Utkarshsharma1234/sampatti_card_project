@@ -207,7 +207,7 @@ def add_vendor_to_cashfree():
         vendor = schemas.Vendor(
             vpa = vpa if vpa else "None",
             workerNumber=int(worker_number),
-            name=bank_worker_name,
+            name=pan_worker_name,
             pan=pan_number,
             accountNumber=f"{account_number}" if account_number else "None",
             ifsc=ifsc_code if account_number else "None",
