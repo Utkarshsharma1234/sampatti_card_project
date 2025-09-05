@@ -559,7 +559,7 @@ def send_audio_sarvam(sample_output: str, employerNumber: int, user_language: st
 
 
 
-def send_audio(sample_output: str, employerNumber: int):
+def send_audio(sample_output: str, employerNumber: int, user_language: str):
     
     try:
         load_dotenv()
@@ -571,8 +571,15 @@ def send_audio(sample_output: str, employerNumber: int):
         mp3_file_path = os.path.join(output_directory, "output.mp3")
         ogg_file_path = os.path.join(output_directory, "output.ogg")
         
+        if user_language is None or user_language == "" or user_language == "en-IN":
+            user_language = "en"
+            print("User Language: ", user_language) # voice_id= 1qEiC6qsybMkmnNdVMbK
+            url = "https://api.elevenlabs.io/v1/text-to-speech/1qEiC6qsybMkmnNdVMbK?output_format=mp3_44100_128"
+        else:
+            print("User Language: ", user_language)
+            url = "https://api.elevenlabs.io/v1/text-to-speech/2bNrEsM0omyhLiEyOwqY?output_format=mp3_44100_128"
+            
         # ElevenLabs API endpoint with output format
-        url = "https://api.elevenlabs.io/v1/text-to-speech/2bNrEsM0omyhLiEyOwqY?output_format=mp3_44100_128"
         
         headers = {
             "xi-api-key": os.getenv("ELEVENLABS_API_KEY")
