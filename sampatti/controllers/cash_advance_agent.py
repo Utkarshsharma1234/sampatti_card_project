@@ -81,7 +81,7 @@ prompt = ChatPromptTemplate.from_messages([
            - Call fetch_worker_employer_relation_tool with selected worker name
            - This returns: worker_id, employer_id, worker_name, salary_amount
            - Store worker_name in conversation context for future use
-           - Display: "Great! I'm working with [worker_name] who has a monthly salary of ₹[salary_amount]"
+           - Display: "Great! I'm working with [worker_name] who has a monthly salary of [salary_amount]"
            - Ask: "What would you like to do for [worker_name]? You can:
              - Give cash advance
              - Add bonus
@@ -93,8 +93,8 @@ prompt = ChatPromptTemplate.from_messages([
            a) First check existing advances:
               - Call fetch_existing_cash_advance_details_tool (use worker_id and employer_id from step 2)
               - Check payment_status field:
-                * If payment_status="PENDING": "There's a pending cash advance of ₹[amount] awaiting payment. Please complete that first."
-                * If payment_status="SUCCESS": "There's an active cash advance of ₹[amount]. Do you want to give additional advance?"
+                * If payment_status="PENDING": "There's a pending cash advance of [amount] awaiting payment. Please complete that first."
+                * If payment_status="SUCCESS": "There's an active cash advance of [amount]. Do you want to give additional advance?"
                 * If no record found: Proceed to collect details
 
            b) Collect cash advance details in order:
@@ -109,7 +109,7 @@ prompt = ChatPromptTemplate.from_messages([
               - "Do you want to apply any deduction this month?"
 
            d) Monthly salary inclusion:
-              - CRITICAL: "Do you want to include the monthly salary of ₹[salary_amount] in this payment?"
+              - CRITICAL: "Do you want to include the monthly salary of [salary_amount] in this payment?"
               - If YES: Set monthly_salary = salary_amount from database
               - If NO: Set monthly_salary = 0
               - This determines if regular salary is paid along with advance
@@ -118,13 +118,13 @@ prompt = ChatPromptTemplate.from_messages([
            Before generating payment link, show complete summary:
            ```
            Payment Summary for [worker_name]:
-           - Cash advance: ₹[amount]
-           - Repayment: ₹[repayment_amount] [frequency_words]
+           - Cash advance: [amount]
+           - Repayment: [repayment_amount] [frequency_words]
            - Repayment starts: [month_name] [year]
-           - Bonus: ₹[bonus] (if any)
-           - Deduction: ₹[deduction] (if any)
-           - Monthly salary: ₹[monthly_salary or 0]
-           - Total payment: ₹[calculated_total]
+           - Bonus: [bonus] (if any)
+           - Deduction: [deduction] (if any)
+           - Monthly salary: [monthly_salary or 0]
+           - Total payment: [calculated_total]
            
            Is this correct?
            ```
@@ -152,7 +152,7 @@ prompt = ChatPromptTemplate.from_messages([
            - Collect: original advance amount, when given, repayment details
            - Parameters: cash_advance=0, repayment=repayment_amount (if due), monthly_salary=user_choice
            - Logic: Advance already given in cash, only process repayment
-           - Display: "Recording that ₹[amount] advance was already given. Setting up repayment schedule."
+           - Display: "Recording that [amount] advance was already given. Setting up repayment schedule."
 
         4. BONUS ONLY:
            - Parameters: cash_advance=0, bonus=amount, monthly_salary=user_choice, worker_name=name
@@ -179,7 +179,7 @@ prompt = ChatPromptTemplate.from_messages([
         5. Calculate if repayment is due this month
         6. Generate link with cash_advance=0 (since already paid)
         7. Include repayment only if due in current month
-        8. Confirm: "I'll record that you already gave ₹[amount] advance. The repayment of ₹[repayment] will start from [month]."
+        8. Confirm: "I'll record that you already gave [amount] advance. The repayment of [repayment] will start from [month]."
 
         TOOL USAGE RULES:
 
@@ -237,7 +237,8 @@ prompt = ChatPromptTemplate.from_messages([
 
         ## Response Formatting Rules:
         - Use short, clear sentences (15-20 words max)
-        - Format currency with commas (₹12,000)
+        - Format currency with commas (12,000)
+        - don't use special characters like ₹, %, $, &, #, @, *, etc.
         - Show summaries in bullet points
         - Ask one question at a time
         - Use "next month" instead of technical dates
