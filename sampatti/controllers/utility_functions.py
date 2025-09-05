@@ -571,7 +571,7 @@ def send_audio(sample_output: str, employerNumber: int, user_language: str):
         mp3_file_path = os.path.join(output_directory, "output.mp3")
         ogg_file_path = os.path.join(output_directory, "output.ogg")
         
-        if user_language is None or user_language == "" or user_language == "en-IN":
+        if user_language is None or user_language == "" or user_language == "en-IN" or user_language == "en":
             user_language = "en"
             print("User Language: ", user_language) # voice_id= 1qEiC6qsybMkmnNdVMbK
             url = "https://api.elevenlabs.io/v1/text-to-speech/1qEiC6qsybMkmnNdVMbK?output_format=mp3_44100_128"
