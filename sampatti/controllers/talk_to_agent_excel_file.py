@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from .utility_functions import current_date
 from .. import models
+from .utility_functions import generate_unique_id
 
 # Load environment variables from .env file
 load_dotenv()
@@ -207,7 +208,7 @@ def add_vendor_to_cashfree():
         vendor = schemas.Vendor(
             vpa = vpa if vpa else "None",
             workerNumber=int(worker_number),
-            name=bank_worker_name,
+            name=pan_worker_name,
             pan=pan_number,
             accountNumber=f"{account_number}" if account_number else "None",
             ifsc=ifsc_code if account_number else "None",
@@ -361,6 +362,34 @@ def create_relations_in_db(db : Session):
                     actual_worker_id = "worker_id"
                     actual_vendor_id = vendorId
                     print(f"[{idx}] Worker not found in database, using sheet values")
+                    
+                employer_obj = db.query(models.Employer).filter(
+                    models.Employer.employerNumber == employer_number
+                ).first()
+
+                if employer_obj:
+                    actual_employer_id = employer_obj.id
+                    print(f"[{idx}] Using existing employer - employer_id: {actual_employer_id}")
+                else:
+                    # Create new Employer
+                    actual_employer_id = generate_unique_id()
+                    new_employer = models.Employer(
+                        id=actual_employer_id,
+                        employerNumber=employer_number,
+                        referralCode=referral_code,
+                        cashbackAmountCredited=0,
+                        FirstPaymentDone=False,
+                        accountNumber='',
+                        ifsc='',
+                        upiId='',
+                        numberofReferral=0,
+                        totalPaymentAmount=0,
+                        beneficiaryId=''
+                    )
+                    db.add(new_employer)
+                    db.commit()
+                    db.refresh(new_employer)
+                    print(f"[{idx}] Created new employer - employer_id: {actual_employer_id}")
                 
                 relation = schemas.Worker_Employer(
                     workerNumber = worker_number,
@@ -368,7 +397,7 @@ def create_relations_in_db(db : Session):
                     salary = salary,
                     vendorId = actual_vendor_id,
                     worker_name = worker_name,
-                    employer_id = "employer_id",
+                    employer_id = actual_employer_id,
                     worker_id = actual_worker_id,
                     referralCode = referral_code
                 )

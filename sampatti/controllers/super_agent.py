@@ -754,7 +754,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 word_count = len(response.split())
                 if word_count > 30:
                     #send_message_user(employer_number, response)
-                    send_audio_message(response, "en-IN", employer_number)
+                    send_audio_message(response, "en", employer_number)
                     print("MESSAGE SENT SUCCESSFULLY: ", response)
                     return response
                 else:
