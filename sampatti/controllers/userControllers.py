@@ -18,7 +18,7 @@ import google.generativeai as genai
 from PIL import Image
 from io import BytesIO
 import json
-import logging
+import logging, random
 
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
@@ -1615,16 +1615,14 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
-        if not employer.FirstPaymentDone:
-            continue
+        if employer.FirstPaymentDone:
 
-        # Generate a new referral code
-        new_referral_code = str(uuid.uuid4())
-
-        # Update the employer record with the new referral code
-        employer.referralCode = new_referral_code
-        db.commit()
-        db.refresh(employer)
-
-        # Send the referral code to the employer
-        send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, new_referral_code, employer.upiId, db)
+            random_digits = random.randint(1000, 9999)
+            
+            new_referral_code = f"SAMP{random_digits}EMP"
+            # Update the employer record with the new referral code
+            employer.referralCode = new_referral_code
+            db.commit()
+            db.refresh(employer)
+            # Send the referral code to the employer
+            send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, new_referral_code, employer.upiId, db)
