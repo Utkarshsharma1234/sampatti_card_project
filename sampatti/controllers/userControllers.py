@@ -1364,47 +1364,11 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
 
 def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, referral_code: str, upiId : str, db: Session) -> dict:
     try:
-        message1 = f"""🎉 Your Referral Code is Ready!
-
-Your referral code is live! 🎉
-
-Referral Code: *{referral_code}*
-
-Here's the deal. Share this. Friends get their workers on Sampatti for verified salary slips + benefits like affordable credit, insurance etc. You get ₹150.
-
-Simple math! 💰
-
-Plus you're literally helping workers build financial futures. Win-win energy right there.
-
-Ready? Forwarding the perfect message next! 🚀
-            """
-            
-        message2 = f"""So. I started using Sampatti for my house help.
-
-Game changer! 🔥
-
-She gets real salary slips now. Building Social Security. The confidence boost? Unreal.
-
-Your worker deserves this too, no?
-
-My code: *{referral_code}*
-
-Try it: https://wa.me/919880081292?text=Hi
-
-Let's upgrade this whole thing! ✨
-        """
-
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
         beneficiary_id = employer.beneficiaryId
 
-        whatsapp_message.send_message_user(
-            employer_number, 
-            message1
-        )
-        whatsapp_message.send_message_user(
-            employer_number, 
-            message2
-        )
+        whatsapp_message.send_referral_message_to_employer(employer_number, "referral_template_1", referral_code)
+        whatsapp_message.send_referral_message_to_employer(employer_number, "referral_template_2", referral_code)
 
         print("Beneficiary in Process")
         if beneficiary_id is None or beneficiary_id == "":
@@ -1618,7 +1582,7 @@ def generate_and_send_referral_code_to_employers(db : Session) :
         if employer.FirstPaymentDone:
 
             random_digits = random.randint(1000, 9999)
-            
+
             new_referral_code = f"SAMP{random_digits}EMP"
             # Update the employer record with the new referral code
             employer.referralCode = new_referral_code

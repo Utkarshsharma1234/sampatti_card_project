@@ -350,3 +350,45 @@ def display_user_message_on_xbotic(employee_number, text: str):
             'error': str(e),
             'status_code': response.status_code if 'response' in locals() else None
         }
+
+
+def send_referral_message_to_employer(employerNumber, template_name, referral_code):
+
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": template_name,
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": referral_code
+                        }
+                    ]
+                }
+            ],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")

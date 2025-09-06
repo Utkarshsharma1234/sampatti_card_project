@@ -503,3 +503,4 @@ fetch_all_workers_linked_to_employer_tool = StructuredTool.from_function(
     name="fetch_all_workers_linked_to_employer",
     description="Fetch all workers linked to an employer. If single worker, returns worker details and prompts for salary action. If multiple workers, asks user to specify worker name."
 )
+

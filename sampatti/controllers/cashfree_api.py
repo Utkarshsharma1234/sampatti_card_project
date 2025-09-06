@@ -560,14 +560,11 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
     try:
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
                 
-        beneficiary_id = str(uuid.uuid4()).replace('-', '_')
-        employer.beneficiaryId = str(beneficiary_id)
-        
-        db.commit()
-        db.refresh(employer)
+        beneficiary_id = "BENEFICIARY_" + str(employer_number) + "_" + generate_unique_id(6)
         
         employer_number_str = str(employer_number)
-        if employer_number_str.startswith('91') and len(employer_number_str) > 10:
+        phone_number = ""
+        if len(employer_number_str) > 10 and employer_number_str.startswith('91'):
             phone_number = employer_number_str[2:]  # Remove first 2 digits (91)
         else:
             phone_number = employer_number_str
@@ -602,12 +599,22 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
         )
             
         if response.status_code == 200:
+
+            employer.beneficiaryId = str(beneficiary_id)
+            db.commit()
+            db.refresh(employer)
+            
             return {
                 "status": "success",
                 "beneficiary_id": beneficiary_id,
                 "message": "Beneficiary created successfully"
             }
         else:
+
+            employer.beneficiaryId = "BENEFICIARY_FAILED"
+            db.commit()
+            db.refresh(employer)
+        
             return {
                 "status": "error",
                 "message": f"Failed to create beneficiary: {response.text}"
