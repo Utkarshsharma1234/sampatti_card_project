@@ -298,7 +298,7 @@ class ProcessReferralCodeInput(BaseModel):
     worker_number: Optional[int] = None
     salary: Optional[int] = None
 
-def process_referral_code(employer_number: int, referral_code: str, worker_number: Optional[int] = None, salary: Optional[int] = None) -> dict:
+def process_referral_code(employer_number: int, referral_code: Optional[str] = None, worker_number: Optional[int] = None, salary: Optional[int] = None) -> dict:
     """
     Process referral code and optionally add worker to employer if worker already exists.
     

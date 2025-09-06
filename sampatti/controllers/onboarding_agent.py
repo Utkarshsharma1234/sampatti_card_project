@@ -90,27 +90,30 @@ prompt = ChatPromptTemplate.from_messages(
                     - Never show vendorId
                 2. Ask for confirmation: "Are these details correct?"
                 3. If confirmed:
-                    a. Ask for salary (mandatory)
-                    b. Ask for referral code (mandatory): "Do you have a referral code from another employer?"
-                    c. If referral code provided:
-                        - Call `process_referral_code` with employer_number, referral_code, worker_number, and salary
-                        - The tool will handle both referral validation AND worker onboarding in one step
-                        - Show the success message returned by the tool
-                        - if user provide the
-                    d. If no referral code provided:
-                        - Call `confirm_worker_and_add_to_employer` tool (if no referral code is provided then for referral_code use empty string)
-                        - Show: "Worker has been successfully onboarded"
+                    a. Ask for referral code (mandatory): "Do you have a referral code from another employer?"
+                    b. If referral code provided:
+                        - if the referral code is valid, show the success message returned by the tool and ask for salary
+                        - if the referral code is invalid, show the error message returned by the tool and ask for referral code again till user provides valid referral code or says no or does not have referral code
+                    c. If employer does not have referral code or says no:
+                        - Show message: "No problem, could you please provide the salary amount for the worker?"
+                    d. Ask for salary (mandatory)
+                        - the salary amount must be greater than 500 rupees and if not greater than 500 rupees
+                        - Call `process_referral_code` with employer_number, referral_code(if provided), worker_number, and salary
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Ask for UPI or bank details (not both)
                 2. Ask for PAN number
-                3. Ask for salary
-                4. Ask for referral code (mandatory)
-                5. If referral code provided:
+                3. Ask for referral code (mandatory)
+                4. If referral code provided:
                     - Call `process_referral_code` with ONLY employer_number and referral_code (no worker details)
-                    - Show the verification message returned by the tool and then call `onboard_worker_employer` tool with all collected information including the verified referral code
-                6. Call `onboard_worker_employer` with all collected information including the verified referral code(Always call this tool after collecting referral code if provided or not)
+                    - if the referral code is valid, show the success message returned by the tool
+                    - if the referral code is invalid, show the error message returned by the tool and ask for referral code again till user provides valid referral code or says no or does not have referral code
+                5. If employer does not have referral code or says no:
+                    - Show message: "No problem, could you please provide the salary amount for the worker?"
+                6. Ask for salary (mandatory)
+                    - the salary amount must be greater than 500 rupees and if not greater than 500 rupees
+                    - Call `onboard_worker_employer` with all collected details 
 
             REFERRAL SYSTEM:
             - Always ask for referral code after collecting salary
