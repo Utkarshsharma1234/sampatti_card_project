@@ -621,7 +621,7 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
 
     try:
         transfer_amount = amount 
-        transfer_id = f"CASHBACK_{beneficiary_id}_{generate_unique_id(6)}"
+        transfer_id = f"C_{beneficiary_id}"
         print("Transfer Amount: ", transfer_amount)
         print("Beneficiary ID: ", beneficiary_id)
             
