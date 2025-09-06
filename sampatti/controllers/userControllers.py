@@ -1576,6 +1576,12 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         
         print("Referring employer total referrals: ", referring_employer.numberofReferral)
         print("Existing Mapping")
+        
+        if referring_employer.beneficiaryId is None or referring_employer.beneficiaryId == "":
+            create_cashfree_beneficiary(employer_number=referring_employer.employerNumber, upi_id=referring_employer.upiId, db=db)
+            print("Beneficiary Created for referring employer")
+        else:
+            print("Beneficiary Already Present for referring employer")
 
         # Commit all changes
         db.commit()
