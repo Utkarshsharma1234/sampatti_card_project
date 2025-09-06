@@ -585,21 +585,19 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
             }
         }
 
-        header = {
+        headers = {
             "Content-Type": "application/json",
             "x-api-version": "2024-01-01",
             "x-client-id": verification_id,
             "x-client-secret": verification_secret
         }
-            
-        response = requests.post(
-            "https://api.cashfree.com/payout/beneficiary",
-            headers=header,
-            json=payload
-        )
-            
+
+        response = requests.post("https://api.cashfree.com/payout/beneficiary", headers=headers, json=payload)
+
+        print("Create Beneficiary Response: ", response.text)
         if response.status_code == 200:
 
+            print("Beneficiary created successfully.")
             employer.beneficiaryId = str(beneficiary_id)
             db.commit()
             db.refresh(employer)
@@ -611,6 +609,7 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
             }
         else:
 
+            print("Failed to create beneficiary.")
             employer.beneficiaryId = "BENEFICIARY_FAILED"
             db.commit()
             db.refresh(employer)
