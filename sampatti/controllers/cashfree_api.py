@@ -110,20 +110,20 @@ def add_a_vendor(request : schemas.Vendor):
 
     uuid_value = uuid.uuid4().hex
     payload = {
-    "vendor_id": uuid_value,
-    "status": "ACTIVE",
-    "name": request.name,
-    "email": "johndoe@gmail.com",
-    "phone": f"{request.workerNumber}",
-    "verify_account": True,
-    "dashboard_access": False,
-    "schedule_option": 1,
-    "kyc_details": {
-        "account_type": "INDIVIDUAL",
-        "business_type": "Education",
-        "pan": request.pan
+        "vendor_id": uuid_value,
+        "status": "ACTIVE",
+        "name": request.name,
+        "email": "johndoe@gmail.com",
+        "phone": f"{request.workerNumber}",
+        "verify_account": True,
+        "dashboard_access": False,
+        "schedule_option": 1,
+        "kyc_details": {
+            "account_type": "INDIVIDUAL",
+            "business_type": "Education",
+            "pan": request.pan
+        }
     }
-}
     
     if request.vpa:
         payload["upi"] = {
@@ -622,6 +622,8 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
     try:
         transfer_amount = amount 
         transfer_id = f"CASHBACK_{beneficiary_id}_{generate_unique_id(6)}"
+        print("Transfer Amount: ", transfer_amount)
+        print("Beneficiary ID: ", beneficiary_id)
             
         payload = {
             "transfer_id": transfer_id,

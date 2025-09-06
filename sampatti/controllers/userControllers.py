@@ -1379,7 +1379,9 @@ Plus you're literally helping workers build financial futures. Win-win energy ri
 Ready? Forwarding the perfect message next! 🚀
             """
             
-        message2 = f"""So. I started using Sampatti for my house help.
+        message2 = f"""Here is the message you can forward 
+        
+So. I started using Sampatti for my house help.
 
 Game changer! 🔥
 
@@ -1422,26 +1424,25 @@ Let's upgrade this whole thing! ✨
     except Exception as e:
         return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
 
-def send_message_to_referring_employee(employer_number: int, referral_code: str, employerNumber: int):
-    message = f"""
-        🎉 Great News! Your Referral Worked!
+def send_message_to_referring_employee(employer_number: int, referral_code: str, db: Session):
+    message = f"""🎉 Great News! Your Referral Worked!
 
-        Your referral code *{referral_code}* was just used by {employerNumber}! 
+Your referral code *{referral_code}* was just used by {employer_number}! 
 
-        ✅ *Cashback Alert*: ₹150 has been credited to your account!
+✅ *Cashback Alert*: ₹150 has been credited to your account!
 
-        You're making a real difference! By sharing Sampatti, you're helping domestic workers:
-        • Get verified salary slips
-        • Build their financial identity
-        • Access banking services
-        • Become financially independent
+You're making a real difference! By sharing Sampatti, you're helping domestic workers:
+• Get verified salary slips
+• Build their financial identity
+• Access banking services
+• Become financially independent
 
-        *Keep the momentum going!* 🚀
-        Share your code *{referral_code}* with more friends and employers. 
+*Keep the momentum going!* 🚀
+Share your code *{referral_code}* with more friends and employers. 
 
-        Every referral = ₹150 for you + A brighter future for a domestic worker 💪
+Every referral = ₹150 for you + A brighter future for a domestic worker 💪
 
-        Together, let's empower more workers and build a financially inclusive society!
+Together, let's empower more workers and build a financially inclusive society!
     """
 
     whatsapp_message.send_message_user(
@@ -1581,7 +1582,7 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         db.refresh(referred_employer)
         db.refresh(referring_employer)
 
-        transfer_cashback_amount(beneficiary_id=referring_employer.beneficiaryId, amount=CASHBACK_AMOUNT, transfer_mode="upi")
+        transfer_cashback_amount(referring_employer.beneficiaryId, CASHBACK_AMOUNT)
         
         referring_employee_number = referring_employer.employerNumber
         referral_code = referring_employer.referralCode
