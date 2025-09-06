@@ -1364,37 +1364,6 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
 
 def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, referral_code: str, upiId : str, db: Session) -> dict:
     try:
-        message1 = f"""🎉 Your Referral Code is Ready!
-
-Your referral code is live! 🎉
-
-Referral Code: *{referral_code}*
-
-Here's the deal. Share this. Friends get their workers on Sampatti for verified salary slips + benefits like affordable credit, insurance etc. You get ₹150.
-
-Simple math! 💰
-
-Plus you're literally helping workers build financial futures. Win-win energy right there.
-
-Ready? Forwarding the perfect message next! 🚀
-            """
-            
-        message2 = f"""Here is the message you can forward 
-        
-So. I started using Sampatti for my house help.
-
-Game changer! 🔥
-
-She gets real salary slips now. Building Social Security. The confidence boost? Unreal.
-
-Your worker deserves this too, no?
-
-My code: *{referral_code}*
-
-Try it: https://wa.me/919880081292?text=Hi
-
-Let's upgrade this whole thing! ✨
-        """
 
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
         beneficiary_id = employer.beneficiaryId
@@ -1418,7 +1387,7 @@ Let's upgrade this whole thing! ✨
     except Exception as e:
         return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
 
-def send_message_to_referring_employee(employer_number: int, referral_code: str, db: Session):
+def send_message_to_referring_employer(employer_number: int, referral_code: str, db: Session):
     message = f"""🎉 Great News! Your Referral Worked!
 
 Your referral code *{referral_code}* was just used by {employer_number}! 
@@ -1497,9 +1466,9 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
 
 
         # Generate new referral code for this employer
-        new_referral_code = generate_referral_code()
+        new_referral_code = f"SAMP{random.randint(1000, 9999)}EMP"
         while db.query(models.Employer).filter(models.Employer.referralCode == new_referral_code).first():
-            new_referral_code = generate_referral_code()
+            new_referral_code = f"SAMP{random.randint(1000, 9999)}EMP"
 
         # First payment processing
         # Update employer record with payment details
@@ -1535,7 +1504,7 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
 
         print("Referring employer: ", referring_employer)
         # Process cashback for referring employer
-        CASHBACK_AMOUNT = 1  # Fixed cashback amount
+        CASHBACK_AMOUNT = 150  # Fixed cashback amount
         referring_employer.cashbackAmountCredited += CASHBACK_AMOUNT
         referring_employer.numberofReferral += 1
 
@@ -1584,9 +1553,9 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
 
         transfer_cashback_amount(referring_employer.beneficiaryId, CASHBACK_AMOUNT)
         
-        referring_employee_number = referring_employer.employerNumber
+        referring_employer_number = referring_employer.employerNumber
         referral_code = referring_employer.referralCode
-        send_message_to_referring_employee(referring_employee_number, referral_code, employerNumber)
+        send_message_to_referring_employer(referring_employer_number, referral_code, employerNumber)
 
         print("Cashback Processed")
 
@@ -1616,6 +1585,9 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
+        if employer.employerNumber != 916378639230:
+            continue
+        
         if employer.FirstPaymentDone:
 
             random_digits = random.randint(1000, 9999)
