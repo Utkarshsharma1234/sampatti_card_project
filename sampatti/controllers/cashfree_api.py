@@ -594,6 +594,8 @@ def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session)
 
         response = requests.post("https://api.cashfree.com/payout/beneficiary", headers=headers, json=payload)
 
+        print("Response ", response)
+        print("Response Status Code: ", response.status_code)
         print("Create Beneficiary Response: ", response.text)
         if response.status_code == 200:
 
