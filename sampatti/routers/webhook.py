@@ -146,3 +146,28 @@ def process_orai_webhook(data: dict):
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
+        
+        
+@router.post("/cashfree_vendor_status")
+def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)):
+    try:
+        payload = request.json()
+        print("Webhook payload received:", payload)
+
+        vendor_id = payload['data'].get('vendor_id')
+        vendor_status = payload['data'].get('vendor_status')
+
+        if not vendor_id or not vendor_status:
+            raise HTTPException(status_code=400, detail="Missing vendor_id or vendor_status in payload")
+
+        print(f"Vendor ID: {vendor_id}")
+        print(f"Vendor Status: {vendor_status}")
+
+        #userControllers.update_vendor_status_in_db(vendor_id, vendor_status, db)
+        return {
+            "status": "success"
+        }
+
+    except Exception as e:
+        print(f"Error handling webhook: {e}")
+        raise HTTPException(status_code=400, detail="Error processing webhook data")
