@@ -131,6 +131,7 @@ def process_orai_webhook(data: dict):
                 forward_response = requests.post(forward_url, headers=headers, data=formatted_json)
                 print(f"Payload Data: {formatted_json}")
                 print(f"Forwarded payload to {forward_url}. Status: {forward_response.status_code}")
+                return
             except Exception as e:
                 print(f"Error forwarding to {forward_url}: {e}")
         
