@@ -1585,7 +1585,7 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
-        if employer.employerNumber != 916378639230:
+        if employer.employerNumber != 917665292549:
             continue
         
         if employer.FirstPaymentDone:
