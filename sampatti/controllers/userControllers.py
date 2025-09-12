@@ -1585,9 +1585,6 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
-        if employer.employerNumber != 918208804525:
-            continue
-        
         if employer.FirstPaymentDone:
 
             random_digits = random.randint(1000, 9999)
