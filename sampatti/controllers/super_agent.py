@@ -45,7 +45,7 @@ llm = ChatOpenAI(
         openai_api_base="https://openrouter.ai/api/v1"
 )
 
-#embedding = OpenAIEmbeddings(api_key=openai_api_key)
+embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 class IntentClassification(BaseModel):
     """Pydantic model for intent classification"""
