@@ -296,3 +296,6 @@ def populate_db(employer_number: int, worker_id: str, db: Session = Depends(get_
 def generate_and_send_referral_code_to_employers(db: Session = Depends(get_db)):
     return userControllers.generate_and_send_referral_code_to_employers(db)
 
+@router.post("/display_user_message_on_xbotic")
+def display_user_message_on_xbotic(employerNumber: int, message: str):
+    return whatsapp_message.display_user_message_on_xbotic(employerNumber, message)
