@@ -162,9 +162,9 @@ def process_orai_webhook(data: dict):
         
         
 @router.post("/cashfree_vendor_status")
-def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)):
+async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)):
     try:
-        payload = request.json()
+        payload = await request.json()
         print("Webhook payload received:", payload)
 
         vendor_id = payload['data'].get('vendor_id')
@@ -177,6 +177,24 @@ def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)):
         print(f"Vendor Status: {vendor_status}")
 
         #userControllers.update_vendor_status_in_db(vendor_id, vendor_status, db)
+        return {
+            "status": "success"
+        }
+
+    except Exception as e:
+        print(f"Error handling webhook: {e}")
+        raise HTTPException(status_code=400, detail="Error processing webhook data")
+    
+
+@router.post("/payment_settlement_issued")
+async def payment_settlement_issued(request: Request, db: Session = Depends(get_db)):
+    try:
+        payload = await request.json()
+        print("Webhook payload received:", payload)
+
+        # Process the payment settlement data
+        # userControllers.process_payment_settlement(payload, db)
+
         return {
             "status": "success"
         }
