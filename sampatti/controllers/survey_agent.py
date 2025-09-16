@@ -16,9 +16,8 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.documents import Document
 from langchain_groq import ChatGroq
-from .whatsapp_message import send_message_user
+from .whatsapp_message import send_message_user, display_user_message_on_xbotic
 from .survey_tools import translate_audio
-from .whatsapp_message import send_message_user
 
 load_dotenv()
 
@@ -339,7 +338,8 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     try:
         assistant_response = response.get('output') or str(response)
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
-        send_message_user(employer_number, assistant_response)
+        #send_message_user(employer_number, assistant_response)
+        display_user_message_on_xbotic(employer_number, assistant_response)
         return assistant_response
 
     except Exception as e:
