@@ -110,7 +110,7 @@ def process_orai_webhook(data: dict):
             # Return early to skip super_agent processing
             return
         
-        if employerNumber == "919731011117":
+        if employerNumber == "919731011117" or employerNumber == "917665292549":
             if message_type == "text":
                 query = message.get("text", {}).get("body")
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
