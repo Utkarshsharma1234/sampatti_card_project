@@ -94,10 +94,10 @@ def cash_advance_link(
 def fetch_payment_details(orderId : str):
     return cashfree_api.fetch_payment_details(orderId)
 
-@router.post('create_cashfree_beneficiary')
+@router.post('/create_cashfree_beneficiary')
 def create_cashfree_beneficiary(employer_number: int, upi_id: str, db : Session = Depends(get_db)):
     return cashfree_api.create_cashfree_beneficiary(employer_number, upi_id, db)
 
-@router.post('transfer_cashback_amount')
+@router.post('/transfer_cashback_amount')
 def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_mode: str = "upi"):
     return cashfree_api.transfer_cashback_amount(beneficiary_id, amount, transfer_mode)

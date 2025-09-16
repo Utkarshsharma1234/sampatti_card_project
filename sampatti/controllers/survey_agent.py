@@ -33,7 +33,7 @@ openai_api_key = os.environ.get("OPENAI_API_KEY")
 openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
 llm = ChatOpenAI(
         model="openai/gpt-4.1", 
-        api_key=openrouter_api_key,
+        openai_api_key=openrouter_api_key,
         openai_api_base="https://openrouter.ai/api/v1"
 )
 #llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
