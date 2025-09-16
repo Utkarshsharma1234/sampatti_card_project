@@ -31,10 +31,20 @@ load_dotenv()
 groq_api_key = os.environ.get("GROQ_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+if not openrouter_api_key:
+    raise RuntimeError("OPENROUTER_API_KEY environment variable is not set.")
+
+_openrouter_headers = {
+    "HTTP-Referer": os.environ.get("OPENROUTER_HTTP_REFERER"),
+    "X-Title": os.environ.get("OPENROUTER_X_TITLE"),
+}
+_openrouter_headers = {k: v for k, v in _openrouter_headers.items() if v}
+
 llm = ChatOpenAI(
         model="openai/gpt-4.1", 
-        openai_api_key=openrouter_api_key,
-        openai_api_base="https://openrouter.ai/api/v1"
+        api_key=openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers=_openrouter_headers or None
 )
 #llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
 
