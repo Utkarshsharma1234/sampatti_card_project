@@ -20,7 +20,7 @@ from .whatsapp_message import send_message_user
 
 load_dotenv()
 
-groq_api_key = os.environ.get("GROQ_API_KEY")
+openai_api_key = os.environ.get("OPENAI_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
 llm = ChatOpenAI(
@@ -29,7 +29,7 @@ llm = ChatOpenAI(
         openai_api_base="https://openrouter.ai/api/v1"
 )
 
-
+embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -166,8 +166,6 @@ agent = create_tool_calling_agent(
     prompt=prompt,
     tools=tools  
 )
-
-embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 PERSIST_DIR = "../../chroma_db"
 
