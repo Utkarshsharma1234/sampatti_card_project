@@ -22,12 +22,7 @@ load_dotenv()
 
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-llm = ChatOpenAI(
-        model="openai/gpt-4.1", 
-        openai_api_key=openrouter_api_key,
-        openai_api_base="https://openrouter.ai/api/v1"
-)
-
+llm = ChatOpenAI(model="gpt-4.1", api_key=openai_api_key)
 embedding = OpenAIEmbeddings(api_key=openai_api_key)
 
 prompt = ChatPromptTemplate.from_messages(
