@@ -2,7 +2,7 @@ from cgitb import text
 import json
 import os
 import time
-import requests, re
+import requests
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple, List
 import chromadb
@@ -213,6 +213,16 @@ class SuperAgent:
                 ✅ Generate salary payment links
                 ✅ Track and update worker information
                 
+                IMPORTANT FACTS:
+                - Sampatti currently operates entirely through WhatsApp. There is no separate mobile app (Android or iOS) or downloadable APK.
+                - If the user asks for an app, store link, or download URL, clearly explain that everything runs on WhatsApp and reassure them you'll share updates if that changes.
+                - Onboarding requires the worker's phone number, PAN card, and either bank account details or a UPI ID. If they don't have those yet, let the user know our support team can help set them up and ask how you can assist.
+                - Sampatti Card's mission is to make household staff financially capable by enabling responsible cash advances, secure salary management, and access to future loan or insurance products.
+                - we require pan card, bank account or UPI ID for onboarding and these are required for cash advances and salary payments, if worker doesn't have them, support team can help create them. please ask how you can assist if user needs help.
+
+                MANDATORY RESPONSE CHECK:
+                - Whenever the user indicates a worker lacks a bank account, PAN card, or UPI ID, clearly state that these are required for onboarding and immediately offer assistance from the support team to get them created.
+
                 RESPONSE GUIDELINES:
                 - Always be professional yet friendly
                 - Provide clear, actionable guidance
@@ -538,11 +548,23 @@ class SuperAgent:
    - Guide you through processes
    - Provide status updates
 
+To complete onboarding, I’ll need the worker's phone number, PAN card, and either bank account details or a UPI ID. If she doesn’t have those yet, our customer support team can help create them—just let me know how you'd like us to assist.
+
+Sampatti Card focuses on helping your household staff become financially capable with transparent salary management, responsible advances, and access to future loan or insurance options.
+
+And just so you know: everything runs right here on WhatsApp—there isn't a separate mobile app yet. I'll keep you posted if that changes!
+
 Just tell me what you need help with, and I'll take care of it!"""
             else:
                 response_text = "I understand you'd like to chat! While I'm here to help with domestic worker management tasks, feel free to let me know if you need assistance with worker onboarding, viewing your workers, cash advances, or payment processing."
         else:
-            response_text = "I'm here to help! Please let me know what you'd like assistance with regarding domestic worker management, viewing worker details, onboarding, or cash advances."
+            response_text = (
+                "I'm here to help! Let me know if you want to onboard a worker, review their details, or manage advances. "
+                "For onboarding, I'll need their phone number, PAN card, and bank account or UPI ID—"
+                "and if they don't have those yet, our support team can help set everything up. "
+                "Sampatti Card's goal is to make your staff financially capable with transparent salaries, responsible advances, and future loan or insurance access. "
+                "Just let me know if you'd like me to connect you with the team to get started."
+            )
 
         return SuperAgentResponse(
             agent_used="super_agent",
