@@ -189,14 +189,30 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Error processing webhook data")
     
 
-@router.post("/payment_settlement_issued")
+@router.post("/settlement_status")
 async def payment_settlement_issued(request: Request, db: Session = Depends(get_db)):
     try:
         payload = await request.json()
         print("Webhook payload received:", payload)
 
-        # Process the payment settlement data
-        # userControllers.process_payment_settlement(payload, db)
+        # Extract required fields from the payload
+        settlement = payload.get('data', {}).get('settlement', {})
+        vendor_id = settlement.get('vendor_id')
+        account_mode = settlement.get('account_mode')
+        account_number = settlement.get('account_number')
+        ifsc = settlement.get('ifsc')
+        vpa = settlement.get('vpa')
+        amount_settled = settlement.get('amount_settled')
+
+        print(f"Vendor ID: {vendor_id}")
+        print(f"Account Mode: {account_mode}")
+        print(f"Account Number: {account_number}")
+        print(f"IFSC: {ifsc}")
+        print(f"VPA: {vpa}")
+        print(f"Amount Settled: {amount_settled}")
+
+        # You can now use these variables for future usecases, e.g., store in DB, trigger other logic, etc.
+        # userControllers.process_payment_settlement(settlement, db)
 
         return {
             "status": "success"
