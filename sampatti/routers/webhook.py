@@ -210,9 +210,8 @@ async def payment_settlement_issued(request: Request, db: Session = Depends(get_
         print(f"IFSC: {ifsc}")
         print(f"VPA: {vpa}")
         print(f"Amount Settled: {amount_settled}")
-
-        # You can now use these variables for future usecases, e.g., store in DB, trigger other logic, etc.
-        # userControllers.process_payment_settlement(settlement, db)
+        
+        userControllers.update_settlement_status_to_worker(vendor_id, amount_settled, db)
 
         return {
             "status": "success"

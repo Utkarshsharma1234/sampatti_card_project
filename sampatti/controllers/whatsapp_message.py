@@ -2,12 +2,16 @@ import json
 from fastapi import Body, HTTPException
 import requests, os
 from dotenv import load_dotenv
-
+import os
+from twilio.rest import Client
 from sampatti.models import Employer
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
 orai_namespace = os.environ.get('ORAI_NAMESPACE')
+twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+twilio_whatsapp_number = os.environ.get("TWILIO_WHATSAPP_NUMBER")
 #authourization_message = os.environ.get('ORAI_AUTHERIZATION_MESSEGE')
 authorization_message = os.environ.get('ORAI_AUTHORIZATION_MESSAGE')
 
@@ -392,3 +396,14 @@ def send_referral_message_to_employer(employerNumber, template_name, referral_co
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
+
+def twilio_send_text_message(mobileNumber, body):
+
+    client = Client(twilio_account_sid, twilio_auth_token)
+    message = client.messages.create(
+        to=mobileNumber,
+        from_=twilio_whatsapp_number,
+        body=body
+    )
+    return message.sid
