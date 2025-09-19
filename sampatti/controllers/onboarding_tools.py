@@ -121,7 +121,7 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
     url = "https://conv.sampatticards.com/user/ai_agent/onboarding_worker_sheet/create"
     response = requests.post(url, json=data)
 
-    return f"Onboarding completed. Status: {response.status_code}, Response: {response.text}"
+    return f"Onboarding for worker has been initiated and we will get back to you when the process is complete. Status: {response.status_code}, Response: {response.text}"
 
 
 def transcribe_audio(mediaId: str):

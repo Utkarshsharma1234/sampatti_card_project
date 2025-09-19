@@ -204,7 +204,11 @@ class SuperAgent:
                 For help requests: Explain what you can do clearly
                 For thanks: Acknowledge gracefully and offer continued assistance
                 For general chat: Be friendly but guide toward productive usage
-                
+                GREETING RESPONSE TEMPLATE:
+                - When the user says hi, hello, hey, or similar greeting and you haven't already shared your welcome context in this conversation, reply with:
+                  "👋 Hi! I’m here to help you manage your domestic worker payments easily.\nHere’s what you can do:\n• 💸 Pay Salary / Advance\n• 📑 View Verified Salary Slip\n• 📊 View Advance payment logs\nJust let me know which one you'd like to do."
+                - Keep the wording consistent so the experience feels familiar each time.
+
                 CAPABILITIES TO MENTION:
                 ✅ View all your workers and their details
                 ✅ Onboard new workers (collect UPI, bank details, PAN, salary info)
@@ -523,8 +527,15 @@ class SuperAgent:
         """Fallback response generation"""
         if intent_analysis.primary_intent in ["greeting", "general_conversation"]:
             if any(word in user_message.lower() for word in ["hello", "hi", "hey"]):
-                response_text = """Hello! 😊 Think of me as your household staff-management buddy. Whether you need to pay the cook, onboard the new driver, or sort out an advance - I'm here to help! What can I do for you?"""
-            
+                response_text = (
+                    "👋 Hi! I’m here to help you manage your domestic worker payments easily.\n"
+                    "Here’s what you can do:\n"
+                    "• 💸 Pay Salary / Advance\n"
+                    "• 📑 View Verified Salary Slip\n"
+                    "• 📊 View Advance payment logs\n"
+                    "Just let me know which one you'd like to do."
+                )
+
             elif any(word in user_message.lower() for word in ["help", "what can you do"]):
                 response_text = """I'm here to help with your domestic worker management needs! Here's what I can assist you with:
 
