@@ -1705,7 +1705,7 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 def update_settlement_status_to_worker(vendorId : str, amount_settled : int, db : Session):
 
     worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.vendorId == vendorId).first()
-
+    
     text_message = f"Rs {amount_settled} credited to your account. - Sampatti Card"
     message = whatsapp_message.twilio_send_text_message(worker.workerNumber, text_message)
     return message
