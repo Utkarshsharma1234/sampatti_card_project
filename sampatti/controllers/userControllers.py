@@ -1083,6 +1083,110 @@ def extract_passbook_details(image_url):
 
     except Exception as e:
         return {"error": str(e)}
+    
+def extract_document_details(media_id: str) -> dict:
+    """
+    Download the document image, send it to Gemini, and return either
+    structured data or the raw textual summary if JSON parsing fails.
+    """
+    try:
+        
+        orai_api_key = os.environ.get("ORAI_API_KEY")  
+
+        headers = {
+            "D360-API-KEY": orai_api_key
+        }
+
+        response_1 = requests.get(f"https://waba-v2.360dialog.io/{media_id}", headers=headers)
+        print("Response 1 Status Code:", response_1.status_code)
+        print("Response 1 Content:", response_1.text)
+        print("Just Response 1:", response_1)
+        print("JSON response:", response_1.json())
+
+        if response_1.status_code != 200:
+            return f"Failed to get audio info: {response_1.status_code} {response_1.text}"
+
+        image_info = response_1.json()
+        
+        image_url = image_info.get("url")
+        if not image_url or "whatsapp" not in image_url:
+            return f"Image URL not found or does not contain 'whatsapp' in API response."
+
+        whatsapp_index = image_url.find("whatsapp")
+        whatsapp_path = image_url[whatsapp_index:]
+
+        response_2 = requests.get(f"https://waba-v2.360dialog.io/{whatsapp_path}", headers=headers, stream=True)
+        if response_2.status_code != 200:
+            return f"Failed to download audio: {response_2.status_code} {response_2.text}"
+        
+        print("Response 2 Status Code:", response_2.status_code)
+        print("Just Response 2:", response_2)
+        print("Response 2 Content-Type:", response_2.headers.get('Content-Type'))
+        print("Response 2 Headers:", response_2.json())
+
+        output_dir = 'audio_files'
+        os.makedirs(output_dir, exist_ok=True)
+
+        image_path = os.path.join(output_dir, f"{media_id}.jpg")
+        with open(image_path, 'wb') as f:
+            for chunk in response_2.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        prompt = """
+        You are an OCR/document-understanding assistant for Indian KYC workflows.
+        Inspect the supplied image (PAN card, bank passbook, Aadhaar, voter ID, etc.),
+        identify the document type, and extract all clearly readable fields.
+
+        Prefer this JSON schema:
+        {
+          "document_type": "<lower_snake_case type>",
+          "fields": {
+            "<field_name>": "<value or null>"
+          }
+        }
+
+        Canonical field names include: name, father_name, pan_number, dob,
+        account_number, ifsc_code, bank_name, address, document_number, etc.
+        Use uppercase for alphanumeric IDs (PAN, IFSC). For dates, prefer DD/MM/YYYY
+        unless the document format is unambiguous. If you cannot provide valid JSON,
+        return a concise plain-text summary of the extracted details instead.
+        """
+
+        result = model.generate_content([prompt, image_url], stream=False)
+        raw_output = (result.text or "").strip()
+        if not raw_output:
+            raise ValueError("Empty response from model")
+
+        json_start = raw_output.find("{")
+        json_end = raw_output.rfind("}") + 1
+        if json_start != -1 and json_end > json_start:
+            try:
+                parsed_json = json.loads(raw_output[json_start:json_end])
+                return {
+                    "document_type": parsed_json.get("document_type"),
+                    "fields": parsed_json.get("fields", {}),
+                    "raw_response": raw_output
+                }
+            except (json.JSONDecodeError, TypeError):
+                pass  # fall through to text response
+
+        return {
+            "document_type": None,
+            "fields": {},
+            "raw_response": raw_output  # plain text summary for the super agent
+        }
+
+    except Exception as exc:
+        return {
+            "error": str(exc),
+            "document_type": None,
+            "fields": {},
+            "raw_response": None
+        }
+
 
 
 def generate_user_id() -> str:

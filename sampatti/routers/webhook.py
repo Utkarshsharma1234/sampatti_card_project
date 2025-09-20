@@ -144,6 +144,10 @@ def process_orai_webhook(data: dict):
         elif message_type == "audio":
             query = message.get("audio", {}).get("id")
             super_agent.super_agent_query(employerNumber, message_type, query, media_id, formatted_json)
+            
+        elif message_type == "image":
+            query = message.get("image", {}).get("id")
+            super_agent.super_agent_query(employerNumber, message_type, query, media_id, formatted_json)
 
         elif message_type == "button":
             print("Button message received, but button text extraction is currently disabled.")
