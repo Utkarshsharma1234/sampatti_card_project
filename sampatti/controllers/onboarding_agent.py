@@ -68,7 +68,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             2. UPI ID (if chosen):
             - Must contain @ symbol
-            - If invalid: "Hey! 😊 The UPI ID should look like name@paytm or number@ybl. Could you check and share again?"
+            - If invalid : Ask user to provide a valid UPI ID.
 
             3. BANK ACCOUNT + IFSC (if chosen):
             - Bank Account: Must be numeric, typically 8-18 digits
