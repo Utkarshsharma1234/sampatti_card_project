@@ -67,7 +67,6 @@ prompt = ChatPromptTemplate.from_messages(
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number
 
             2. UPI ID (if chosen):
-            - Format: username@bankname (e.g., name@paytm, number@ybl, etc.)
             - Must contain @ symbol
             - If invalid: "Hey! 😊 The UPI ID should look like name@paytm or number@ybl. Could you check and share again?"
 
