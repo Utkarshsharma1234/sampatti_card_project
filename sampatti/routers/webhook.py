@@ -171,19 +171,33 @@ def process_orai_webhook(data: dict):
 @router.post("/cashfree_vendor_status")
 async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)):
     try:
+
         payload = await request.json()
         print("Webhook payload received:", payload)
 
-        vendor_id = payload['data'].get('vendor_id')
-        vendor_status = payload['data'].get('vendor_status')
-
-        if not vendor_id or not vendor_status:
-            raise HTTPException(status_code=400, detail="Missing vendor_id or vendor_status in payload")
+        data = payload.get('data', {})
+        vendor_id = data.get('merchant_vendor_id')
+        updated_status = data.get('updated_status')
+        phone = data.get('phone')
+        name = data.get('name')
+        account_number = data.get('account_number')
+        ifsc = data.get('ifsc')
+        vpa = data.get('vpa')
+        pan_status = data.get('document_status', {}).get('PAN')
+        event_type = payload.get('type')
 
         print(f"Vendor ID: {vendor_id}")
-        print(f"Vendor Status: {vendor_status}")
+        print(f"Updated Status: {updated_status}")
+        print(f"Phone: {phone}")
+        print(f"Name: {name}")
+        print(f"Account Number: {account_number}")
+        print(f"IFSC: {ifsc}")
+        print(f"VPA: {vpa}")
+        print(f"PAN Status: {pan_status}")
+        print(f"Event Type: {event_type}")
 
-        #userControllers.update_vendor_status_in_db(vendor_id, vendor_status, db)
+        text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},The vendor has been added successfully."
+        message = whatsapp_message.twilio_send_text_message(phone, text_message)
         return {
             "status": "success"
         }
