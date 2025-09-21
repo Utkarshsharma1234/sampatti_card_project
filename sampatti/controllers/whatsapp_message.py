@@ -407,3 +407,47 @@ def twilio_send_text_message(mobileNumber, body):
         body=body
     )
     return message.sid
+
+
+def send_greetings_with_image(employerNumber,template_name):
+
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template",
+        "template" : {
+            "namespace": orai_namespace,
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            },
+            "name": template_name,
+            "components" : [
+
+                {
+                    "type" : "header",
+                    "parameters" : [
+                        {
+                            "type": "image",
+                            "image": {
+                                "link": "https://bb.branding-element.com/prod/118331/118331-21092025_190144-navratra_stapana.png"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")

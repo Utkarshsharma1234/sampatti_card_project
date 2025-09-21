@@ -408,7 +408,9 @@ def send_greetings(db : Session):
     total_employers = db.query(models.Employer).all()
 
     for employer in total_employers:
-        whatsapp_message.send_greetings(employer.employerNumber, template_name="salary_adjust_greetings")
+        if employer.employerNumber != 916378639230:
+            continue
+        whatsapp_message.send_greetings_with_image(employer.employerNumber, template_name="greetings_message_with_image")
 
     return {
         "MESSAGE" : "Greetings sent successfully."

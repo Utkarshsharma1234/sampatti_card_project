@@ -102,7 +102,7 @@ def salary_payment_reminder(db : Session = Depends(get_db)):
     return userControllers.salary_payment_reminder(db)
 
 @router.get("/send_greetings")
-def send_greetings_message(db : Session = Depends(get_db)):
+def send_greetings(db : Session = Depends(get_db)):
     return userControllers.send_greetings(db)
 
 @router.get('/generate_talk_to_agent_sheet')
