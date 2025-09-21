@@ -1702,10 +1702,38 @@ def generate_and_send_referral_code_to_employers(db : Session) :
             send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, new_referral_code, employer.upiId, db)
 
 
-def update_settlement_status_to_worker(vendorId : str, amount_settled : int, db : Session):
+def update_settlement_status_to_worker(payload, db : Session):
 
-    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.vendorId == vendorId).first()
-    
-    text_message = f"Rs {amount_settled} credited to your account. - Sampatti Card"
-    message = whatsapp_message.twilio_send_text_message(worker.workerNumber, text_message)
+    # Extract required fields from the payload
+    settlement = payload.get('data', {}).get('settlement', {})
+    vendor_id = settlement.get('vendor_id')
+    account_mode = settlement.get('account_mode')
+    account_number = settlement.get('account_number')
+    ifsc = settlement.get('ifsc')
+    vpa = settlement.get('vpa')
+    amount_settled = settlement.get('amount_settled')
+    settlement_type = settlement.get('settlement_type')
+
+    print(f"Vendor ID: {vendor_id}")
+    print(f"Account Mode: {account_mode}")
+    print(f"Account Number: {account_number}")
+    print(f"IFSC: {ifsc}")
+    print(f"VPA: {vpa}")
+    print(f"Amount Settled: {amount_settled}")
+    print(f"Settlement Type: {settlement_type}")
+
+    text_message = ""
+    contactNumber = ""
+
+    worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.vendorId == vendor_id).first()
+
+    if settlement_type == "VENDOR_SETTLEMENT_FAILED":
+        text_message = f"Vendor settlement failed for vendor: {vendor_id}, vpa: {vpa}, account_number: {account_number}, ifsc: {ifsc}. Amount settled: Rs {amount_settled}."
+        contactNumber = "+916378639230"
+
+    elif settlement_type == "VENDOR_SETTLEMENT_SUCCESS":
+        text_message = f"Vendor settlement successful for vendor: {vendor_id}, vpa: {vpa}, account_number: {account_number}, ifsc: {ifsc}. Amount settled: Rs {amount_settled}."
+        contactNumber = "+916378639230"
+
+    message = whatsapp_message.twilio_send_text_message(contactNumber, text_message)
     return message
