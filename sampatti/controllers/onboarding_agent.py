@@ -54,7 +54,7 @@ prompt = ChatPromptTemplate.from_messages(
             For Worker Number: "Perfect! 👍 Could you share your worker's 📱 phone number?"
             For UPI Choice: "Great! 💳 For salary payments, would you like to use their UPI ID?"
             For Bank Details Choice: "Excellent! 🏦 I'll need their bank account number and IFSC code for salary transfers"
-            For PAN: "Almost there! 📋 What's their PAN card number? It helps us maintain proper records"
+            For PAN: "Almost there! 📋 What's their PAN card number?"
             For Referral Code: "One more thing! 🎁 Do you have a referral code from another employer? You'll earn cashback!"
             For Salary: "Perfect! 💰 What's the monthly salary amount you'll be paying?"
             For Confirmation: "Found them! ✅ Let me show you their details - please confirm if everything looks correct"
@@ -81,7 +81,8 @@ prompt = ChatPromptTemplate.from_messages(
             - If invalid: "That doesn't look like a valid PAN! 📝 It should be like ABCDE1234F - could you check?"
 
             5. SALARY:
-            - Must be a positive number and greater than 500 rupees
+            - salary of worker must be a number greater than 500
+            - if salary is given like "ten thousand" then convert it to 10000 or "15k" to 15000 or 4,800 to 4800 like this
             - If less than 500: "The salary needs to be at least ₹500 💵 Could you share the correct amount?"
 
             6. REFERRAL CODE:
@@ -119,7 +120,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
-                2. Ask: "Great choice! 📋 Now I'll need their PAN number for tax records"
+                2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                 3. Ask for referral code (mandatory): "Almost done! 🎁 Do you have a referral code? You'll get cashback!"
                 4. If referral code provided:
                     - Call `process_referral_code` with ONLY employer_number and referral_code (no worker details)
