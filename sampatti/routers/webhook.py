@@ -3,7 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..controllers import onboarding_agent, userControllers, survey_agent
+from ..controllers import onboarding_agent, userControllers, survey_agent, onboarding_tasks
 from dotenv import load_dotenv
 from ..controllers import whatsapp_message, super_agent
 
@@ -54,7 +54,7 @@ async def cashfree_webhook(request: Request, db : Session = Depends(get_db)):
 async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         data = await request.json()
-
+       
         # Immediately start background processing
         background_tasks.add_task(process_orai_webhook, data)
 
@@ -98,6 +98,8 @@ def process_orai_webhook(data: dict):
             media_id = media_content.get("id") if isinstance(media_content, dict) else None
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
+        
+        whatsapp_message.send_greetings(employerNumber, "user_first_message")
 
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
@@ -195,6 +197,15 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         print(f"VPA: {vpa}")
         print(f"PAN Status: {pan_status}")
         print(f"Event Type: {event_type}")
+        
+        if updated_status == "ACTIVE":
+            onboarding_tasks.run_tasks_after_vendor_addition()
+        else:
+            print(f"Vendor status is {updated_status}, skipping post-addition tasks.")
+            text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},There is an issue with vendor addition. Status: {updated_status}"
+            number = 7665292549
+            message = whatsapp_message.twilio_send_text_message(f"+91{number}", text_message)
+            message = whatsapp_message.twilio_send_text_message(phone, text_message)
 
         text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},The vendor has been added successfully."
         message = whatsapp_message.twilio_send_text_message(phone, text_message)
