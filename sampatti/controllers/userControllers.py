@@ -1658,8 +1658,9 @@ def process_employer_cashback_for_first_payment(employerNumber: int, payload: di
         transfer_cashback_amount(referring_employer.beneficiaryId, CASHBACK_AMOUNT)
         
         referring_employer_number = referring_employer.employerNumber
+        upi_idd = referring_employer.upiId
         referral_code = referring_employer.referralCode
-        send_message_to_referring_employer(referring_employer_number, referral_code, employerNumber)
+        whatsapp_message.send_message_to_referring_employer(referring_employer_number, "referral_sucess_message_1", referral_code, employerNumber, upi_idd)
 
         print("Cashback Processed")
 

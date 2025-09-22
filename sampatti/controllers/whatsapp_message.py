@@ -451,3 +451,50 @@ def send_greetings_with_image(employerNumber,template_name):
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+        
+        
+def send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id):
+
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": template_name,
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": employerNumber
+                        },
+                        {
+                            "type": "text",
+                            "text": referral_code
+                        },
+                        {
+                            "type": "text",
+                            "text": referred_employer
+                        },
+                        {
+                            "type": "text",
+                            "text": upi_id
+                        }
+                    ]
+                }
+            ],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
+    }

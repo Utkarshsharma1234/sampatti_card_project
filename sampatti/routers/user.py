@@ -299,3 +299,7 @@ def generate_and_send_referral_code_to_employers(db: Session = Depends(get_db)):
 @router.post("/display_user_message_on_xbotic")
 def display_user_message_on_xbotic(employerNumber: int, message: str):
     return whatsapp_message.display_user_message_on_xbotic(employerNumber, message)
+
+@router.post("/send_message_to_referring_employer")
+def send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id):
+    return whatsapp_message.send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id)
