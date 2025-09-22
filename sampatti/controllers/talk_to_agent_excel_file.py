@@ -10,6 +10,7 @@ from .. import schemas
 from .utility_functions import current_date
 from .. import models
 from .utility_functions import generate_unique_id
+#from .onboarding_tasks import run_tasks_till_add_vendor, run_tasks_after_vendor_addition
 
 # Load environment variables from .env file
 load_dotenv()
@@ -158,6 +159,9 @@ def create_worker_details_onboarding(worker_number: int, employer_number : int, 
         print("Sheet created and first row added.")
 
     print(f"Sheet URL: {spreadsheet.url}")
+
+    #run_tasks_till_add_vendor()
+
     return spreadsheet.url
 
 def add_vendor_to_cashfree():
@@ -492,8 +496,8 @@ def fetch_pan_bank_details_from_image():
             bank_response = userControllers.extract_passbook_details(bank_passbook_image)
             response_error = bank_response.get("error")
             if response_error:
-                update_sheet_cell(sheet, idx, "bank_account_number", "Refer Image")
-                update_sheet_cell(sheet, idx, "ifsc_code", "Refer Image")
+                update_sheet_cell(sheet, idx, "bank_account_number", "NA")
+                update_sheet_cell(sheet, idx, "ifsc_code", "NA")
             else:
                 account_number = bank_response.get("account_number")
                 ifsc_code = bank_response.get("ifsc_code")
@@ -508,7 +512,7 @@ def fetch_pan_bank_details_from_image():
             pan_response = userControllers.extract_pan_card_details(pan_card_image)
             response_error = pan_response.get("error")
             if response_error:
-                update_sheet_cell(sheet, idx, "PAN_number", "Refer Image")
+                update_sheet_cell(sheet, idx, "PAN_number", "NA")
             else:
                 PAN_number = pan_response.get("pan_number")
                 update_sheet_cell(sheet, idx, "PAN_number", PAN_number)
