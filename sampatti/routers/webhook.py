@@ -153,10 +153,9 @@ def process_orai_webhook(data: dict):
 
         elif message_type == "button":
             print("Button message received, but button text extraction is currently disabled.")
-            return
-            # query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
-            # print("Extracted the Button Text: ", query)
-            # super_agent.super_agent_query(employerNumber, "text", query, "", formatted_json)
+            query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
+            print("Extracted the Button Text: ", query)
+            super_agent.super_agent_query(employerNumber, "text", query, "", formatted_json)
 
         elif message_type == "contacts":
             numb = data["entry"][0]["changes"][0]["value"]["messages"][0]["contacts"][0]["phones"][0]["wa_id"]
