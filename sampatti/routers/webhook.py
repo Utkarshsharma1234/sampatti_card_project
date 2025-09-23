@@ -99,11 +99,11 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
-        if userControllers.is_employer_present(employerNumber, db):
-            print(f"Employer {employerNumber} exists in the database.")
-        else:
-            whatsapp_message.send_template_message(employerNumber, "user_first_message")
-            return
+        # if userControllers.is_employer_present(employerNumber, db):
+        #     print(f"Employer {employerNumber} exists in the database.")
+        # else:
+        #     whatsapp_message.send_template_message(employerNumber, "user_first_message")
+        #     return
 
         # if userControllers.is_worker_present_for_employer(employerNumber, db):
         #     print(f"Worker exists for Employer {employerNumber} in the database.")
