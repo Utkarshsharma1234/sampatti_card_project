@@ -68,6 +68,7 @@ async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
 
 def process_orai_webhook(data: dict):
     try:
+        db = next(get_db())
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
 
@@ -77,7 +78,6 @@ def process_orai_webhook(data: dict):
         headers = {
             'Content-Type': 'application/json'
         }
-
         response = requests.post(url, headers=headers, data=formatted_json)
 
         entry = data.get("entry", [])[0] if data.get("entry") else {}
@@ -99,11 +99,11 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
-        # if userControllers.is_employer_present(employerNumber):
-        #     print(f"Employer {employerNumber} exists in the database.")
-        # else:
-        #     whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #     return
+        if userControllers.is_employer_present(employerNumber, db):
+            print(f"Employer {employerNumber} exists in the database.")
+        else:
+            whatsapp_message.send_template_message(employerNumber, "user_first_message")
+            return
 
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
