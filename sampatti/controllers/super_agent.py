@@ -15,7 +15,7 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
-from .userControllers import send_audio_message
+from .userControllers import send_audio_message, extract_document_details
 from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
@@ -679,6 +679,11 @@ Just tell me what you need help with, and I'll take care of it!"""
                 user_language = transcribed_text_language[1]
                 print(f"🎤 Transcribed text: {query}")
                 print(f"User Language:##: ", user_language)
+                
+            if type_of_message == "image" and media_id:
+                resp = extract_document_details(media_id)
+                query = resp
+                print("Image Resp from the gemini")
             
             # Get conversation history
             chat_history = self.get_sorted_chat_history(employer_number)
