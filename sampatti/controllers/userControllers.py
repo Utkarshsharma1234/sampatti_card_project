@@ -1460,9 +1460,22 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
 def is_employer_present(employer_number: str, db: Session) -> bool:
     
-    stmt = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employer_number)
+    stmt = db.query(models.Employer).where(
+        models.Employer.employerNumber == employer_number
+    )
     result = db.execute(stmt).first()
     print(f"Result of employer presence check: {result}")
+    return result is not None
+
+
+def is_worker_present_for_employer(employer_number: str, worker_number: str, db: Session) -> bool:
+
+    stmt = db.query(models.worker_employer).where(
+        models.worker_employer.c.employer_number == employer_number,
+        models.worker_employer.c.worker_number == worker_number
+    )
+    result = db.execute(stmt).first()
+    print(f"Result of worker presence check for employer {employer_number} and worker {worker_number}: {result}")
     return result is not None
 
 
