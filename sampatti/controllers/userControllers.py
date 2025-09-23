@@ -1695,12 +1695,8 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
-        if employer.employerNumber != 918208804525:
-            continue
         if employer.FirstPaymentDone:
-
             employer_referral_code = employer.referralCode
-            # Send the referral code to the employer
             send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, employer_referral_code, employer.upiId, db)
 
 
