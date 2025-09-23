@@ -105,12 +105,12 @@ def process_orai_webhook(data: dict):
             whatsapp_message.send_template_message(employerNumber, "user_first_message")
             return
 
-        if userControllers.is_worker_present_for_employer(employerNumber, db):
-            print(f"Worker exists for Employer {employerNumber} in the database.")
-        else:
-            if message == "Hi" or message == "Hello" or message == "hello" or message == "hi" or message == "HEY" or message == "Hey" or message == "hey":
-                whatsapp_message.send_template_message(employerNumber, "user_first_message")
-                return
+        # if userControllers.is_worker_present_for_employer(employerNumber, db):
+        #     print(f"Worker exists for Employer {employerNumber} in the database.")
+        # else:
+        #     if message == "Hi" or message == "Hello" or message == "hello" or message == "hi" or message == "HEY" or message == "Hey" or message == "hey":
+        #         whatsapp_message.send_template_message(employerNumber, "user_first_message")
+        #         return
         
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
