@@ -99,7 +99,7 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
         
-        whatsapp_message.send_greetings(employerNumber, "user_first_message")
+        whatsapp_message.send_template_message(employerNumber, "user_first_message")
 
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
