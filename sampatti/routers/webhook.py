@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from ..controllers import onboarding_agent, userControllers, survey_agent, onboarding_tasks
 from dotenv import load_dotenv
 from ..controllers import whatsapp_message, super_agent
+from .. import models
+from ..controllers.userControllers import generate_unique_id
 
 load_dotenv()
 orai_api_key = os.environ.get('ORAI_API_KEY')
@@ -99,18 +101,28 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
-        # if userControllers.is_employer_present(employerNumber, db):
-        #     print(f"Employer {employerNumber} exists in the database.")
-        # else:
-        #     whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #     return
+        if userControllers.is_employer_present(employerNumber, db):
+            print(f"Employer {employerNumber} exists in the database.")
+        else:
+            whatsapp_message.send_template_message(employerNumber, "user_first_message")
+            unique_id = generate_unique_id()
+            new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return
 
-        # if userControllers.is_worker_present_for_employer(employerNumber, db):
-        #     print(f"Worker exists for Employer {employerNumber} in the database.")
-        # else:
-        #     if message == "Hi" or message == "Hello" or message == "hello" or message == "hi" or message == "HEY" or message == "Hey" or message == "hey":
-        #         whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #         return
+        if userControllers.is_worker_present_for_employer(employerNumber, db):
+            print(f"Worker exists for Employer {employerNumber} in the database.")
+        else:
+            if message == "Hi" or message == "Hello" or message == "hello" or message == "hi" or message == "HEY" or message == "Hey" or message == "hey":
+                whatsapp_message.send_template_message(employerNumber, "user_first_message")
+                unique_id = generate_unique_id()
+                new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
+                db.add(new_user)
+                db.commit()
+                db.refresh(new_user)
+                return
         
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
