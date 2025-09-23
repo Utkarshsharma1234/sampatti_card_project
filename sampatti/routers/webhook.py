@@ -99,7 +99,11 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
         
-        whatsapp_message.send_template_message(employerNumber, "user_first_message")
+        if userControllers.is_employer_present(employerNumber):
+            print(f"Employer {employerNumber} exists in the database.")
+        else:
+            whatsapp_message.send_template_message(employerNumber, "user_first_message")
+            return
 
         # Forward to ngrok for specific number
         if employerNumber == "918197266977":
