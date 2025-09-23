@@ -208,17 +208,17 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         print(f"PAN Status: {pan_status}")
         print(f"Event Type: {event_type}")
         
+        number = 6378639230
+        text_message = ""
         if updated_status == "ACTIVE":
             onboarding_tasks.run_tasks_after_vendor_addition()
+            text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},The vendor has been added successfully."
         else:
             print(f"Vendor status is {updated_status}, skipping post-addition tasks.")
             text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},There is an issue with vendor addition. Status: {updated_status}"
-            number = 7665292549
-            message = whatsapp_message.twilio_send_text_message(f"+91{number}", text_message)
-            message = whatsapp_message.twilio_send_text_message(phone, text_message)
 
-        text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},The vendor has been added successfully."
-        message = whatsapp_message.twilio_send_text_message(phone, text_message)
+        message = whatsapp_message.twilio_send_text_message(f"+91{number}", text_message)
+        print(message.sid)
         return {
             "status": "success"
         }
