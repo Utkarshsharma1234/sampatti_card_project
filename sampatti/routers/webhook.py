@@ -66,7 +66,7 @@ async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Error processing webhook data")
 
 
-def process_orai_webhook(data: dict):
+def process_orai_webhook(data: dict, db: Session = Depends(get_db)):
     try:
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
@@ -98,8 +98,8 @@ def process_orai_webhook(data: dict):
             media_id = media_content.get("id") if isinstance(media_content, dict) else None
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
-        
-        if userControllers.is_employer_present(employerNumber):
+
+        if userControllers.is_employer_present(employerNumber, db=db):
             print(f"Employer {employerNumber} exists in the database.")
         else:
             whatsapp_message.send_template_message(employerNumber, "user_first_message")
