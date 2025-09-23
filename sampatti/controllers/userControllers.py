@@ -1484,8 +1484,7 @@ def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, 
         employer = db.query(models.Employer).filter(models.Employer.employerNumber == employer_number).first()
         beneficiary_id = employer.beneficiaryId
 
-        whatsapp_message.send_referral_message_to_employer(employer_number, "referral_template_1", referral_code)
-        whatsapp_message.send_referral_message_to_employer(employer_number, "referral_template_2", referral_code)
+        whatsapp_message.send_referral_message_to_employer(employer_number, "employer_referral_message", referral_code)
 
         print("Beneficiary in Process")
         if beneficiary_id is None or beneficiary_id == "":
@@ -1493,12 +1492,6 @@ def send_referral_code_to_employer_and_create_beneficiary(employer_number: int, 
             print("Beneficiary Created")
         else:
             print("Beneficiary Already Present")
-            
-        return {
-            "status": "success",
-            "message": "Referral code sent successfully",
-            "referral_code": referral_code
-        }
             
     except Exception as e:
         return {"status": "error", "message": f"Error sending referral code: {str(e)}"}
@@ -1702,17 +1695,13 @@ def generate_and_send_referral_code_to_employers(db : Session) :
 
     for employer in total_employers:
 
+        if employer.employerNumber != 918208804525:
+            continue
         if employer.FirstPaymentDone:
 
-            random_digits = random.randint(1000, 9999)
-
-            new_referral_code = f"SAMP{random_digits}EMP"
-            # Update the employer record with the new referral code
-            employer.referralCode = new_referral_code
-            db.commit()
-            db.refresh(employer)
+            employer_referral_code = employer.referralCode
             # Send the referral code to the employer
-            send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, new_referral_code, employer.upiId, db)
+            send_referral_code_to_employer_and_create_beneficiary(employer.employerNumber, employer_referral_code, employer.upiId, db)
 
 
 def update_settlement_status_to_worker(payload, db : Session):
@@ -1736,17 +1725,15 @@ def update_settlement_status_to_worker(payload, db : Session):
     print(f"Settlement Type: {settlement_type}")
 
     text_message = ""
-    contactNumber = ""
+    contactNumber = 6378639230
 
     worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.vendorId == vendor_id).first()
 
     if settlement_type == "VENDOR_SETTLEMENT_FAILED":
         text_message = f"Vendor settlement failed for vendor: {vendor_id}, vpa: {vpa}, account_number: {account_number}, ifsc: {ifsc}. Amount settled: Rs {amount_settled}."
-        contactNumber = "+916378639230"
 
     elif settlement_type == "VENDOR_SETTLEMENT_SUCCESS":
         text_message = f"Vendor settlement successful for vendor: {vendor_id}, vpa: {vpa}, account_number: {account_number}, ifsc: {ifsc}. Amount settled: Rs {amount_settled}."
-        contactNumber = "+916378639230"
 
-    message = whatsapp_message.twilio_send_text_message(contactNumber, text_message)
+    message = whatsapp_message.twilio_send_text_message(f"+91{contactNumber}", text_message)
     return message
