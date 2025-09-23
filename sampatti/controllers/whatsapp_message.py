@@ -451,3 +451,32 @@ def send_greetings_with_image(employerNumber,template_name):
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+        
+def send_template_message(employerNumber,template_name):
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": template_name,
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
