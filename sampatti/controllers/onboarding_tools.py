@@ -17,6 +17,7 @@ from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
 from . import userControllers
+from ..controllers import onboarding_tasks
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -120,6 +121,10 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
 
     url = "https://conv.sampatticards.com/user/ai_agent/onboarding_worker_sheet/create"
     response = requests.post(url, json=data)
+    
+    if response.status_code == 200:
+        onboarding_tasks.run_tasks_till_add_vendor()
+        print("Onboarding task intialized!!!")
 
     return f"Onboarding for worker has been initiated and we will get back to you when the process is complete. Status: {response.status_code}, Response: {response.text}"
 
