@@ -1468,14 +1468,13 @@ def is_employer_present(employer_number: str, db: Session) -> bool:
     return result is not None
 
 
-def is_worker_present_for_employer(employer_number: str, worker_number: str, db: Session) -> bool:
+def is_worker_present_for_employer(employer_number: str, db: Session) -> bool:
 
     stmt = db.query(models.worker_employer).where(
-        models.worker_employer.c.employer_number == employer_number,
-        models.worker_employer.c.worker_number == worker_number
+        models.worker_employer.c.employer_number == employer_number
     )
     result = db.execute(stmt).first()
-    print(f"Result of worker presence check for employer {employer_number} and worker {worker_number}: {result}")
+    print(f"Result of worker presence check for employer {employer_number}: {result}")
     return result is not None
 
 
