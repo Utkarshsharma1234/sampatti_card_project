@@ -1733,3 +1733,10 @@ def update_settlement_status_to_worker(payload, db : Session):
 
     message = whatsapp_message.twilio_send_text_message(f"+91{contactNumber}", text_message)
     return message
+
+def send_referral_code_message(employer_number: int, referral_code: str):
+    try:
+        whatsapp_message.send_referral_message_to_employer(employer_number, "employer_referral_message", referral_code)
+        return {"status": "success", "message": "Referral code message sent successfully."}
+    except Exception as e:
+        return {"status": "error", "message": f"Error sending referral code message: {str(e)}"}
