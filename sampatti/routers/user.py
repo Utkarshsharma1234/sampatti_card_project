@@ -303,3 +303,7 @@ def display_user_message_on_xbotic(employerNumber: int, message: str):
 @router.post("/send_message_to_referring_employer")
 def send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id):
     return whatsapp_message.send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id)
+
+@router.post("/send_referral_code_message")
+def send_referral_code_message(employer_number: int, referral_code: str):
+    return userControllers.send_referral_code_message(employer_number, referral_code)
