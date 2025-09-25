@@ -308,14 +308,14 @@ def send_message_to_referring_employer(employerNumber, template_name, referral_c
 def send_referral_code_message(employer_number: int, referral_code: str):
     return userControllers.send_referral_code_message(employer_number, referral_code)
 
-@router.post("/clear_cache_using_number")
+@router.post("/clear_cache_using_number_super_agent")
 def clear_employer_cache_super_agent(employer_number: int) -> dict:
     return onboarding_agent.clear_employer_cache_super_agent(employer_number)
 
-@router.post("/clear_cache_using_number")
+@router.post("/clear_cache_using_number_onboarding_agent")
 def clear_employer_cache_onboarding_agent(employer_number: int) -> dict:
     return onboarding_agent.clear_employer_cache_onboarding_agent(employer_number)
 
-@router.post("/clear_cache_using_number")
+@router.post("/clear_cache_using_number_cash_advance_agent")
 def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
     return onboarding_agent.clear_employer_cache_cash_advance_agent(employer_number)
