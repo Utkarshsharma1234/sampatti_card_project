@@ -303,3 +303,19 @@ def display_user_message_on_xbotic(employerNumber: int, message: str):
 @router.post("/send_message_to_referring_employer")
 def send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id):
     return whatsapp_message.send_message_to_referring_employer(employerNumber, template_name, referral_code, referred_employer, upi_id)
+
+@router.post("/send_referral_code_message")
+def send_referral_code_message(employer_number: int, referral_code: str):
+    return userControllers.send_referral_code_message(employer_number, referral_code)
+
+@router.post("/clear_cache_using_number_super_agent")
+def clear_employer_cache_super_agent(employer_number: int) -> dict:
+    return onboarding_agent.clear_employer_cache_super_agent(employer_number)
+
+@router.post("/clear_cache_using_number_onboarding_agent")
+def clear_employer_cache_onboarding_agent(employer_number: int) -> dict:
+    return onboarding_agent.clear_employer_cache_onboarding_agent(employer_number)
+
+@router.post("/clear_cache_using_number_cash_advance_agent")
+def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
+    return onboarding_agent.clear_employer_cache_cash_advance_agent(employer_number)

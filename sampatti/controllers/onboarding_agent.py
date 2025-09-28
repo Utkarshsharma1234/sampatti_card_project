@@ -250,3 +250,78 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
 
     except Exception as e:
         print("Error storing/parsing response:", e, "\nRaw response:", response)
+        
+
+
+#Clear Cache Functionality
+def clear_employer_cache_super_agent(employer_number: int) -> dict:
+    """Clear all ChromaDB conversation data for a specific employer."""
+    try:
+        # Using your existing vectordb instance
+        vectordb = Chroma(
+            persist_directory=PERSIST_DIR,
+            collection_name="SuperAgentConversations",
+            embedding_function=embedding
+        )
+        
+        # Get documents for this employer
+        results = vectordb.get(where={"employerNumber": str(employer_number)})
+        document_ids = results.get("ids", [])
+        
+        if document_ids:
+            vectordb.delete(ids=document_ids)
+            vectordb.persist()
+            return {"status": "success", "deleted": len(document_ids)}
+        
+        return {"status": "success", "deleted": 0}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
+def clear_employer_cache_onboarding_agent(employer_number: int) -> dict:
+    """Clear all ChromaDB conversation data for a specific employer."""
+    try:
+        # Using your existing vectordb instance
+        vectordb = Chroma(
+            persist_directory=PERSIST_DIR,
+            collection_name="SuperAgentConversations",
+            embedding_function=embedding
+        )
+        
+        # Get documents for this employer
+        results = vectordb.get(where={"employerNumber": str(employer_number)})
+        document_ids = results.get("ids", [])
+        
+        if document_ids:
+            vectordb.delete(ids=document_ids)
+            vectordb.persist()
+            return {"status": "success", "deleted": len(document_ids)}
+        
+        return {"status": "success", "deleted": 0}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
+def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
+    """Clear all ChromaDB conversation data for a specific employer."""
+    try:
+        # Using your existing vectordb instance
+        vectordb = Chroma(
+            persist_directory=PERSIST_DIR,
+            collection_name="CashAdvanceConversations",
+            embedding_function=embedding
+        )
+        
+        # Get documents for this employer
+        results = vectordb.get(where={"employerNumber": str(employer_number)})
+        document_ids = results.get("ids", [])
+        
+        if document_ids:
+            vectordb.delete(ids=document_ids)
+            vectordb.persist()
+            return {"status": "success", "deleted": len(document_ids)}
+        
+        return {"status": "success", "deleted": 0}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
