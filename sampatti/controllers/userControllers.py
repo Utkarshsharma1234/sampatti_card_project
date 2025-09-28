@@ -411,15 +411,11 @@ def send_greetings(db : Session):
     file_url = "https://bb.branding-element.com/prod/118331/118331-28092025_201229-saptami_greetings.mp4"
 
     for employer in total_employers:
-        if employer.employerNumber != 916378639230:
-            continue
-
         whatsapp_message.send_greetings_with_file_type(employer.employerNumber, template_name, file_type, file_url)
 
     return {
         "MESSAGE" : "Greetings sent successfully."
     }
-
 
 def salary_payment_reminder(db : Session):
 
