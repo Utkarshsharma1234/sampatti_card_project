@@ -70,6 +70,7 @@ async def orai_webhook(request: Request, background_tasks: BackgroundTasks):
 
 def process_orai_webhook(data: dict):
     try:
+        db = next(get_db())
         formatted_json = json.dumps(data, indent=2)
         formatted_json_oneline = json.dumps(data, separators=(',', ':'))
 
@@ -100,16 +101,16 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
-        # if userControllers.is_employer_present(employerNumber, db):
-        #     print(f"Employer {employerNumber} exists in the database.")
-        # else:
-        #     whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #     unique_id = generate_unique_id()
-        #     new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
-        #     db.add(new_user)
-        #     db.commit()
-        #     db.refresh(new_user)
-        #     return
+        if userControllers.is_employer_present(employerNumber, db):
+            print(f"Employer {employerNumber} exists in the database.")
+        else:
+            whatsapp_message.send_template_message(employerNumber, "user_first_message")
+            unique_id = generate_unique_id()
+            new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return
 
         # if userControllers.is_worker_present_for_employer(employerNumber, db):
         #     print(f"Worker exists for Employer {employerNumber} in the database.")
@@ -134,7 +135,7 @@ def process_orai_webhook(data: dict):
             # Return early to skip super_agent processing
             return
         
-        if employerNumber == "919731011117" or employerNumber == "917665292549":
+        if employerNumber == "919731011117":
             if message_type == "text":
                 query = message.get("text", {}).get("body")
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
@@ -144,7 +145,7 @@ def process_orai_webhook(data: dict):
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
                 return
 
-        if employerNumber == "917665292549" or employerNumber == "917738877765":
+        if employerNumber == "917738877765":
             forward_url = "https://p31xn2lg-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
