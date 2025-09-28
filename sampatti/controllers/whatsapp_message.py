@@ -409,7 +409,7 @@ def twilio_send_text_message(mobileNumber, body):
     return message.sid
 
 
-def send_greetings_with_image(employerNumber,template_name):
+def send_greetings_with_file_type(employerNumber,template_name, file_type, file_url):
 
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
     headers = {
@@ -434,9 +434,9 @@ def send_greetings_with_image(employerNumber,template_name):
                     "type" : "header",
                     "parameters" : [
                         {
-                            "type": "image",
-                            "image": {
-                                "link": "https://bb.branding-element.com/prod/118331/118331-21092025_190144-navratra_stapana.png"
+                            "type": file_type,
+                            file_type: {
+                                "link": file_url
                             }
                         }
                     ]
@@ -451,7 +451,8 @@ def send_greetings_with_image(employerNumber,template_name):
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
-        
+
+
 def send_template_message(employerNumber,template_name):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
 
