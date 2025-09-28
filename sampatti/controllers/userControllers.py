@@ -413,7 +413,7 @@ def send_greetings(db : Session):
     for employer in total_employers:
         if employer.employerNumber != 916378639230:
             continue
-        
+
         whatsapp_message.send_greetings_with_file_type(employer.employerNumber, template_name, file_type, file_url)
 
     return {
