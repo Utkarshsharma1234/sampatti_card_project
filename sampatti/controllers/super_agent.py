@@ -21,7 +21,7 @@ from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
 # Import the employer and worker tools
-from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, check_worker_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists, check_worker_employer_exists
+from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists, check_worker_employer_exists
 # Import attendance agent and tools
 from .attendance_agent import queryExecutor as attendance_agent
 from .attendance_tool import get_workers_for_employer_tool, manage_attendance_tool, get_attendance_summary_tool
@@ -113,8 +113,7 @@ class SuperAgent:
             get_workers_for_employer_tool,
             manage_attendance_tool,
             get_attendance_summary_tool,
-            check_employer_exists_tool,
-            check_worker_employer_exists_tool
+            check_employer_exists_tool
         ]
         
         self.setup_intent_classifier()
