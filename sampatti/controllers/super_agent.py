@@ -694,18 +694,6 @@ Just tell me what you need help with, and I'll take care of it!"""
             # Get conversation history
             chat_history = self.get_sorted_chat_history(employer_number)
             print(f"📚 Chat History Length: {len(chat_history)} characters")
-            
-            if check_employer_exists(employer_number) is False:
-                send_template_message(employer_number, "user_first_message")
-                print(f"👤 First time employer detected: {employer_number}")
-                self.ensure_employer_exists(employer_number)
-                print(f"✅ Employer {employer_number} added to database")
-                return
-            
-            if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
-                send_template_message(employer_number, "user_first_message")
-                print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
-                return
                 
             # Ensure employer exists in database first
             self.ensure_employer_exists(employer_number)
@@ -738,6 +726,18 @@ Just tell me what you need help with, and I'll take care of it!"""
                 f"User: {query}",
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
+            
+            if check_employer_exists(employer_number) is False:
+                send_template_message(employer_number, "user_first_message")
+                print(f"👤 First time employer detected: {employer_number}")
+                self.ensure_employer_exists(employer_number)
+                print(f"✅ Employer {employer_number} added to database")
+                return
+            
+            if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
+                send_template_message(employer_number, "user_first_message")
+                print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
+                return
             
             # Handle worker info requests with internal tools
             if intent_analysis.primary_intent == "worker_info" and intent_analysis.confidence >= 0.7:
