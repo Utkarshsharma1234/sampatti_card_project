@@ -63,7 +63,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             1. WORKER NUMBER:
             - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number"
-            - Always call `get_worker_details` after validation of the mobile number passes
+            - Always call `get_worker_details` tool after validation of the mobile number passes
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number
 
             2. UPI ID (if chosen):

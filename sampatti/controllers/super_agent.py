@@ -16,12 +16,12 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message, extract_document_details
-from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic
+from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic, send_template_message
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
 # Import the employer and worker tools
-from .main_tool import add_employer_tool, get_employer_workers_info_tool, add_employer, get_employer_workers_info
+from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists
 # Import attendance agent and tools
 from .attendance_agent import queryExecutor as attendance_agent
 from .attendance_tool import get_workers_for_employer_tool, manage_attendance_tool, get_attendance_summary_tool
@@ -112,7 +112,8 @@ class SuperAgent:
             get_employer_workers_info_tool,
             get_workers_for_employer_tool,
             manage_attendance_tool,
-            get_attendance_summary_tool
+            get_attendance_summary_tool,
+            check_employer_exists_tool
         ]
         
         self.setup_intent_classifier()
@@ -255,6 +256,16 @@ class SuperAgent:
             return True
         except Exception as e:
             print(f"❌ Error ensuring employer exists: {e}")
+            return False
+        
+    def check_first_time_employer(self, employer_number: int) -> bool:
+        try:
+            check_result = check_employer_exists(employer_number)
+            print(f"EMPLOYER CHECK LOG: {check_result}")
+            return check_result
+        
+        except Exception as e:
+            print(f"❌ Error checking if employer exists: {e}")
             return False
 
     def check_employer_exists(employer_number: int) -> bool:
@@ -669,6 +680,13 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"🆔 Media ID: {media_id}")
         
         try:
+            if check_employer_exists(employer_number) is False:
+                send_template_message(employer_number, "user_first_message")
+                print(f"👤 First time employer detected: {employer_number}")
+                self.ensure_employer_exists(employer_number)
+                print(f"✅ Employer {employer_number} added to database")
+                return
+                
             # Ensure employer exists in database first
             self.ensure_employer_exists(employer_number)
             
