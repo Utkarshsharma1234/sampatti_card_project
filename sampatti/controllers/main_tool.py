@@ -85,7 +85,13 @@ def check_employer_exists(employer_number: int) -> bool:
         return True
     return False
     
+def check_worker_employer_exists(employer_number: int) -> bool:
+    db = next(get_db())
+    mapping = db.query(models.worker_employer).where(models.worker_employer.c.employer_number == employer_number).first()
     
+    if mapping:
+        return True
+    return False
 
 
 add_employer_tool = StructuredTool.from_function(
@@ -105,4 +111,11 @@ check_employer_exists_tool = StructuredTool.from_function(
     name="Check Employer Exists",
     description="Check if an employer exists in the database."
 )
+
+check_worker_employer_exists_tool = StructuredTool.from_function(
+    func=check_worker_employer_exists,
+    name="Check Worker-Employer Mapping Exists",
+    description="Check if any worker-employer mapping exists for a given employer number."
+)
+    
 
