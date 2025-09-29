@@ -75,9 +75,9 @@ class SuperAgent:
         # Intent keywords for classification - Added worker_info keywords
         self.intent_keywords = {
             "onboarding": [
-                "onboard", "add worker", "new worker", "worker details", "employee details",
+                "onboard", "add worker", "new worker", "employee details",
                 "upi", "bank account", "pan number", "salary", "ifsc", "worker number",
-                "add employee", "register worker", "setup worker", "worker information",
+                "add worker", "register worker", "setup worker", "worker information",
                 "new employee", "employee setup", "worker registration", "referral code", 
                 "cashback amount", "number of referrals", "referral code status"
             ],
