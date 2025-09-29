@@ -690,6 +690,11 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"🆔 Media ID: {media_id}")
         
         try:
+            
+            # Get conversation history
+            chat_history = self.get_sorted_chat_history(employer_number)
+            print(f"📚 Chat History Length: {len(chat_history)} characters")
+            
             if check_employer_exists(employer_number) is False:
                 send_template_message(employer_number, "user_first_message")
                 print(f"👤 First time employer detected: {employer_number}")
@@ -719,9 +724,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 query = resp
                 print("Image Resp from the gemini")
             
-            # Get conversation history
-            chat_history = self.get_sorted_chat_history(employer_number)
-            print(f"📚 Chat History Length: {len(chat_history)} characters")
+            
             
             # Classify intent
             intent_analysis = self.classify_intent(query, chat_history)
