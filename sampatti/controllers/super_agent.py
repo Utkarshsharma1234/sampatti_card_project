@@ -327,6 +327,7 @@ class SuperAgent:
                 7. If user asks generally, provide a comprehensive overview
                 8. Always end with a helpful suggestion or question
                 9. Monthly leaves is total number of leaves in the current month.
+                10. only provide the like this *example* for bullet point don't use **example** like this.
                 
                 SPECIFIC QUERY HANDLING:
                 - "how many workers": Focus on count and status breakdown
