@@ -411,8 +411,6 @@ def send_greetings(db : Session):
     file_url = "https://bb.branding-element.com/prod/118331/118331-30092025_193957-navmi_image.png"
 
     for employer in total_employers:
-        if employer.employerNumber != 916378639230:
-            continue
         whatsapp_message.send_greetings_with_file_type(employer.employerNumber, template_name, file_type, file_url)
 
     return {
