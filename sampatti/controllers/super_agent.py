@@ -16,12 +16,12 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message, extract_document_details
-from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic
+from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic, send_template_message
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
 # Import the employer and worker tools
-from .main_tool import add_employer_tool, get_employer_workers_info_tool, add_employer, get_employer_workers_info
+from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists, check_worker_employer_exists
 # Import attendance agent and tools
 from .attendance_agent import queryExecutor as attendance_agent
 from .attendance_tool import get_workers_for_employer_tool, manage_attendance_tool, get_attendance_summary_tool
@@ -75,9 +75,9 @@ class SuperAgent:
         # Intent keywords for classification - Added worker_info keywords
         self.intent_keywords = {
             "onboarding": [
-                "onboard", "add worker", "new worker", "worker details", "employee details",
+                "onboard", "add worker", "new worker", "employee details",
                 "upi", "bank account", "pan number", "salary", "ifsc", "worker number",
-                "add employee", "register worker", "setup worker", "worker information",
+                "add worker", "register worker", "setup worker", "worker information",
                 "new employee", "employee setup", "worker registration", "referral code", 
                 "cashback amount", "number of referrals", "referral code status"
             ],
@@ -112,7 +112,8 @@ class SuperAgent:
             get_employer_workers_info_tool,
             get_workers_for_employer_tool,
             manage_attendance_tool,
-            get_attendance_summary_tool
+            get_attendance_summary_tool,
+            check_employer_exists_tool
         ]
         
         self.setup_intent_classifier()
@@ -256,6 +257,26 @@ class SuperAgent:
         except Exception as e:
             print(f"❌ Error ensuring employer exists: {e}")
             return False
+        
+    def check_first_time_employer(self, employer_number: int) -> bool:
+        try:
+            check_result = check_employer_exists(employer_number)
+            print(f"EMPLOYER CHECK LOG: {check_result}")
+            return check_result
+        
+        except Exception as e:
+            print(f"❌ Error checking if employer exists: {e}")
+            return False
+    
+    def worker_employer_mapping(self, employer_number: int) -> bool:
+        try:
+            check_result = check_worker_employer_exists(employer_number)
+            print(f"WORKER-EMPLOYER MAPPING CHECK LOG: {check_result}")
+            return check_result
+        
+        except Exception as e:
+            print(f"❌ Error checking worker-employer mapping: {e}")
+            return False
 
     def check_employer_exists(employer_number: int) -> bool:
         """
@@ -327,6 +348,7 @@ class SuperAgent:
                 7. If user asks generally, provide a comprehensive overview
                 8. Always end with a helpful suggestion or question
                 9. Monthly leaves is total number of leaves in the current month.
+                10. only provide the like this *example* for bullet point don't use **example** like this.
                 
                 SPECIFIC QUERY HANDLING:
                 - "how many workers": Focus on count and status breakdown
@@ -668,6 +690,11 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"🆔 Media ID: {media_id}")
         
         try:
+            
+            # Get conversation history
+            chat_history = self.get_sorted_chat_history(employer_number)
+            print(f"📚 Chat History Length: {len(chat_history)} characters")
+                
             # Ensure employer exists in database first
             self.ensure_employer_exists(employer_number)
             
@@ -685,9 +712,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 query = resp
                 print("Image Resp from the gemini")
             
-            # Get conversation history
-            chat_history = self.get_sorted_chat_history(employer_number)
-            print(f"📚 Chat History Length: {len(chat_history)} characters")
+            
             
             # Classify intent
             intent_analysis = self.classify_intent(query, chat_history)
@@ -701,6 +726,18 @@ Just tell me what you need help with, and I'll take care of it!"""
                 f"User: {query}",
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
+            
+            if check_employer_exists(employer_number) is False:
+                send_template_message(employer_number, "user_first_message")
+                print(f"👤 First time employer detected: {employer_number}")
+                self.ensure_employer_exists(employer_number)
+                print(f"✅ Employer {employer_number} added to database")
+                return
+            
+            if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
+                send_template_message(employer_number, "user_first_message")
+                print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
+                return
             
             # Handle worker info requests with internal tools
             if intent_analysis.primary_intent == "worker_info" and intent_analysis.confidence >= 0.7:
