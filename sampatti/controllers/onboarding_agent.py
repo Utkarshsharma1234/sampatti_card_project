@@ -111,13 +111,14 @@ prompt = ChatPromptTemplate.from_messages(
                 3. If confirmed:
                     a. Ask for referral code (mandatory): "Awesome! 🎁 Do you have a referral code from another employer? You can earn cashback!"
                     b. If referral code provided:
+                        - call the process_referral_code tool with employer_number, referral_code, worker_number, salary.
                         - if valid, show: "Fantastic! 🎉 Your referral code is applied. Now, what's the monthly salary?"
                         - if invalid, show: "Hmm, that code doesn't work 😕 Do you have another one, or shall we continue?"
                     c. If employer does not have referral code or says no:
                         - Show message: "No worries! 😊 Let's continue - what's the monthly salary amount?"
                     d. Ask for salary (mandatory)
                         - the salary amount must be greater than 500 rupees
-                        - Call `process_referral_code` with employer_number, referral_code(if provided), worker_number, and salary
+                        - after getting the salary call `confirm_worker_and_add_to_employer` tool with all collected details
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
