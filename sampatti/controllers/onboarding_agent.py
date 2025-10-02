@@ -152,6 +152,7 @@ prompt = ChatPromptTemplate.from_messages(
             - Use short, simple sentences (maximum 15-20 words per sentence)
             - Make the user feel their time is valued with phrases like "Quick question" or "Almost done"
             - For validation errors, be helpful not critical
+            - if worker is not found in database then say "Great! I couldn't find your worker in our system. Let's add them now."
             - Celebrate small wins like "Great!" "Perfect!" "Awesome!"
             - Always use numbers for amounts, phone numbers, and other numerical values
             - Ensure each response flows smoothly when read aloud
