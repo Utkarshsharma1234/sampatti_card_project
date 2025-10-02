@@ -95,6 +95,9 @@ prompt = ChatPromptTemplate.from_messages(
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question
+            - after providing the worker number and validating it, call `get_worker_details` tool to check if worker exists
+            - If worker exists, show the details and ask for confirmation before proceeding to referral code and salary
+            - If worker does not exist, continue with normal onboarding flow.
             - Re-ask if validation fails with encouraging message
             - Only proceed to next item after current validation passes
             - If employer wants to know the referral code, numberOfReferrals, and cashback amount then call `employer_details` tool to fetch the details.
