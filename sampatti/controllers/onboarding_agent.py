@@ -63,15 +63,17 @@ prompt = ChatPromptTemplate.from_messages(
 
             1. WORKER NUMBER:
             - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number"
-            - Always call `get_worker_details` tool after validation of the mobile number passes
-            - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number
+            - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number.
+            - if +91 is provided then also remove the +91 and call `get_worker_details` with the 10 digit worker number.
+            - if worker number is same as employer number then ask: "Hey! You can't add yourself as a worker. Please share your worker's number"
+            - Always call `get_worker_details` tool after validation of the mobile number.
 
             2. UPI ID (if chosen):
             - it can be anything like don't validate the upi id
             - take as user provides
 
             3. BANK ACCOUNT + IFSC (if chosen):
-            - Bank Account: Must be numeric, typically 8-18 digits
+            - Bank Account: Must be numeric get_worker_details, typically 8-18 digits
             - IFSC Code: Must be exactly 11 characters (4 letters + 7 alphanumeric)
             - Format: First 4 characters must be letters, 5th character must be 0, last 6 can be letters or numbers
             - If invalid: "Hold on! 🤔 The bank details don't look right. Please check the account number and IFSC code"
