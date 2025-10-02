@@ -39,7 +39,7 @@ print("✅ Successfully imported attendance_agent and attendance_tools")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
 llm = ChatOpenAI(
-        model="openai/gpt-4.1", 
+        model="openai/gpt-4.1-mini", 
         api_key=openrouter_api_key,
         base_url="https://openrouter.ai/api/v1"
 )
