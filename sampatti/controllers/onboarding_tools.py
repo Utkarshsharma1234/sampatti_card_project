@@ -17,7 +17,7 @@ from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
 from . import userControllers
-from ..controllers import onboarding_tasks
+from ..controllers import onboarding_tasks, talk_to_agent_excel_file
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -566,7 +566,20 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
         
         db.execute(insert_stmt)
         db.commit()
-        
+
+        talk_to_agent_excel_file.create_worker_details_onboarding(
+            worker_number=worker_number,
+            employer_number=employer_number,
+            UPI=worker.upi_id or "",
+            bank_account_number=worker.accountNumber or "",
+            ifsc_code=worker.ifsc or "",
+            pan_number=worker.panNumber,
+            bank_passbook_image=worker.bankPassbookImage or "",
+            pan_card_image=worker.panCardImage or "",
+            salary=salary,
+            referral_code=referral_code or ""
+        )
+
         # Generate employment contract
         try:
             userControllers.generate_employment_contract(
