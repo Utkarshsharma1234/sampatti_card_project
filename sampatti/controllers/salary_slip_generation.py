@@ -8,23 +8,12 @@ from textwrap import wrap
 from sqlalchemy.orm import Session
 from .. import models
 from .cashfree_api import check_order_status, fetch_bank_ref
-from .utility_functions import current_date, current_month, previous_month, current_year, amount_to_words
+from .utility_functions import current_date,amount_to_words
 
 
-def generate_salary_slip(workerNumber, db:Session) :
+def generate_salary_slip(workerNumber, month, year, db:Session) :
 
     worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.workerNumber == workerNumber).first()
-    
-    year = current_year()
-    month = current_month()
-    date = current_date()
-
-    if month == "January":
-        month = "December"
-        year -= 1
-
-    else:
-        month = previous_month()
         
     if not worker :
         raise HTTPException(status_code=404, detail="The domestic worker is not registered. You must register the worker first.")
@@ -105,13 +94,13 @@ def generate_salary_slip(workerNumber, db:Session) :
 
     rows = 0
 
-    total_transactions = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber).all()
+    total_transactions = db.query(models.SalaryDetails).filter(models.SalaryDetails.worker_id == worker.id, models.SalaryDetails.month == month, models.SalaryDetails.year == year).all()
     total_amount = 0
     
     ct = 1
     for transaction in total_transactions:
         order_id = transaction.order_id
-        if order_id == "sample":
+        if order_id is None or order_id == "":
             continue
         order_info = check_order_status(order_id=order_id)
         status = order_info["order_status"]
@@ -156,7 +145,7 @@ def generate_salary_slip(workerNumber, db:Session) :
     receipt_table.drawOn(c, x, y)
 
     c.setFont("Times-Roman", 10)
-    issued = f"Salary Slip issued on : {date} for the month of {month} {year}"
+    issued = f"Salary Slip issued on : {current_date()} for the month of {month} {year}"
     y -= 25
     c.drawString(x, y, text=issued)
 

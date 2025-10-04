@@ -390,7 +390,7 @@ def send_worker_salary_slips(db : Session) :
 
     for worker in total_workers:
 
-        salary_slip_generation.generate_salary_slip(worker.workerNumber, db)
+        salary_slip_generation.generate_salary_slip(worker.workerNumber, month, year, db)
         worker_salary_slip_name = f"{worker.workerNumber}_SS_{month}_{year}.pdf"
         object_name = f"salarySlips/{worker_salary_slip_name}"
         
