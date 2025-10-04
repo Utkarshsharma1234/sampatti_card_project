@@ -62,7 +62,7 @@ press "Yes' if the following details are correct:
 
 Name of domestic worker: {request.name}
 
-Bank Details: VPA : {request.upi},  Account Number : {request.accountNumber},  IFSC : {request.ifsc}
+Bank Details:: VPA : {request.upi},  Account Number : {request.accountNumber},  IFSC : {request.ifsc}
 PAN Number : {request.panNumber}
 
 Employer: Yes
