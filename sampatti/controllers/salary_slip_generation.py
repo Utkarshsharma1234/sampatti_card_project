@@ -105,7 +105,7 @@ def generate_salary_slip(workerNumber, month, year, db:Session) :
         order_info = check_order_status(order_id=order_id)
         status = order_info["order_status"]
         order_amount = order_info["order_amount"]
-        salary = transaction.salary_amount
+        salary = transaction.salary
         if status == "PAID":
 
             bank_ref_no = fetch_bank_ref(order_id=order_id)
