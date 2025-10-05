@@ -668,4 +668,113 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
                 
     except Exception as e:
         return {"status": "error", "message": f"Error transferring cashback: {str(e)}"}
+    
+    
+def rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repayment, total_amount, template_name, db: Session):
+    
+    Cashfree.XClientId = pg_id
+    Cashfree.XClientSecret = pg_secret
+    Cashfree.XEnvironment = Cashfree.XProduction
+    x_api_version = "2023-08-01"
+    
+    try:
+        item = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber).first() 
+        
+        note = {
+            salary : salary,
+            advance_remaining : advance_remaining,
+            repayment : repayment,
+            total_amount : total_amount
+        }
+
+        order_splits = [
+            {
+                "vendor_id": item.vendor_id,
+                "amount": total_amount
+            }
+        ]
+        note_string = json.dumps(note)
+        actual_number = int(str(employerNumber)[2:])
+
+        customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
+        createOrderRequest = CreateOrderRequest(order_amount = total_amount, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
+        
+        api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
+        response = dict(api_response.data)
+        payment_session_id = response["payment_session_id"]
+        
+        clean_response = {
+            "cf_order_id": str(response.get("cf_order_id", "")),
+            "order_id": str(response.get("order_id", "")),
+            "order_amount": float(response.get("order_amount", 0)),
+            "order_status": response.get("order_status", ""),
+            "payment_session_id": response.get("payment_session_id", ""),
+            "order_note": response.get("order_note", ""),
+        }                                                           
+        
+        url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": orai_api_key
+        }
+
+        data = {
+            "template": {
+                "namespace": orai_namespace,
+                "name": template_name,
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {
+                                "type": "text",
+                                "text": salary
+                            },
+                            {
+                                "type": "text",
+                                "text": advance_remaining
+                            },
+                            {
+                                "type": "text",
+                                "text": repayment
+                            },
+                            {
+                                "type": "text",
+                                "text": total_amount
+                            }
+                        ]
+                    },
+                    {
+                        "index": 0,
+                        "parameters": [
+                            {
+                                "type": "text",
+                                "text": payment_session_id
+                            }
+                        ],
+                        "sub_type": "url",
+                        "type": "button"
+                    }
+                ],
+                "language": {
+                    "code": "en_US",
+                    "policy": "deterministic"
+                }
+            },
+            "messaging_product": "whatsapp",
+            "to": employerNumber,
+            "type": "template"
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+
+        if response.status_code == 200:
+            print("Message sent successfully")
+        else:
+            print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+            
+    except Exception as e:
+        print(e)
+        pass
 
