@@ -483,7 +483,7 @@ def send_template_message(employerNumber,template_name):
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
 
 
-def rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repayment, total_amount, link_param, template_name):
+def rashmita_sample_payment_link(employerNumber, workerName, salary, advance, total_amount, link_param, template_name):
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
 
     headers = {
@@ -501,15 +501,19 @@ def rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repa
                     "parameters": [
                         {
                             "type": "text",
+                            "text": employerNumber
+                        },
+                        {
+                            "type": "text",
+                            "text": workerName
+                        },
+                        {
+                            "type": "text",
                             "text": salary
                         },
                         {
                             "type": "text",
-                            "text": advance_remaining
-                        },
-                        {
-                            "type": "text",
-                            "text": repayment
+                            "text": advance
                         },
                         {
                             "type": "text",
