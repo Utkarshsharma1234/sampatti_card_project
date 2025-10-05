@@ -321,5 +321,5 @@ def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
     return onboarding_agent.clear_employer_cache_cash_advance_agent(employer_number)
 
 @router.post("/add_existing_worker_to_sheet")
-def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
+def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: str = "") -> dict:
     return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
