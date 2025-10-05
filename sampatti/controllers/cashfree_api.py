@@ -670,7 +670,7 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
         return {"status": "error", "message": f"Error transferring cashback: {str(e)}"}
     
     
-def rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repayment, total_amount, template_name, db: Session):
+def rashmita_sample_payment_link(employerNumber, workerName, salary, advance_remaining, repayment, total_amount, template_name, db: Session):
     
     Cashfree.XClientId = pg_id
     Cashfree.XClientSecret = pg_secret
@@ -678,7 +678,7 @@ def rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repa
     x_api_version = "2023-08-01"
     
     try:
-        item = db.query(models.worker_employer).filter(models.worker_employer.c.employer_number == employerNumber).first() 
+        item = db.query(models.worker_employer).filter(func.lower(models.worker_employer.c.worker_name) == workerName.strip().lower(), models.worker_employer.c.employer_number == employerNumber).first() 
         
         note = {
             salary : salary,

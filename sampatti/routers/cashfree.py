@@ -103,5 +103,5 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
     return cashfree_api.transfer_cashback_amount(beneficiary_id, amount, transfer_mode)
 
 @router.post('/rashmita_sample_payment_link')
-def rashmita_sample_payment_link(employerNumber: int, salary: int, advance_remaining: int, repayment: int, total_amount: int, template_name: str, db: Session = Depends(get_db)):
-    return cashfree_api.rashmita_sample_payment_link(employerNumber, salary, advance_remaining, repayment, total_amount, template_name, db)
+def rashmita_sample_payment_link(employerNumber: int, workerName: str, salary: int, advance_remaining: int, repayment: int, total_amount: int, template_name: str, db: Session = Depends(get_db)):
+    return cashfree_api.rashmita_sample_payment_link(employerNumber, workerName, salary, advance_remaining, repayment, total_amount, template_name, db)
