@@ -574,8 +574,8 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
             bank_account_number=worker.accountNumber or "",
             ifsc_code=worker.ifsc or "",
             pan_number=worker.panNumber,
-            bank_passbook_image=worker.bankPassbookImage or "",
-            pan_card_image=worker.panCardImage or "",
+            bank_passbook_image="NA",
+            pan_card_image="NA",
             salary=salary,
             referral_code=referral_code or ""
         )
