@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..controllers import onboarding_agent, rag_funcs, userControllers
 from ..controllers import employment_contract_gen, salary_summary_gen, cash_advance_agent, super_agent
 from datetime import datetime, timedelta
-from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces
+from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces, onboarding_tools
 from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
 from pydantic import BaseModel
 from typing import Optional
@@ -319,3 +319,7 @@ def clear_employer_cache_onboarding_agent(employer_number: int) -> dict:
 @router.post("/clear_cache_using_number_cash_advance_agent")
 def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
     return onboarding_agent.clear_employer_cache_cash_advance_agent(employer_number)
+
+@router.post("/add_existing_worker_to_sheet")
+def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
+    return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
