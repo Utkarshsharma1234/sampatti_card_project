@@ -518,7 +518,7 @@ def cash_advance_link(
         }
 
         #send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
-        rashmita_sample_payment_link(employerNumber=employerNumber, workerName=item.worker_name, salary=monthly_salary, advance_remaining=cash_advance, repayment=repayment_amount, total_amount=total_salary, template_name="revised_salary_link_template", db=db)
+        rashmita_sample_payment_link(employerNumber=employerNumber, workerName=item.worker_name, salary=monthly_salary, advance_remaining=cash_advance, repayment=repayment_amount, total_amount=total_salary, template_name="rashmita_sample_payment_link", db=db)
 
         update_statement = update(models.worker_employer).where(
             (models.worker_employer.c.worker_name == workerName) &
