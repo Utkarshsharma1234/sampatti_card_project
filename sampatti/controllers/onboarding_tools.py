@@ -549,6 +549,7 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
         
         # Create worker-employer relationship
         relation_id = generate_unique_id(length=8)
+        worker_name = worker.name
         
         # Insert into worker_employer table
         insert_stmt = models.worker_employer.insert().values(
@@ -567,18 +568,17 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
         db.execute(insert_stmt)
         db.commit()
 
-        # talk_to_agent_excel_file.create_worker_details_onboarding(
-        #     worker_number=worker_number,
-        #     employer_number=employer_number,
-        #     UPI=worker.upi_id or "",
-        #     bank_account_number=worker.accountNumber or "",
-        #     ifsc_code=worker.ifsc or "",
-        #     pan_number=worker.panNumber,
-        #     bank_passbook_image="NA",
-        #     pan_card_image="NA",
-        #     salary=salary,
-        #     referral_code=referral_code or ""
-        # )
+        talk_to_agent_excel_file.create_record_for_existing_worker_sheet(
+            worker_number=worker_number,
+            employer_number=employer_number,
+            worker_name=worker_name,
+            UPI=worker.upi_id or "",
+            bank_account_number=worker.accountNumber or "",
+            ifsc_code=worker.ifsc or "",
+            pan_number=worker.panNumber,
+            salary=salary,
+            referral_code=referral_code or "",
+        )
 
         # Generate employment contract
         try:
