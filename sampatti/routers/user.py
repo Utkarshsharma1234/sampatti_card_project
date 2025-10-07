@@ -323,7 +323,3 @@ def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
 @router.post("/add_existing_worker_to_sheet")
 def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: str = "") -> dict:
     return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
-
-@router.post("/add_existing_worker_to_sheet")
-def create_record_for_existing_worker_sheet(worker_number: int, employer_number : int, worker_name : str, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, salary : int, referral_code : str = ""):
-    return talk_to_agent_excel_file.create_record_for_existing_worker_sheet(worker_number, employer_number, worker_name, UPI, bank_account_number, ifsc_code, pan_number, salary, referral_code)

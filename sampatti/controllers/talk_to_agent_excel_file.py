@@ -538,7 +538,7 @@ def get_column_index(sheet, column_name):
         raise ValueError(f"Column '{column_name}' not found in sheet header.")
     
     
-def create_record_for_existing_worker_sheet(worker_number: int, employer_number : int, worker_name : str, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, salary : int, referral_code : str = ""):
+def create_record_for_existing_worker_sheet(worker_number: int, employer_number : int, worker_name : str, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, vendor_id : str, salary : int, referral_code : str = ""):
     date = current_date()
     
     # Input row dictionary
@@ -557,7 +557,8 @@ def create_record_for_existing_worker_sheet(worker_number: int, employer_number 
         "referral_code" : referral_code,
         "bank_account_validation": "VALID",
         "pan_card_validation": "VALID",
-        "cashfree_vendor_add_status": "VALID",
+        "cashfree_vendor_add_status": "ACTIVE",
+        "vendorId": vendor_id,
         "bank_account_name_cashfree": worker_name,
         "pan_card_name_cashfree": worker_name, 
     }
