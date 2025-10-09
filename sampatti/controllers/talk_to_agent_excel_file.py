@@ -488,7 +488,7 @@ def fetch_pan_bank_details_from_image():
         pan_number = row.get("PAN_number", "").strip()
         ifsc_code = row.get("ifsc_code", "").strip()
 
-        if bank_passbook_image:
+        if bank_passbook_image is not None or bank_passbook_image != "":
 
             if account_number and ifsc_code:
                 continue
@@ -504,7 +504,7 @@ def fetch_pan_bank_details_from_image():
                 update_sheet_cell(sheet, idx, "bank_account_number", account_number)
                 update_sheet_cell(sheet, idx, "ifsc_code", ifsc_code)
 
-        if pan_card_image:
+        if pan_card_image is not None or pan_card_image != "":
 
             if pan_number: 
                 continue
