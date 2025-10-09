@@ -306,7 +306,7 @@ def payment_link_generation(db : Session):
             current_month_num = datetime.now().month
             current_year_num = datetime.now().year
             should_deduct_repayment = False
-            if payment_status == "Completed" and repayment_start_month and repayment_frequency and repayment_start_year:
+            if payment_status == "COMPLETED" and repayment_start_month and repayment_frequency and repayment_start_year:
                 # Calculate the difference in months between current and repayment start
                 month_diff = (current_year_num - repayment_start_year) * 12 + (current_month_num - repayment_start_month)
                 if month_diff >= 0 and month_diff % repayment_frequency == 0:
