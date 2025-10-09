@@ -1434,9 +1434,9 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
     contract_schema = schemas.Contract(
         employerNumber = employerNumber,
         workerNumber = workerNumber,
-        upi = upi,
-        accountNumber = accountNumber,
-        ifsc = ifsc,
+        upi = upi or "NA",
+        accountNumber = accountNumber or "NA",
+        ifsc = ifsc or "NA",
         name = name,
         salary = salary,
         panNumber=panNumber

@@ -290,7 +290,7 @@ def clear_employer_cache_onboarding_agent(employer_number: int) -> dict:
         # Using your existing vectordb instance
         vectordb = Chroma(
             persist_directory=PERSIST_DIR,
-            collection_name="SuperAgentConversations",
+            collection_name="OnboardingConversations",
             embedding_function=embedding
         )
         

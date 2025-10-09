@@ -481,3 +481,71 @@ def send_template_message(employerNumber,template_name):
         print(f"Message sent successfully, Employer name : {employerNumber}")
     else:
         print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
+
+def rashmita_sample_payment_link(employerNumber, workerName, salary, advance, total_amount, link_param, template_name):
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": template_name,
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": employerNumber
+                        },
+                        {
+                            "type": "text",
+                            "text": workerName
+                        },
+                        {
+                            "type": "text",
+                            "text": salary
+                        },
+                        {
+                            "type": "text",
+                            "text": advance
+                        },
+                        {
+                            "type": "text",
+                            "text": total_amount
+                        }
+                    ]
+                },
+                {
+                    "index": 0,
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": link_param
+                        }
+                    ],
+                    "sub_type": "url",
+                    "type": "button"
+                }
+            ],
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")

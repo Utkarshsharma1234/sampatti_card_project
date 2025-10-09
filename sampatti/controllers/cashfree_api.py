@@ -10,7 +10,7 @@ from cashfree_pg.models.create_order_request import CreateOrderRequest
 from cashfree_pg.api_client import Cashfree
 from cashfree_pg.models.customer_details import CustomerDetails
 from .. import models
-from .whatsapp_message import send_whatsapp_message
+from .whatsapp_message import send_whatsapp_message, rashmita_sample_payment_link
 from .utility_functions import generate_unique_id, current_month, current_date, current_year, previous_month
 from sqlalchemy.orm import Session
 from sqlalchemy import update
@@ -518,6 +518,8 @@ def cash_advance_link(
         }
 
         send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+        #rashmita_sample_payment_link(employerNumber=employerNumber, workerName=item.worker_name, salary=monthly_salary, advance=cash_advance, total_amount=bonus, link_param=payment_session_id, template_name="rashmita_sample_paymet_temp_copy")
+        
 
         update_statement = update(models.worker_employer).where(
             (models.worker_employer.c.worker_name == workerName) &
@@ -668,4 +670,5 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
                 
     except Exception as e:
         return {"status": "error", "message": f"Error transferring cashback: {str(e)}"}
-
+    
+    

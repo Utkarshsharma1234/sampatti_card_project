@@ -537,3 +537,94 @@ def get_column_index(sheet, column_name):
     except ValueError:
         raise ValueError(f"Column '{column_name}' not found in sheet header.")
     
+    
+def create_record_for_existing_worker_sheet(worker_number: int, employer_number : int, worker_name : str, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, vendor_id : str, salary : int, referral_code : str = ""):
+    date = current_date()
+    
+    # Input row dictionary
+    input_data = {
+        "id": utility_functions.generate_unique_id(length=16),
+        "worker_number": worker_number,
+        "employer_number" : employer_number,
+        "UPI": UPI or "NA",
+        "bank_account_number": bank_account_number or "NA",
+        "ifsc_code": ifsc_code or "NA",
+        "PAN_number": pan_number,
+        "bank_passbook_image": "NA",
+        "pan_card_image": "NA",
+        "salary" : salary,
+        "date_of_onboarding" : f"{date}",
+        "referral_code" : referral_code,
+        "bank_account_validation": "VALID",
+        "pan_card_validation": "VALID",
+        "cashfree_vendor_add_status": "ACTIVE",
+        "vendorId": vendor_id,
+        "bank_account_name_cashfree": worker_name,
+        "pan_card_name_cashfree": worker_name, 
+    }
+
+
+    # Setup Google Sheets credentials
+    client = get_client()
+    team_emails = ['utkarsh@sampatticard.in', 'nusrathmuskan962@gmail.com', 'vrashali@sampatticard.in', 'om@sampatticard.in', 'nusrath@sampatticard.in']
+
+    try:
+        spreadsheet = client.open(sheet_title)
+        sheet = spreadsheet.sheet1
+        print("Sheet exists. Checking headers...")
+
+        existing_headers = sheet.row_values(1)
+
+        if existing_headers == all_columns:
+            # Exact match: append new row
+            row = [input_data.get(col, "") for col in all_columns]
+            sheet.append_row(row)
+            print("Exact column match. Row appended.")
+        else:
+            print("Column mismatch. Adjusting headers and restoring data...")
+
+            # Fetch existing data
+            all_data = sheet.get_all_values()
+            existing_data = all_data[1:]  # Exclude headers
+
+            # Map old column positions
+            old_columns = existing_headers
+            old_data_dicts = []
+            for row in existing_data:
+                data_dict = {col: row[i] if i < len(row) else "" for i, col in enumerate(old_columns)}
+                old_data_dicts.append(data_dict)
+
+            # Backup old rows into new structure
+            padded_data = []
+            for data_dict in old_data_dicts:
+                padded_row = [data_dict.get(col, "") for col in all_columns]
+                padded_data.append(padded_row)
+
+            # Add the new row too
+            new_row = [input_data.get(col, "") for col in all_columns]
+            padded_data.append(new_row)
+
+            # Clear and rewrite everything
+            sheet.clear()
+            sheet.update([all_columns] + padded_data)
+
+            print("Headers updated. Previous and new data restored.")
+            
+
+    except gspread.SpreadsheetNotFound:
+        print("Sheet not found. Creating new sheet...")
+        spreadsheet = client.create(sheet_title)
+        sheet = spreadsheet.sheet1
+        sheet.update([all_columns])
+        row = [input_data.get(col, "") for col in all_columns]
+        sheet.append_row(row)
+        for email in team_emails:
+            spreadsheet.share(email, perm_type='user', role='writer')
+        print("Sheet created and first row added.")
+
+    print(f"Sheet URL: {spreadsheet.url}")
+
+    #run_tasks_till_add_vendor()
+
+    return spreadsheet.url
+    
