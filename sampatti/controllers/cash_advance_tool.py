@@ -304,7 +304,7 @@ def generate_payment_link_func(
                         deduction=deduction,
                         date_issued_on=current_date_str,
                         order_id=order_id,
-                        payment_status="pending"  # Initial status is pending
+                        payment_status="PENDING"  # Initial status is pending
                     )
                     
                     db.add(new_salary_management)

@@ -315,15 +315,15 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     cash_advance_paid = order_note["cashAdvance"]
 
     if cash_advance_paid > 0:
-        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id, models.CashAdvanceManagement.payment_status == "PENDING", models.CashAdvanceManagement.cashAdvance == cash_advance_paid).first()
+        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.order_id == orderId).first()
 
-        cash_advance_record.payment_status = "COMPLETED"
+        cash_advance_record.payment_status = "SUCCESS"
         db.commit()
         db.refresh(cash_advance_record)
 
     if repayment_paid > 0:
 
-        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id, models.CashAdvanceManagement.payment_status == "COMPLETED").first()
+        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id, models.CashAdvanceManagement.payment_status == "SUCCESS").first()
 
         if cash_advance_record:
             cash_advance_record.cashAdvance -= repayment_paid
@@ -333,6 +333,7 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     return {
         "Message": "Salary details updated successfully."
     }
+
 
 def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
 
