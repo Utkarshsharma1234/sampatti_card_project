@@ -311,44 +311,28 @@ def update_salary_details(employerNumber : int, orderId : str, db : Session):
     db.commit()
     db.refresh(new_entry)
     
-    if order_note["cashAdvance"] > 0 or order_note["repayment"] > 0:
-        # First, update the payment status for the current order
-        update_cash_advance_order = update(models.CashAdvanceManagement).where(
-            models.CashAdvanceManagement.order_id == orderId
-        ).values(
-            payment_status="SUCCESS"
-        )
-        db.execute(update_cash_advance_order)
+    repayment_paid = order_note["repayment"]
+    cash_advance_paid = order_note["cashAdvance"]
+
+    if cash_advance_paid > 0:
+        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id, models.CashAdvanceManagement.payment_status == "PENDING", models.CashAdvanceManagement.cashAdvance == cash_advance_paid).first()
+
+        cash_advance_record.payment_status = "COMPLETED"
         db.commit()
+        db.refresh(cash_advance_record)
 
-    if order_note["repayment"] > 0:
+    if repayment_paid > 0:
 
-        existing_cash_advance_entry = db.query(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).first()
+        cash_advance_record = db.query(models.CashAdvanceManagement).filter(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id, models.CashAdvanceManagement.payment_status == "COMPLETED").first()
 
+        if cash_advance_record:
+            cash_advance_record.cashAdvance -= repayment_paid
+            db.commit()
+            db.refresh(cash_advance_record)
 
-        existing_repayment = existing_cash_advance_entry.monthlyRepayment
-        existing_advance = existing_cash_advance_entry.cashAdvance
-
-        cash = existing_advance - order_note["repayment"]
-        repayment = existing_repayment
-        startMonth = existing_cash_advance_entry.repaymentStartMonth
-        startYear = existing_cash_advance_entry.repaymentStartYear
-
-        if cash <= 0:
-            cash = 0
-            repayment = 0
-            startMonth = "sampatti"
-            startYear = 0
-
-        update_statement = update(models.CashAdvanceManagement).where(models.CashAdvanceManagement.worker_id == item.worker_id, models.CashAdvanceManagement.employer_id == item.employer_id).values(cashAdvance = cash, monthlyRepayment = repayment, repaymentStartMonth = startMonth, repaymentStartYear = startYear)
-
-        db.execute(update_statement)
-        db.commit()
-        
-        
-
-
-
+    return {
+        "Message": "Salary details updated successfully."
+    }
 
 def download_worker_salary_slip(workerNumber: int, month : str, year : int, db : Session):
 

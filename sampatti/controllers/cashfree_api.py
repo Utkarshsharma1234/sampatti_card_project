@@ -271,32 +271,69 @@ def payment_link_generation(db : Session):
     total_relations = db.query(models.worker_employer).all()
     
     for item in total_relations:
-
         if item.employer_number == 917015645195 or item.employer_number == 919731011117 or item.employer_number == 917022878346:
             continue
-        
         else:
             dummy_number = item.employer_number
             actual_number = int(str(dummy_number)[2:])
-            
             customerDetails = CustomerDetails(customer_id= f"{item.worker_number}", customer_phone= f"{actual_number}")
 
             total_salary = item.salary_amount
             number_of_month_days = calendar.monthrange(cr_year, datetime.now().month)[1]
 
-            note = {'salary' : item.salary_amount, 'cashAdvance' : 0, 'bonus' : 0, 'repayment' : 0, 'deduction' : 0, 'attendance' : number_of_month_days,
-            'repaymentStartMonth': "September",
-            'repaymentStartYear': 2025,
-            'frequency': 1}
+            # Cash advance repayment logic
+            repayment_amount = 0
+            repayment_start_month = None
+            repayment_frequency = None
+            payment_status = None
+            repayment_start_year = None
+            cash_advance = 0
+
+            # Fetch cash advance record for this worker-employer pair
+            cash_advance_record = db.query(models.CashAdvanceManagement).filter(
+                models.CashAdvanceManagement.worker_id == item.worker_id,
+                models.CashAdvanceManagement.employer_id == item.employer_id
+            ).first()
+
+            if cash_advance_record:
+                repayment_amount = cash_advance_record.repaymentAmount or 0
+                repayment_start_month = cash_advance_record.repaymentStartMonth
+                repayment_frequency = cash_advance_record.frequency
+                payment_status = cash_advance_record.payment_status
+                repayment_start_year = cash_advance_record.repaymentStartYear
+                cash_advance = cash_advance_record.cashAdvance or 0
+
+            current_month_num = datetime.now().month
+            current_year_num = datetime.now().year
+            should_deduct_repayment = False
+            if payment_status == "Completed" and repayment_start_month and repayment_frequency and repayment_start_year:
+                # Calculate the difference in months between current and repayment start
+                month_diff = (current_year_num - repayment_start_year) * 12 + (current_month_num - repayment_start_month)
+                if month_diff >= 0 and month_diff % repayment_frequency == 0:
+                    should_deduct_repayment = True
+
+            actual_repayment = min(cash_advance, repayment_amount) if should_deduct_repayment else 0
+            amount_payable = total_salary - actual_repayment
+            note = {
+                'salary': item.salary_amount,
+                'cashAdvance': 0,
+                'bonus': 0,
+                'repayment': actual_repayment,
+                'deduction': 0,
+                'attendance': number_of_month_days,
+                'repaymentStartMonth': repayment_start_month,
+                'repaymentStartYear': repayment_start_year,
+                'frequency': repayment_frequency
+            }
 
             order_splits = [
                 {
                     "vendor_id": f"{item.vendor_id}",
-                    "amount": total_salary
+                    "amount": amount_payable
                 }
             ]
             note_string = json.dumps(note)
-            createOrderRequest = CreateOrderRequest(order_amount = total_salary, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
+            createOrderRequest = CreateOrderRequest(order_amount = amount_payable, order_currency="INR", customer_details=customerDetails, order_note=note_string, order_splits=order_splits)
             try:
                 api_response = Cashfree().PGCreateOrder(x_api_version, createOrderRequest, None, None)
                 response = dict(api_response.data)
@@ -309,7 +346,6 @@ def payment_link_generation(db : Session):
                 db.execute(update_statement)
                 db.commit()
                 payment_ids.append(payment_session_id)
-
 
             except Exception as e:
                 print(e)
