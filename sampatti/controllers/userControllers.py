@@ -1094,7 +1094,7 @@ def extract_document_details(media_id: str) -> dict:
         print("JSON response:", response_1.json())
 
         if response_1.status_code != 200:
-            return f"Failed to get audio info: {response_1.status_code} {response_1.text}"
+            return f"Failed to get image info: {response_1.status_code} {response_1.text}"
 
         image_info = response_1.json()
         
@@ -1105,25 +1105,35 @@ def extract_document_details(media_id: str) -> dict:
         whatsapp_index = image_url.find("whatsapp")
         whatsapp_path = image_url[whatsapp_index:]
 
+        # Download the actual image file
         response_2 = requests.get(f"https://waba-v2.360dialog.io/{whatsapp_path}", headers=headers, stream=True)
         if response_2.status_code != 200:
-            return f"Failed to download audio: {response_2.status_code} {response_2.text}"
+            return f"Failed to download image: {response_2.status_code} {response_2.text}"
         
         print("Response 2 Status Code:", response_2.status_code)
         print("Just Response 2:", response_2)
         print("Response 2 Content-Type:", response_2.headers.get('Content-Type'))
-        print("Response 2 Headers:", response_2.json())
+        print("Response 2 Content-Length:", response_2.headers.get('Content-Length'))  # ✅ Fixed
 
-        output_dir = 'audio_files'
+        output_dir = 'audio_files'  # Consider renaming to 'document_files' or 'images'
         os.makedirs(output_dir, exist_ok=True)
 
         image_path = os.path.join(output_dir, f"{media_id}.jpg")
+        
+        # Save the image file
         with open(image_path, 'wb') as f:
             for chunk in response_2.iter_content(chunk_size=8192):
                 f.write(chunk)
+        
+        print(f"Image saved to: {image_path}")
 
+        # Upload the saved image to Gemini
         genai.configure(api_key=google_api_key)
         model = genai.GenerativeModel("gemini-2.0-flash")
+
+        # Upload the local file to Gemini
+        uploaded_file = genai.upload_file(image_path)
+        print(f"Uploaded file URI: {uploaded_file.uri}")
 
         prompt = """
         You are an OCR/document-understanding assistant for Indian KYC workflows.
@@ -1145,11 +1155,14 @@ def extract_document_details(media_id: str) -> dict:
         return a concise plain-text summary of the extracted details instead.
         """
 
-        result = model.generate_content([prompt, image_url], stream=False)
+        # Send to Gemini with the uploaded file
+        result = model.generate_content([prompt, uploaded_file], stream=False)
         raw_output = (result.text or "").strip()
+        
         if not raw_output:
             raise ValueError("Empty response from model")
 
+        # Parse JSON from response
         json_start = raw_output.find("{")
         json_end = raw_output.rfind("}") + 1
         if json_start != -1 and json_end > json_start:
@@ -1170,6 +1183,8 @@ def extract_document_details(media_id: str) -> dict:
         }
 
     except Exception as exc:
+        import traceback
+        print(f"Error in extract_document_details: {traceback.format_exc()}")
         return {
             "error": str(exc),
             "document_type": None,
