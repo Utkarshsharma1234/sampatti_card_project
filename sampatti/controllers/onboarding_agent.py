@@ -42,6 +42,14 @@ prompt = ChatPromptTemplate.from_messages(
             3. PAN Number
             4. Salary
             5. Referral Code
+            
+            Include steps number like step 1/n, step 2/5 etc in each response:
+            - Step 1/5: Ask for worker number
+            - Step 2/5: Ask for UPI or Bank details
+            - Step 3/5: Ask for PAN
+            - Step 4/5: Ask for Referral Code
+            - Step 5/5: Ask for Salary
+            - After each step, validate the input before proceeding to the next step        
 
             FIRST RESPONSE TEMPLATE:
             - When the conversation starts or the employer greets you, begin with: "Great! Let’s get your worker added.Please share their 📱 mobile number."
@@ -155,7 +163,8 @@ prompt = ChatPromptTemplate.from_messages(
             - Celebrate small wins like "Great!" "Perfect!" "Awesome!"
             - Always use numbers for amounts, phone numbers, and other numerical values
             - Ensure each response flows smoothly when read aloud
-            - Maximum 2-3 sentences per response unless showing worker details
+            - Maximum 2-3 sentences per response unless showing worker details.
+            - 
 
             ## TONE AND PERSONALITY:
             - Be like a helpful friend, not a robot
