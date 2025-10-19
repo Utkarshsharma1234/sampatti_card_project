@@ -97,9 +97,9 @@ def update_worker_salary(employerNumber : int, workerName : str, salary : int, d
 def send_employer_invoice(employerNumber : int, orderId : str, db : Session = Depends(get_db)):
     return userControllers.send_employer_invoice(employerNumber, orderId, db)
     
-@router.get('/salary_payment_reminder')
-def salary_payment_reminder(db : Session = Depends(get_db)):
-    return userControllers.salary_payment_reminder(db)
+# @router.get('/salary_payment_reminder')
+# def salary_payment_reminder(db : Session = Depends(get_db)):
+#     return userControllers.salary_payment_reminder(db)
 
 @router.get("/send_greetings")
 def send_greetings(db : Session = Depends(get_db)):

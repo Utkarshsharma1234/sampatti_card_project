@@ -20,9 +20,9 @@ def fetch_multiple_vpa(workerNumber : int):
     return cashfree_api.fetch_multiple_vpa(workerNumber=workerNumber)
 
 
-@router.get("/payment_link")
-def payment_link_generation(db : Session = Depends(get_db)):
-    return cashfree_api.payment_link_generation(db)
+# @router.get("/payment_link")
+# def payment_link_generation(db : Session = Depends(get_db)):
+#     return cashfree_api.payment_link_generation(db)
 
 @router.get("/dynamic_payment_link")
 def dynamic_payment_link(employerNumber : int, workerName : str, cashAdvance : int, bonus : int, attendance : int, repayment : int, salary : int, db : Session = Depends(get_db)):
