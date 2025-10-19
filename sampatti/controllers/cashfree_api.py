@@ -708,3 +708,32 @@ def transfer_cashback_amount(beneficiary_id: str, amount: int = None, transfer_m
         return {"status": "error", "message": f"Error transferring cashback: {str(e)}"}
     
     
+def terminate_cashfree_order(order_id: str):
+    """
+    Terminate a Cashfree order
+    """
+    url = "https://api.cashfree.com/pg/orders/{order_id}"
+    
+    headers = {
+        "accept": "application/json",
+        "x-api-version": "2023-08-01",
+        "x-client-id": pg_id,
+        "x-client-secret": pg_secret
+    }
+    
+    body = {
+        "order_status": "TERMINATED"
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=body)
+        print("Terminate Order Response: ", response.text)
+        print("Status Code: ", response.status_code)
+        print("Response JSON: ", response.json())
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=response.status_code if response else 500,
+            detail=f"Failed to terminate order: {str(e)}"
+        )
