@@ -712,7 +712,7 @@ def terminate_cashfree_order(order_id: str):
     """
     Terminate a Cashfree order
     """
-    url = "https://api.cashfree.com/pg/orders/{order_id}"
+    url = f"https://api.cashfree.com/pg/orders/{order_id}"
     
     headers = {
         "accept": "application/json",
