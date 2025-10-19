@@ -105,6 +105,10 @@ def salary_payment_reminder(db : Session = Depends(get_db)):
 def send_greetings(db : Session = Depends(get_db)):
     return userControllers.send_greetings(db)
 
+@router.get("/send_apology_message")
+def send_apology_message(db : Session = Depends(get_db)):
+    return userControllers.send_apology_message(db)
+
 @router.get('/generate_talk_to_agent_sheet')
 def generate_sheet():
     return talk_to_agent_excel_file.upload_data_to_google_sheets()

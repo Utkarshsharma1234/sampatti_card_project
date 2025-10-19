@@ -401,6 +401,19 @@ def send_greetings(db : Session):
     return {
         "MESSAGE" : "Greetings sent successfully."
     }
+    
+def send_apology_message(db : Session):
+
+    total_employers = db.query(models.Employer).all()
+    template_name = "apology_message"
+
+    whatsapp_message.send_greetings(917665292549, template_name)
+    # for employer in total_employers:
+    #     whatsapp_message.send_greetings(employer.employerNumber, template_name)
+
+    return {
+        "MESSAGE" : "Apology messages sent successfully."
+    }
 
 def salary_payment_reminder(db : Session):
 
