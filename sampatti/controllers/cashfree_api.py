@@ -716,6 +716,7 @@ def terminate_cashfree_order(order_id: str):
     
     headers = {
         "accept": "application/json",
+        "content-type": "application/json",
         "x-api-version": "2023-08-01",
         "x-client-id": pg_id,
         "x-client-secret": pg_secret
@@ -726,7 +727,7 @@ def terminate_cashfree_order(order_id: str):
     }
     
     try:
-        response = requests.post(url, headers=headers, json=body)
+        response = requests.patch(url, headers=headers, json=body)
         print("Terminate Order Response: ", response.text)
         print("Status Code: ", response.status_code)
         print("Response JSON: ", response.json())
@@ -734,6 +735,6 @@ def terminate_cashfree_order(order_id: str):
         return response.json()
     except requests.exceptions.RequestException as e:
         raise HTTPException(
-            status_code=response.status_code if response else 500,
+            status_code=response.status_code if response else 500,  # 'response' might not exist
             detail=f"Failed to terminate order: {str(e)}"
         )
