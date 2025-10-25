@@ -18,6 +18,7 @@ from .. import models
 from .main_tool import add_employer
 from . import userControllers
 from ..controllers import onboarding_tasks, talk_to_agent_excel_file
+from ..routers.auth import get_auth_headers
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -290,11 +291,12 @@ def get_worker_details(workerNumber : int, employer_number: int):
     }
 
     try:
-        response = requests.get(url, params=payload)
+        response = requests.get(url, params=payload, headers=get_auth_headers())
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
         return {"error": str(e)}
+
 
 # Updated Pydantic model for the tool
 class ProcessReferralCodeInput(BaseModel):
