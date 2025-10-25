@@ -1,8 +1,9 @@
 import requests
+from ..routers.auth import get_auth_headers
 
 def main():
     url = "https://conv.sampatticards.com/user/send_referral_code" 
-    response = requests.post(url)
+    response = requests.post(url, headers=get_auth_headers())
     if response.status_code == 200:
         print("Request successful:", response.json())
     else:

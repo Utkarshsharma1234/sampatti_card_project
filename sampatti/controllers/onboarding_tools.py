@@ -121,7 +121,7 @@ def onboard_worker_employer( worker_number: int, employer_number: int, pan_numbe
     }
 
     url = "https://conv.sampatticards.com/user/ai_agent/onboarding_worker_sheet/create"
-    response = requests.post(url, json=data)
+    response = requests.post(url, json=data, headers=get_auth_headers())
     
     if response.status_code == 200:
         onboarding_tasks.run_tasks_till_add_vendor()
@@ -203,7 +203,7 @@ def send_audio(text: str, employerNumber: int, user_language: str = "en-IN"):
         "employerNumber": employerNumber
     }
     try:
-        response = requests.post(url, params=payload)
+        response = requests.post(url, params=payload, headers=get_auth_headers())
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

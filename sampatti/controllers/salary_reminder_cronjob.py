@@ -1,9 +1,10 @@
 import requests
+from ..routers.auth import get_auth_headers
 
 def main():
 
     url = "https://conv.sampatticards.com/user/salary_payment_reminder" 
-    response = requests.get(url)
+    response = requests.get(url, headers=get_auth_headers())
     if response.status_code == 200:
         print("Request successful:", response.json())
     else:

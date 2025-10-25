@@ -16,6 +16,7 @@ from sqlalchemy import func
 from ..models import CashAdvanceManagement, worker_employer, SalaryDetails, SalaryManagementRecords
 from .. import models
 from datetime import datetime
+from ..routers.auth import get_auth_headers
 
 
 
@@ -257,7 +258,7 @@ def generate_payment_link_func(
         print("Print Payload: ", payload)
         
         # Make API call
-        response = requests.get(url, params=payload)
+        response = requests.get(url, params=payload, headers=get_auth_headers())
         
         if response.status_code == 200:
             response_data = response.json()
@@ -405,7 +406,7 @@ def update_salary_func(employer_number: int, worker_name: str, new_salary: int, 
             print(f"Warning: Could not retrieve worker data: {db_error}")
         
         # Make the API call to update salary
-        response = requests.put(url, params=params)
+        response = requests.put(url, params=params, headers=get_auth_headers())
         
         if response.status_code == 200:
             # If worker data was found, create a SalaryManagementRecords entry
