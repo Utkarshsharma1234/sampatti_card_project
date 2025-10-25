@@ -4,10 +4,12 @@ from .. import schemas
 from ..database import get_db
 from sqlalchemy.orm import Session
 from ..controllers import cashfree_api
+from ..auth import get_current_user
 
 router = APIRouter(
     prefix="/cashfree",
-    tags=['Cashfree']
+    tags=['Cashfree'],
+    dependencies=[Depends(get_current_user)]
 )
 
 

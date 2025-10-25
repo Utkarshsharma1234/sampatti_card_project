@@ -11,11 +11,13 @@ from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_
 from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
 from pydantic import BaseModel
 from typing import Optional
+from ..auth import get_current_user
 
 
 router = APIRouter(
     prefix="/user",
-    tags=['users']
+    tags=['users'],
+    dependencies=[Depends(get_current_user)]
 )
 
 current_date = datetime.now().date()
