@@ -157,6 +157,7 @@ def process_orai_webhook(data: dict):
                 print(f"Response: {staging_response.text}")
             except Exception as e:
                 print(f"Error forwarding to staging: {e}")
+            return
             
         
         if not message_type:
