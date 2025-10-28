@@ -144,19 +144,20 @@ def process_orai_webhook(data: dict):
                 survey_agent.queryExecutor(employerNumber, message_type, query, media_id)
                 return
 
-        if employerNumber == "917738877765":
-            forward_url = "https://p31xn2lg-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
+        # Forward to staging     
+        if employerNumber == "917738877765" or employerNumber == "917665292549" or employerNumber == "916378639230" or employerNumber == "919080682466":
+            staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
             }
             
             try:
-                forward_response = requests.post(forward_url, headers=headers, data=formatted_json)
-                print(f"Payload Data: {formatted_json}")
-                print(f"Forwarded payload to {forward_url}. Status: {forward_response.status_code}")
-                return
+                staging_response = requests.post(staging_url, headers=headers, data=formatted_json)
+                print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
+                print(f"Response: {staging_response.text}")
             except Exception as e:
-                print(f"Error forwarding to {forward_url}: {e}")
+                print(f"Error forwarding to staging: {e}")
+            
         
         if not message_type:
             print("None message type")
