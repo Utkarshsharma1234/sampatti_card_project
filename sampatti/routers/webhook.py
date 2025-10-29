@@ -124,15 +124,15 @@ def process_orai_webhook(data: dict):
         #         return
         
         # Forward to ngrok for specific number
-        if employerNumber == "918197266977":
-            ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
-            try: 
-                ngrok_response = requests.post(ngrok_url, headers=headers, data=formatted_json) 
-                print(f"Forwarded to ngrok. Status: {ngrok_response.status_code}")
-            except Exception as e:
-                print(f"Error forwarding to ngrok: {e}")
-            # Return early to skip super_agent processing
-            return
+        # if employerNumber == "918197266977":
+        #     ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
+        #     try: 
+        #         ngrok_response = requests.post(ngrok_url, headers=headers, data=formatted_json) 
+        #         print(f"Forwarded to ngrok. Status: {ngrok_response.status_code}")
+        #     except Exception as e:
+        #         print(f"Error forwarding to ngrok: {e}")
+        #     # Return early to skip super_agent processing
+        #     return
         
         if employerNumber == "919731011117":
             if message_type == "text":
@@ -145,7 +145,7 @@ def process_orai_webhook(data: dict):
                 return
 
         # Forward to staging     
-        if employerNumber == "917738877765" or employerNumber == "917665292549" or employerNumber == "916378639230" or employerNumber == "919080682466":
+        if employerNumber == "917738877765" or employerNumber == "917665292549" or employerNumber == "916378639230" or employerNumber == "919080682466" or employerNumber == "918197266977":
             staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
