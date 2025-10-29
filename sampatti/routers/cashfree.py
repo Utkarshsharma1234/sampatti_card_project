@@ -9,7 +9,7 @@ from ..auth import get_current_user
 router = APIRouter(
     prefix="/cashfree",
     tags=['Cashfree'],
-    dependencies=[Depends(get_current_user)]
+    # dependencies=[Depends(get_current_user)]
 )
 
 

@@ -1,9 +1,9 @@
 import requests
-from sampatti.routers.auth import get_auth_headers
+# from sampatti.routers.auth import get_auth_headers
 
 def main():
     url = "https://conv.sampatticards.com/cashfree/payment_link" 
-    response = requests.get(url, headers=get_auth_headers())
+    response = requests.get(url)
     if response.status_code == 200:
         print("Request successful:", response.json())
     else:
