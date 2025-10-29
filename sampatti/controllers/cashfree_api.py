@@ -272,11 +272,8 @@ def payment_link_generation(db : Session):
     
     for item in total_relations:
 
-        if item.employer_number != 916378639230 :
+        if item.employer_number == 917015645195 or item.employer_number == 919731011117 or item.employer_number == 917022878346:
             continue
-
-        # if item.employer_number == 917015645195 or item.employer_number == 919731011117 or item.employer_number == 917022878346:
-        #     continue
 
         else:
             dummy_number = item.employer_number
