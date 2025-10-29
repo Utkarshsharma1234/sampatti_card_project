@@ -574,22 +574,23 @@ def employer_contract_template(employerNumber, worker_name, template_name):
             "name": template_name,
             "components": [
                 {
+                    "type" : "header",
+                    "parameters" : [
+                        {
+                            "type": "document",
+                            "document": {
+                                "link": "https://fpu.branding-element.com/prod/71029/SEND_DOCUMENT_ATTACHMENT/118331_29102025_064844_College_Students.pdf-zUzfG.pdf",
+                                "filename": "Employment_Contract"
+                            }
+                        }
+                    ]
+                },
+                {
                     "type": "body",
                     "parameters": [
                         {
                             "type": "text",
                             "text": worker_name
-                        }
-                    ]
-                },
-                {
-                    "type": "document",
-                    "parameters": [
-                        {
-                            "type": "document",
-                            "document": {
-                                "link": "https://fpu.branding-element.com/prod/71029/SEND_DOCUMENT_ATTACHMENT/118331_29102025_064844_College_Students.pdf-zUzfG.pdf",
-                            }
                         }
                     ]
                 }
