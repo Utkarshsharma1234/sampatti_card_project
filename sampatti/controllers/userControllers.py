@@ -1728,7 +1728,7 @@ def update_settlement_status_to_worker(payload, db : Session):
     ifsc = settlement.get('ifsc')
     vpa = settlement.get('vpa')
     amount_settled = settlement.get('amount_settled')
-    settlement_type = settlement.get('settlement_type')
+    settlement_type = payload.get('type')
 
     print(f"Vendor ID: {vendor_id}")
     print(f"Account Mode: {account_mode}")
