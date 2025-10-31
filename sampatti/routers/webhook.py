@@ -92,7 +92,7 @@ def process_orai_webhook(data: dict):
         message = messages[0] if messages else {}
         message_type = message.get("type")
         
-        # Safely extract media_id - only for media message types
+        # extract media_id - only for media message types
         media_id = None
         if message_type and message_type in ["image", "audio", "video", "document", "sticker"]:
             media_content = message.get(message_type, {})
@@ -100,40 +100,6 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
 
-        # if userControllers.is_employer_present(employerNumber, db):
-        #     print(f"Employer {employerNumber} exists in the database.")
-        # else:
-        #     whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #     unique_id = generate_unique_id()
-        #     new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
-        #     db.add(new_user)
-        #     db.commit()
-        #     db.refresh(new_user)
-        #     return
-
-        # if userControllers.is_worker_present_for_employer(employerNumber, db):
-        #     print(f"Worker exists for Employer {employerNumber} in the database.")
-        # else:
-        #     if message == "Hi" or message == "Hello" or message == "hello" or message == "hi" or message == "HEY" or message == "Hey" or message == "hey":
-        #         whatsapp_message.send_template_message(employerNumber, "user_first_message")
-        #         unique_id = generate_unique_id()
-        #         new_user = models.Employer(id= unique_id, employerNumber = employerNumber)
-        #         db.add(new_user)
-        #         db.commit()
-        #         db.refresh(new_user)
-        #         return
-        
-        # Forward to ngrok for specific number
-        # if employerNumber == "918197266977":
-        #     ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
-        #     try: 
-        #         ngrok_response = requests.post(ngrok_url, headers=headers, data=formatted_json) 
-        #         print(f"Forwarded to ngrok. Status: {ngrok_response.status_code}")
-        #     except Exception as e:
-        #         print(f"Error forwarding to ngrok: {e}")
-        #     # Return early to skip super_agent processing
-        #     return
-        
         if employerNumber == "919731011117":
             if message_type == "text":
                 query = message.get("text", {}).get("body")
@@ -145,7 +111,7 @@ def process_orai_webhook(data: dict):
                 return
 
         # Forward to staging     
-        if employerNumber == "917738877765" or employerNumber == "917665292549" or employerNumber == "916378639230" or employerNumber == "919080682466" or employerNumber == "918197266977":
+        if employerNumber == "917738877765" or employerNumber == "917665292549" or employerNumber == "919080682466" or employerNumber == "918197266977":
             staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
