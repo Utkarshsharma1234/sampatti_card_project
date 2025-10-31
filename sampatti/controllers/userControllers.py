@@ -1739,7 +1739,7 @@ def update_settlement_status_to_worker(payload, db : Session):
     print(f"Settlement Type: {settlement_type}")
 
     text_message = ""
-    contactNumber = 6378639230
+    contactNumber = 7665292549
 
     worker = db.query(models.Domestic_Worker).filter(models.Domestic_Worker.vendorId == vendor_id).first()
 
