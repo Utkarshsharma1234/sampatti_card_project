@@ -432,11 +432,8 @@ def salary_payment_reminder(db : Session):
 
     for item in transactions:
         
-        if item.employer_number != 916378639230:
+        if item.employer_number == 917015645195 or item.employer_number == 919731011117 or item.employer_number == 917022878346 or item.employer_number == 919920802613 or item.employer_number == 919380496287 or item.employer_number == 919845445408:
             continue
-
-        # if item.employer_number == 919380496287 or item.employer_number == 919920802613 or item.employer_number == 919972488084:
-        #     continue
 
         response_data = cashfree_api.check_order_status(order_id=item.order_id)
         order_status = response_data.get("order_status")
