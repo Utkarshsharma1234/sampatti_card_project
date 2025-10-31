@@ -1,5 +1,5 @@
 import requests
-from ..routers.auth import get_auth_headers
+from sampatti.routers.auth import get_auth_headers
 
 def main():
 
