@@ -92,13 +92,24 @@ def process_orai_webhook(data: dict):
         message = messages[0] if messages else {}
         message_type = message.get("type")
         
-        # extract media_id - only for media message types
         media_id = None
         if message_type and message_type in ["image", "audio", "video", "document", "sticker"]:
             media_content = message.get(message_type, {})
             media_id = media_content.get("id") if isinstance(media_content, dict) else None
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
+        
+        
+        # if employerNumber == "918197266977":
+        #     ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
+        #     try:
+        #         ngrok_response = requests.post(ngrok_url, headers=headers, data=formatted_json)
+        #         print(f"Forwarded to ngrok. Status: {ngrok_response.status_code}")
+        #     except Exception as e:
+        #         print(f"Error forwarding to ngrok: {e}")
+        #     # Return early to skip super_agent processing
+        #     return
+                
 
         if employerNumber == "919731011117":
             if message_type == "text":
