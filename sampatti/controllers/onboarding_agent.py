@@ -134,7 +134,7 @@ prompt = ChatPromptTemplate.from_messages(
                     d. Ask for salary (mandatory)
                         - the salary amount must be greater than 500 rupees
                         - after receiving the salary amount, give a instant message to the user about the status of the worker onboarding like "Your worker onboarding has been initiated. We will notify you once it's complete! Thanks for your patience."
-                        - after getting the salary call `confirm_worker_and_add_to_employer` tool with all collected details
+                        - also call `onboard_worker_employer` with all collected details after sending the instant message.
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
