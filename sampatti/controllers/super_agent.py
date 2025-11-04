@@ -778,18 +778,6 @@ Just tell me what you need help with, and I'll take care of it!"""
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
             
-            if check_employer_exists(employer_number) is False:
-                send_template_message(employer_number, "user_first_message")
-                print(f"👤 First time employer detected: {employer_number}")
-                self.ensure_employer_exists(employer_number)
-                print(f"✅ Employer {employer_number} added to database")
-                return
-            
-            if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
-                send_template_message(employer_number, "user_first_message")
-                print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
-                return
-            
             if employer_number == "918208804525":
                 print("Test number detected, skipping processing.")
                 
@@ -815,6 +803,18 @@ Just tell me what you need help with, and I'll take care of it!"""
                     elif button_text == "Proceed":
                         query = "i want to onboard a worker for domestic help to digitise their salary payments"
                         print(f"Button 'Proceed' clicked. Updated query: {query}")
+            
+            if check_employer_exists(employer_number) is False:
+                send_template_message(employer_number, "user_first_message")
+                print(f"👤 First time employer detected: {employer_number}")
+                self.ensure_employer_exists(employer_number)
+                print(f"✅ Employer {employer_number} added to database")
+                return
+            
+            if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
+                send_template_message(employer_number, "user_first_message")
+                print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
+                return
                         
                         
             # Handle worker info requests with internal tools
