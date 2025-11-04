@@ -156,29 +156,29 @@ def process_orai_webhook(data: dict):
 
         elif message_type == "text":
             query = message.get("text", {}).get("body")
-            super_agent.super_agent_query(employerNumber, message_type, query, "", formatted_json)
+            super_agent.super_agent_query(employerNumber, message_type, query, "", data)
 
         elif message_type == "audio":
             query = message.get("audio", {}).get("id")
-            super_agent.super_agent_query(employerNumber, message_type, query, media_id, formatted_json)
+            super_agent.super_agent_query(employerNumber, message_type, query, media_id, data)
             
         elif message_type == "image":
             query = message.get("image", {}).get("id")
-            super_agent.super_agent_query(employerNumber, message_type, query, media_id, formatted_json)
+            super_agent.super_agent_query(employerNumber, message_type, query, media_id, data)
 
         elif message_type == "button":
             print("Button message received, but button text extraction is currently disabled.")
             query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
             print("Extracted the Button Text: ", query)
-            super_agent.super_agent_query(employerNumber, "text", query, "", formatted_json)
+            super_agent.super_agent_query(employerNumber, "text", query, "", data)
 
         elif message_type == "contacts":
             numb = data["entry"][0]["changes"][0]["value"]["messages"][0]["contacts"][0]["phones"][0]["wa_id"]
             print("Extracted the Contact Number from the Button: ", numb)
-            super_agent.super_agent_query(employerNumber, "text", numb, "", formatted_json)
+            super_agent.super_agent_query(employerNumber, "text", numb, "", data)
 
         else:
-            super_agent.super_agent_query(employerNumber, "text", "Hi", media_id, formatted_json)
+            super_agent.super_agent_query(employerNumber, "text", "Hi", media_id, data)
 
     except Exception as e:
         print(f"Error in background processing of orai webhook: {e}")
