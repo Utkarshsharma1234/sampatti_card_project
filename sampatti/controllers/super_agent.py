@@ -699,7 +699,11 @@ Just tell me what you need help with, and I'll take care of it!"""
         messages = value.get("messages", [])    
         message = messages[0] if messages else {}
         message_type = message.get("type")
-        button_text = formatted_json["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
+        if message_type == "button":
+            messages = value.get("messages", [])
+            if messages:
+                button_text = messages[0].get("button", {}).get("text")
+                print(f"🔘 Button Text: {button_text}")
         
         try:
             
