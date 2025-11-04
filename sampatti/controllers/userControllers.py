@@ -1472,7 +1472,7 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     print("uploaded the employment contract.")
 
-    whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, link_param=link_param, filename="Employment Contract", template_name="employment_contract")
+    whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, link_param=link_param, filename="Employment_Contract.pdf", template_name="employment_contract")
 
     print("Employment Contract sent successfully.")
 
