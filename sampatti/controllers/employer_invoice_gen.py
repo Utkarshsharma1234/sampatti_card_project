@@ -131,7 +131,7 @@ The money has been debited in the corresponding bank account."""
 
     y = 110
     for line in lines:
-        c.drawString(x+20, y, line)
+        c.drawString(x+40, y, line)
         y -= 10
 
     y -= 10
@@ -144,7 +144,7 @@ employer for the worker for whom salary payment receipt is generated."""
 
     lines = declaration.split('\n')
     for line in lines:
-        c.drawString(x+20, y, line)
+        c.drawString(x+40, y, line)
         y -= 10
 
 
