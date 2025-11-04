@@ -579,7 +579,7 @@ def employer_contract_template(employerNumber, worker_name, link_param, filename
                         {
                             "type": "document",
                             "document": {
-                                "link": link_param,
+                                "link": "https://fpu.branding-element.com/prod/71029/SEND_DOCUMENT_ATTACHMENT/118331_04112025_185604_916378639230_INV_6392056437_October_2025.pdf-R0jKc.pdf",
                                 "filename": filename
                             }
                         }
