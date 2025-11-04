@@ -689,21 +689,57 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"📋 Type: {type_of_message}")
         print(f"🆔 Media ID: {media_id}")
         
-        entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
-        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        value = changes.get("value", {})
+        if formatted_json is None:
+            formatted_json = {}
+            print("⚠️ Warning: formatted_json was None, using empty dict")
+            
+        if formatted_json is None:
+            formatted_json = {}
+            print("⚠️ Warning: formatted_json was None, using empty dict")
+    
+        if isinstance(formatted_json, str):
+            print(f"❌ CRITICAL ERROR: formatted_json is a STRING, not a dict!")
+            print(f"❌ Value received: {formatted_json[:200]}")
+            print(f"❌ This indicates the webhook is passing formatted_json (string) instead of data (dict)")
+            formatted_json = {}  # Use empty dict to prevent crash
+    
+        print(f"✅ formatted_json type: {type(formatted_json)}")
+        
+        # entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
+        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        # value = changes.get("value", {})
 
-        contacts = value.get("contacts", [])
-        employerNumber = contacts[0].get("wa_id") if contacts else None
+        # contacts = value.get("contacts", [])
+        # employerNumber = contacts[0].get("wa_id") if contacts else None
 
-        messages = value.get("messages", [])    
-        message = messages[0] if messages else {}
-        message_type = message.get("type")
-        if message_type == "button":
-            messages = value.get("messages", [])
-            if messages:
-                button_text = messages[0].get("button", {}).get("text")
-                print(f"🔘 Button Text: {button_text}")
+        # messages = value.get("messages", [])    
+        # message = messages[0] if messages else {}
+        # message_type = message.get("type")
+        # if message_type == "button":
+        #     messages = value.get("messages", [])
+        #     if messages:
+        #         button_text = messages[0].get("button", {}).get("text")
+        #         print(f"🔘 Button Text: {button_text}")
+        
+        try:
+            entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
+            changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+            value = changes.get("value", {})
+
+            contacts = value.get("contacts", [])
+            if contacts:
+                user_name = contacts[0].get("profile", {}).get("name")
+                print(f"👤 User Name: {user_name}")
+
+            # Extract button text only if message type is button
+            if type_of_message == "button":
+                messages = value.get("messages", [])
+                if messages:
+                    button_text = messages[0].get("button", {}).get("text")
+                    print(f"🔘 Button Text: {button_text}")
+                    
+        except Exception as e:
+            print(f"⚠️ Warning: Could not extract metadata from formatted_json: {e}")
         
         try:
             
@@ -761,7 +797,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                     send_template_message(employer_number, "first_message_template") 
                     print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
                     return
-                elif message_type == "button":
+                elif type_of_message == "button":
                     if button_text == "Yes":
                         display_user_message_on_xbotic(employer_number, "Got it ! Great, you are switching - let’s digitise & document your workers right away. 🙂")
                         send_template_message(employer_number, "employer_options_display")
@@ -918,6 +954,8 @@ Just tell me what you need help with, and I'll take care of it!"""
 # Global instance
 super_agent_instance = SuperAgent()
 
-def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = {}) -> str:
+def super_agent_query(employer_number: int, type_of_message: str, query: str, media_id: str = "", formatted_json: Dict[str, Any] = None) -> str:
     """Main entry point for the Super Agent"""
+    if formatted_json is None:
+        formatted_json = {}
     return super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
