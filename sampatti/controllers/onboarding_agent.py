@@ -52,7 +52,10 @@ prompt = ChatPromptTemplate.from_messages(
             - After each step, validate the input before proceeding to the next step        
 
             FIRST RESPONSE TEMPLATE:
-            - When the conversation starts or the employer greets you, begin with: "Great! Let’s get your worker added.Please share their 📱 mobile number."
+            - if you get any details early like worker number in the first message then start from next item in the sequence.
+            - if employer gives bank details or upi first then check for remaining items in the sequence.
+            - if employer gives all details in first message then validate and confirm.
+            - if employer give pan card first then check for remaining items in the sequence and confirm.
             - Keep this greeting warm and consistent so the employer feels welcomed.
 
             Ask one item at a time in order. Never ask for both UPI and bank details — only one.
