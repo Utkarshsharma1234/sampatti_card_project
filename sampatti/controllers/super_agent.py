@@ -16,7 +16,7 @@ from langchain.tools import StructuredTool
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from .userControllers import send_audio_message, extract_document_details
-from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic, send_template_message
+from .whatsapp_message import send_v2v_message, send_message_user, display_user_message_on_xbotic, send_template_message, twilio_send_text_message
 from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
@@ -689,6 +689,18 @@ Just tell me what you need help with, and I'll take care of it!"""
         print(f"📋 Type: {type_of_message}")
         print(f"🆔 Media ID: {media_id}")
         
+        entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
+        changes = entry.get("changes", [])[0] if entry.get("changes") else {}
+        value = changes.get("value", {})
+
+        contacts = value.get("contacts", [])
+        employerNumber = contacts[0].get("wa_id") if contacts else None
+
+        messages = value.get("messages", [])    
+        message = messages[0] if messages else {}
+        message_type = message.get("type")
+        button_text = formatted_json["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
+        
         try:
             
             # Get conversation history
@@ -711,8 +723,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 resp = extract_document_details(media_id)
                 query = resp
                 print("Image Resp from the gemini")
-            
-            
+                print(f"🖼️ Extracted text from image: {query}")                
             
             # Classify intent
             intent_analysis = self.classify_intent(query, chat_history)
@@ -739,6 +750,33 @@ Just tell me what you need help with, and I'll take care of it!"""
                 print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
                 return
             
+            if employer_number == "918208804525":
+                print("Test number detected, skipping processing.")
+                
+                if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
+                    send_template_message(employer_number, "first_message_template") 
+                    print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
+                    return
+                elif message_type == "button":
+                    if button_text == "Yes":
+                        display_user_message_on_xbotic(employer_number, "Got it ! Great, you are switching - let’s digitise & document your workers right away. 🙂")
+                        send_template_message(employer_number, "employer_options_display")
+                        return
+                    elif button_text == "No":
+                        display_user_message_on_xbotic(employer_number, "Okay! You can return anytime when you’re ready to digitise & document your workers. Have a great day! 🙂")
+                        return
+                    elif button_text == "Loans & Insurance" or button_text == "Govt. Schemes assist" or button_text == "KYC,Bank A/c opening":
+                        send_template_message(employer_number, "other_options_start_message")
+                        return
+                    elif button_text == "Talk to Support":
+                        display_user_message_on_xbotic(employer_number, "Sure! Our support team will get in touch with you shortly. 🙂")
+                        twilio_send_text_message("+917665292549", f"Employer wants to talk to support. Please reach out to them.--> Employer Number: {employer_number}")
+                        return
+                    elif button_text == "Proceed":
+                        query = "i want to onboard a worker for domestic help to digitise their salary payments"
+                        print(f"Button 'Proceed' clicked. Updated query: {query}")
+                        
+                        
             # Handle worker info requests with internal tools
             if intent_analysis.primary_intent == "worker_info" and intent_analysis.confidence >= 0.7:
                 print(f"📊 WORKER INFO REQUEST DETECTED")
