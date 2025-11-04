@@ -579,7 +579,7 @@ def employer_contract_template(employerNumber, worker_name, employment_contract_
                         {
                             "type": "document",
                             "document": {
-                                "link": "https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employment_contract_name}",
+                                "link": f"https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employment_contract_name}",
                                 "filename": filename
                             }
                         }
