@@ -778,7 +778,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
             
-            if employer_number == "918208804525":
+            if employer_number == "918208804525" and employer_number == "917742422603" and employer_number == "917015645195":
                 print("Test number detected, skipping processing.")
                 
                 if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
@@ -787,10 +787,9 @@ Just tell me what you need help with, and I'll take care of it!"""
                     return
                 elif type_of_message == "button":
                     if button_text == "Yes":
-                        display_user_message_on_xbotic(employer_number, "Got it ! Great, you are switching - let’s digitise & document your workers right away. 🙂")
-                        send_template_message(employer_number, "employer_options_display")
+                        send_template_message(employer_number, "employer_current_payment_method")
                         return
-                    elif button_text == "No":
+                    elif button_text == "No" or button_text == "Cash":
                         display_user_message_on_xbotic(employer_number, "Okay! You can return anytime when you’re ready to digitise & document your workers. Have a great day! 🙂")
                         return
                     elif button_text == "Loans & Insurance" or button_text == "Govt. Schemes assist" or button_text == "KYC,Bank A/c opening":
@@ -799,6 +798,10 @@ Just tell me what you need help with, and I'll take care of it!"""
                     elif button_text == "Talk to Support":
                         display_user_message_on_xbotic(employer_number, "Sure! Our support team will get in touch with you shortly. 🙂")
                         twilio_send_text_message("+917665292549", f"Employer wants to talk to support. Please reach out to them.--> Employer Number: {employer_number}")
+                        return
+                    elif button_text == "UPI":
+                        display_user_message_on_xbotic(employer_number, "Great! To proceed with UPI onboarding, please share the UPI ID of your worker.")
+                        send_template_message(employer_number, "employer_display_template")
                         return
                     elif button_text == "Proceed":
                         query = "i want to onboard a worker for domestic help to digitise their salary payments"
