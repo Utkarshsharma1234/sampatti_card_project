@@ -792,8 +792,8 @@ Just tell me what you need help with, and I'll take care of it!"""
                     elif button_text == "No" or button_text == "Cash":
                         display_user_message_on_xbotic(employer_number, "Okay! You can return anytime when you’re ready to digitise & document your workers. Have a great day! 🙂")
                         return
-                    elif button_text == "Loans & Insurance" or button_text == "Govt. Schemes assist" or button_text == "KYC,Bank A/c opening":
-                        send_template_message(employer_number, "other_options_start_message")
+                    elif button_text == "Loans & Insurance" or button_text == "Access Govt. Schemes" or button_text == "KYC,Bank A/c opening":
+                        send_template_message(employer_number, "cash_or_upi_template")
                         return
                     elif button_text == "Talk to Support":
                         display_user_message_on_xbotic(employer_number, "Sure! Our support team will get in touch with you shortly. 🙂")
