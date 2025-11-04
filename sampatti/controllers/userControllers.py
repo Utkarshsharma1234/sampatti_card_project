@@ -1459,7 +1459,6 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     employment_contract_name = f"{employerNumber}_ER_{workerNumber}.pdf"
     object_name = f"employmentRecords/{employment_contract_name}"
-    link_param = f"https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employment_contract_name}"
     
     static_dir = os.path.join(os.getcwd(), 'contracts')
 
@@ -1472,7 +1471,7 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     print("uploaded the employment contract.")
 
-    whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, link_param=link_param, filename="Employment_Contract.pdf", template_name="employment_contract")
+    whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, employment_contract_name=employment_contract_name, filename="Employment_Contract.pdf", template_name="employment_contract")
 
     print("Employment Contract sent successfully.")
 
