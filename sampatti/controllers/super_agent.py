@@ -778,7 +778,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                 {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
             )
             
-            if employer_number == "918208804525" and employer_number == "917742422603" and employer_number == "917015645195":
+            if employer_number == "918208804525" or employer_number == "917742422603" or employer_number == "917015645195":
                 print("Test number detected, skipping processing.")
                 
                 if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
