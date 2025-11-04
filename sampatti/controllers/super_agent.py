@@ -805,6 +805,9 @@ Just tell me what you need help with, and I'll take care of it!"""
                     elif button_text == "Proceed":
                         query = "i want to onboard a worker for domestic help to digitise their salary payments"
                         print(f"Button 'Proceed' clicked. Updated query: {query}")
+                    elif button_text == "Salary Slip":
+                        query = "onboard new worker"
+                        print(f"Button 'Salary Slip' clicked. Updated query: {query}")
             
             if check_employer_exists(employer_number) is False:
                 send_template_message(employer_number, "user_first_message")
