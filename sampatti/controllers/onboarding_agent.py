@@ -43,7 +43,7 @@ prompt = ChatPromptTemplate.from_messages(
             4. Salary
             5. Referral Code
 
-            Include steps number like step 1/n, step 2/5 etc in each response to make the employer aware of the progress and keep them engaged:
+            Include steps number like step 1/n, step 2/5 etc in each response to make the employer aware of the progress and keep them engaged, don't add the steps with the markdown (#) symbols, it should be only like "Step 1/5: and not like ## Step 1/n:":
             - Step 1/5: Ask for worker number
             - Step 2/5: Ask for UPI or Bank details
             - Step 3/5: Ask for PAN
@@ -133,6 +133,7 @@ prompt = ChatPromptTemplate.from_messages(
                         - Show message: "No worries! 😊 Let's continue - what's the monthly salary amount?"
                     d. Ask for salary (mandatory)
                         - the salary amount must be greater than 500 rupees
+                        - after receiving the salary amount, give a instant message to the user about the status of the worker onboarding like "Your worker onboarding has been initiated. We will notify you once it's complete! Thanks for your patience."
                         - after getting the salary call `confirm_worker_and_add_to_employer` tool with all collected details
                 4. If not confirmed, continue with normal onboarding process (B)
 
@@ -148,6 +149,7 @@ prompt = ChatPromptTemplate.from_messages(
                     - Show message: "No problem at all! 😊 What's the monthly salary you'll be paying?"
                 6. Ask for salary (mandatory)
                     - the salary amount must be greater than 500 rupees
+                    - after receiving the salary amount, give a instant message to the user about the status of the worker onboarding like "Your worker onboarding has been initiated. We will notify you once it's complete! Thanks for your patience."
                     - Call `onboard_worker_employer` with all collected details
 
             REFERRAL SYSTEM:

@@ -792,16 +792,15 @@ Just tell me what you need help with, and I'll take care of it!"""
                     elif button_text == "No" or button_text == "Cash":
                         display_user_message_on_xbotic(employer_number, "Okay! You can return anytime when you’re ready to digitise & document your workers. Have a great day! 🙂")
                         return
-                    elif button_text == "Loans & Insurance" or button_text == "Access Govt. Schemes" or button_text == "KYC,Bank A/c opening":
-                        send_template_message(employer_number, "cash_or_upi_template")
+                    elif button_text == "UPI":
+                        send_template_message(employer_number, "employer_display_template")
                         return
-                    elif button_text == "Talk to Support":
+                    elif button_text == "Loans & Insurance" or button_text == "Access Govt. Schemes" or button_text == "KYC,Bank A/c opening":
+                        send_template_message(employer_number, "other_options_display_template")
+                        return
+                    elif button_text == "Contact Support":
                         display_user_message_on_xbotic(employer_number, "Sure! Our support team will get in touch with you shortly. 🙂")
                         twilio_send_text_message("+917665292549", f"Employer wants to talk to support. Please reach out to them.--> Employer Number: {employer_number}")
-                        return
-                    elif button_text == "UPI":
-                        display_user_message_on_xbotic(employer_number, "Great! To proceed with UPI onboarding, please share the UPI ID of your worker.")
-                        send_template_message(employer_number, "employer_display_template")
                         return
                     elif button_text == "Proceed":
                         query = "i want to onboard a worker for domestic help to digitise their salary payments"

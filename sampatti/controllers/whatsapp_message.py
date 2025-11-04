@@ -552,7 +552,7 @@ def rashmita_sample_payment_link(employerNumber, workerName, salary, advance, to
 
 
 
-def employer_contract_template(employerNumber, worker_name, template_name):
+def employer_contract_template(employerNumber, worker_name, link_param, filename, template_name):
     import requests
 
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
@@ -579,8 +579,8 @@ def employer_contract_template(employerNumber, worker_name, template_name):
                         {
                             "type": "document",
                             "document": {
-                                "link": "https://fpu.branding-element.com/prod/71029/SEND_DOCUMENT_ATTACHMENT/118331_29102025_064844_College_Students.pdf-zUzfG.pdf",
-                                "filename": "Employment_Contract"
+                                "link": link_param,
+                                "filename": filename
                             }
                         }
                     ]

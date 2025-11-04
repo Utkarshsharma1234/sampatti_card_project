@@ -47,7 +47,7 @@ def employer_invoice_generation(employerNumber, workerNumber, employerId, worker
     size = len(text)
     c.drawString(w/2 - size*4.5, h-80, text=text)
 
-    x = 30
+    x = 15
     y = h - 110
 
     c.setFont("Helvetica", 14)

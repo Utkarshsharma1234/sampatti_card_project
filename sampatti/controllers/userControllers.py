@@ -1149,42 +1149,61 @@ def extract_document_details(media_id: str) -> dict:
         print(f"Uploaded file URI: {uploaded_file.uri}")
 
         prompt = """
-        You are an OCR assistant for Indian KYC documents. Analyze the image and extract information in a clear, conversational format.
-        
-        Instructions:
-        - Identify the document type (PAN card, bank passbook, Aadhaar, voter ID, etc.)
-        - Extract all visible details clearly
-        - Present the information in simple, easy-to-read text format
-        
-        Examples:
-        
-        For PAN Card:
-        "This is a PAN card. Name: RAVI KUMAR, Father's Name: SURESH KUMAR, PAN Number: ABCDE1234F, Date of Birth: 15/08/1990"
-        
-        For Bank Passbook:
-        "This is a bank passbook. Name: RAVI KUMAR, Account Number: 123456789012, IFSC Code: SBIN0001234, Bank Name: State Bank of India"
-        
-        For Aadhaar:
-        "This is an Aadhaar card. Name: RAVI KUMAR, Aadhaar Number: 1234 5678 9012, Date of Birth: 15/08/1990, Address: [extracted address]"
-        
-        Return ONLY the extracted information in plain text format. Do not include any JSON, markdown, or special formatting.
+        You are an OCR/document-understanding assistant for Indian KYC workflows.
+        Inspect the supplied image (PAN card, bank passbook, Aadhaar, voter ID, etc.),
+        identify the document type, and extract all clearly readable fields.
+
+        Prefer this JSON schema:
+        {
+          "document_type": "<lower_snake_case type>",
+          "fields": {
+            "<field_name>": "<value or null>"
+          }
+        }
+
+        Canonical field names include: name, father_name, pan_number, dob,
+        account_number, ifsc_code, bank_name, address, document_number, etc.
+        Use uppercase for alphanumeric IDs (PAN, IFSC). For dates, prefer DD/MM/YYYY
+        unless the document format is unambiguous. If you cannot provide valid JSON,
+        return a concise plain-text summary of the extracted details instead.
         """
 
         # Send to Gemini with the uploaded file
         result = model.generate_content([prompt, uploaded_file], stream=False)
-        extracted_text = (result.text or "").strip()
+        raw_output = (result.text or "").strip()
         
-        if not extracted_text:
-            return "Unable to extract information from the document. Please upload a clearer image."
-        
-        print(f"✅ Extracted text: {extracted_text}")
-        return extracted_text
+        if not raw_output:
+            raise ValueError("Empty response from model")
+
+        # Parse JSON from response
+        json_start = raw_output.find("{")
+        json_end = raw_output.rfind("}") + 1
+        if json_start != -1 and json_end > json_start:
+            try:
+                parsed_json = json.loads(raw_output[json_start:json_end])
+                return {
+                    "document_type": parsed_json.get("document_type"),
+                    "fields": parsed_json.get("fields", {}),
+                    "raw_response": raw_output
+                }
+            except (json.JSONDecodeError, TypeError):
+                pass  # fall through to text response
+
+        return {
+            "document_type": None,
+            "fields": {},
+            "raw_response": raw_output  # plain text summary for the super agent
+        }
 
     except Exception as exc:
         import traceback
-        error_trace = traceback.format_exc()
-        print(f"Error in extract_document_details: {error_trace}")
-        return f"Error processing document: {str(exc)}"
+        print(f"Error in extract_document_details: {traceback.format_exc()}")
+        return {
+            "error": str(exc),
+            "document_type": None,
+            "fields": {},
+            "raw_response": None
+        }
 
 
 
@@ -1440,6 +1459,7 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     employment_contract_name = f"{employerNumber}_ER_{workerNumber}.pdf"
     object_name = f"employmentRecords/{employment_contract_name}"
+    link_param = f"https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employment_contract_name}"
     
     static_dir = os.path.join(os.getcwd(), 'contracts')
 
@@ -1452,7 +1472,7 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     print("uploaded the employment contract.")
 
-    whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="successful_worker_onboarding")
+    whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, link_param=link_param, filename="Employment Contract", template_name="employment_contract")
 
     print("Employment Contract sent successfully.")
 
