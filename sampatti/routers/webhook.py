@@ -168,7 +168,7 @@ def process_orai_webhook(data: dict):
 
         elif message_type == "button":
             #print("Button message received, but button text extraction is currently disabled.")
-            #query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
+            query = data["entry"][0]["changes"][0]["value"]["messages"][0]["button"]["text"]
             print("Button message received.")
             super_agent.super_agent_query(employerNumber, message_type, query, media_id, data)
 
