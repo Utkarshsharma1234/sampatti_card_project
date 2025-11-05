@@ -17,7 +17,7 @@ from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
 from . import userControllers
-from ..controllers import onboarding_tasks, talk_to_agent_excel_file
+from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers
 from ..routers.auth import get_auth_headers
 
 
@@ -480,6 +480,23 @@ def process_referral_code(employer_number: int, referral_code: Optional[str] = N
         db.close()
 
 
+def pan_verify(pan_number: str):
+    """
+    Verifies the validity of a PAN number using an external API.
+    """
+    url = "https://conv.sampatticards.com/cashfree/pan_verification"
+    payload = {
+        "pan": pan_number,
+        "name": "sample"
+    }
+
+    try:
+        response = requests.get(url, params=payload, headers=get_auth_headers())
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
+
 def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
     """
     Immediately adds worker to employer in worker_employer table and generates employment contract
@@ -690,6 +707,12 @@ get_worker_by_name_and_employer_tool = StructuredTool.from_function(
     func=get_worker_by_name_and_employer,
     name="get_worker_by_name_and_employer",
     description="Find worker details by name and employer number from worker_employer table."
+)
+
+pan_verification_tool = StructuredTool.from_function(
+    func=pan_verify,
+    name="pan_verification",
+    description="Verifies the validity of a PAN number using an external API."
 )
 
 process_referral_code_tool = StructuredTool.from_function(

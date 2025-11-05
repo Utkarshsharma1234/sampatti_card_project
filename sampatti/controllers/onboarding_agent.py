@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -140,6 +140,9 @@ prompt = ChatPromptTemplate.from_messages(
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
+                    - after we get the pan number, validate it using `pan_verification` tool immediately.
+                    - if the pan is invalid then say "The PAN number {pan_number} provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process."
+                    - if the pan is valid then proceed to next step.
                 3. Ask for referral code (mandatory): "Almost done! 🎁 Do you have a referral code? You'll get cashback!"
                 4. If referral code provided:
                     - Call `process_referral_code` with ONLY employer_number and referral_code (no worker details)
@@ -202,7 +205,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
