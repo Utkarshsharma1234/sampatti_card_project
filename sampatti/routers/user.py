@@ -331,5 +331,5 @@ def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int,
     return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
 
 @router.post("/generate_salary_slip_for_worker")
-def generate_salary_slip_for_worker(workerName: str, month: str, year: int, db: Session = Depends(get_db)):
-    return salary_slip_generation.generate_salary_slip(workerName, month, year, db)
+def generate_salary_slip_for_worker(workerNumber: int, month: str, year: int, db: Session = Depends(get_db)):
+    return salary_slip_generation.generate_salary_slip(workerNumber, month, year, db)
