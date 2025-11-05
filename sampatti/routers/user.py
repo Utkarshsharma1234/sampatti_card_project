@@ -8,7 +8,7 @@ from ..controllers import onboarding_agent, rag_funcs, userControllers
 from ..controllers import employment_contract_gen, salary_summary_gen, cash_advance_agent, super_agent
 from datetime import datetime, timedelta
 from ..controllers import whatsapp_message, talk_to_agent_excel_file, uploading_files_to_spaces, onboarding_tools
-from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management
+from ..controllers import utility_functions, rag_funcs, onboarding_tasks, cash_advance_management, salary_slip_generation
 from pydantic import BaseModel
 from typing import Optional
 from ..auth import get_current_user
@@ -329,3 +329,7 @@ def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
 @router.post("/add_existing_worker_to_sheet")
 def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: str = "") -> dict:
     return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
+
+@router.post("/generate_salary_slip_for_worker")
+def generate_salary_slip_for_worker(workerName: str, month: str, year: int, db: Session = Depends(get_db)):
+    return salary_slip_generation.generate_salary_slip(workerName, month, year, db)
