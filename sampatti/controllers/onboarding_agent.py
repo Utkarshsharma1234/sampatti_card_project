@@ -141,7 +141,8 @@ prompt = ChatPromptTemplate.from_messages(
                 1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
-                    - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process."
+                    - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
+                    - we need to validate the pan immediately after getting it and pan verification is mandatory to onboard a new worker.
                     - if the pan is valid then proceed to next step.
                 3. Ask for referral code (mandatory): "Almost done! 🎁 Do you have a referral code? You'll get cashback!"
                 4. If referral code provided:
