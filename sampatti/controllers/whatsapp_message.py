@@ -563,7 +563,7 @@ def employer_contract_template(employerNumber, worker_name, employment_contract_
 
     data = {
         "messaging_product": "whatsapp",
-        "to": employerNumber,
+        "to": employerNumber,  # Ensure it's a string
         "type": "template",
         "template": {
             "namespace": orai_namespace,
@@ -574,8 +574,8 @@ def employer_contract_template(employerNumber, worker_name, employment_contract_
             "name": template_name,
             "components": [
                 {
-                    "type" : "header",
-                    "parameters" : [
+                    "type": "header",
+                    "parameters": [
                         {
                             "type": "document",
                             "document": {
@@ -602,5 +602,7 @@ def employer_contract_template(employerNumber, worker_name, employment_contract_
 
     if response.status_code == 200:
         print(f"✅ Message sent successfully. Employer: {employerNumber}")
+        return response.json()
     else:
         print(f"❌ Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+        return None
