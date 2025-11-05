@@ -781,7 +781,7 @@ Just tell me what you need help with, and I'll take care of it!"""
             if employer_number == "918208804525" or employer_number == "917742422603" or employer_number == "917015645195":
                 print("Test number detected, skipping processing.")
                 
-                if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting":
+                if check_worker_employer_exists(employer_number) is False and intent_analysis.primary_intent == "greeting" and type_of_message == "text":
                     send_template_message(employer_number, "first_message_template") 
                     print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
                     return
