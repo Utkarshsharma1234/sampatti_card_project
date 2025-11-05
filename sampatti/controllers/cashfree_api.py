@@ -556,7 +556,7 @@ def cash_advance_link(
             "order_note": response.get("order_note", ""),
         }
 
-        send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="revised_salary_link_template")
+        send_whatsapp_message(employerNumber=employerNumber, worker_name=item.worker_name, param3=f"{month} {year}", link_param=payment_session_id, template_name="payment_link_adjust_salary")
         #rashmita_sample_payment_link(employerNumber=employerNumber, workerName=item.worker_name, salary=monthly_salary, advance=cash_advance, total_amount=bonus, link_param=payment_session_id, template_name="rashmita_sample_paymet_temp_copy")
         
 
