@@ -552,7 +552,7 @@ def rashmita_sample_payment_link(employerNumber, workerName, salary, advance, to
 
 
 
-def employer_contract_template(employerNumber, worker_name, employment_contract_name, filename, template_name):
+def employer_contract_template(employerNumber, worker_name, media_id, template_name):
     import requests
 
     url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
@@ -579,8 +579,8 @@ def employer_contract_template(employerNumber, worker_name, employment_contract_
                         {
                             "type": "document",
                             "document": {
-                                "link": f"https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employment_contract_name}",
-                                "filename": filename
+                                "id": media_id,
+                                "filename": "Employer_Contract.pdf"
                             }
                         }
                     ]

@@ -19,11 +19,13 @@ from PIL import Image
 from io import BytesIO
 import json
 import logging, random
+import mimetypes
 
 load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY')
 google_api_key = os.environ.get('GOOGLE_API_KEY')
 sarvam_api_key = os.environ.get('SARVAM_API_KEY')
+orai_api_key = os.environ.get('ORAI_API_KEY')
 
 
 def create_employer(request : schemas.Employer, db: Session):
@@ -1442,6 +1444,47 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
         "clarification_needed": clarification_needed
     }
 
+def upload_media_to_360dialog(file_path: str, api_key: str = None) -> str:
+    """
+    Uploads a local file (PDF) to 360dialog media endpoint and returns the media_id.
+    """
+    if not api_key:
+        raise RuntimeError("D360_API_KEY is not set.")
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    # Guess MIME, default to PDF if unknown
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        mime_type = "application/pdf"
+
+    url = "https://waba-v2.360dialog.io/media"
+    headers = {
+        "D360-API-KEY": api_key
+    }
+
+    # multipart/form-data: messaging_product + file
+    data = { "messaging_product": "whatsapp" }
+    with open(file_path, "rb") as f:
+        files = {
+            "file": (os.path.basename(file_path), f, mime_type)
+        }
+        resp = requests.post(url, headers=headers, data=data, files=files, timeout=60)
+
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(
+            f"360dialog media upload failed ({resp.status_code}): {resp.text}"
+        )
+
+    payload = resp.json()
+    media_id = payload.get("id")
+    if not media_id:
+        raise RuntimeError(f"Could not find media id in response: {payload}")
+
+    return media_id
+
+
 def generate_employment_contract(employerNumber: int, workerNumber : int, upi : str, accountNumber : str, ifsc : str, panNumber: str, name : str, salary : int, db : Session):
 
     contract_schema = schemas.Contract(
@@ -1457,22 +1500,28 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
 
     employment_contract_gen.create_employment_record_pdf(contract_schema, db)
 
+    url = "https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/"
     employment_contract_name = f"{employerNumber}_ER_{workerNumber}.pdf"
     object_name = f"employmentRecords/{employment_contract_name}"
+    #https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/{employerNumber}_ER_{workerNumber}.pdf
+    #https://sampattifilstorage.sgp1.digitaloceanspaces.com/employmentRecords/916378639230_ER_9350073253.pdf
     
     static_dir = os.path.join(os.getcwd(), 'contracts')
 
     field = db.query(models.worker_employer).filter(models.worker_employer.c.worker_number == workerNumber , models.worker_employer.c.employer_number == employerNumber).first()
-
+    worker_name = field.worker_name
+    
     filePath = os.path.join(static_dir, f"{field.id}_ER.pdf")
 
     print(f"the pdf path is : {filePath}")
     uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
-
     print("uploaded the employment contract.")
+    
+    media_id = upload_media_to_360dialog(filePath)
+    print(f"360dialog media uploaded. media_id={media_id}")
 
-    whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="successful_worker_onboarding")
-
+    #whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="successful_worker_onboarding")
+    whatsapp_message.employer_contract_template(employerNumber=employerNumber,worker_name=name,media_id=media_id,template_name="employment_contract")
     # whatsapp_message.employer_contract_template(employerNumber=employerNumber, worker_name=name, employment_contract_name=employment_contract_name, filename="Employment_Contract.pdf", template_name="employment_contract")
 
     print("Employment Contract sent successfully.")
