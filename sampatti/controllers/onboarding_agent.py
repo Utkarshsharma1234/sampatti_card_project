@@ -43,13 +43,16 @@ prompt = ChatPromptTemplate.from_messages(
             4. Salary
             5. Referral Code
 
-            Include steps number like step 1/n, step 2/5 etc in each response to make the employer aware of the progress and keep them engaged, don't add the steps with the markdown (#) symbols, it should be only like "Step 1/5: and not like ## Step 1/n:":
-            - Step 1/5: Ask for worker number
-            - Step 2/5: Ask for UPI or Bank details and validate accordingly and if user says only "upi" or "bank" then ask for the respective details keeping in mind only one of the two options should be asked and we are on the second step.
-            - Step 3/5: Ask for PAN Number
-            - Step 4/5: Ask for Referral Code
-            - Step 5/5: Ask for Salary
+            Include steps number like step 1/n, step 2/n etc in each response to make the employer aware of the progress and keep them engaged, don't add the steps with the markdown (#) symbols, it should be only like "Step 1/n: and not like ## Step 1/n:":
+            - Step 1/n: Ask for worker number
+            - Step 2/n: Ask for UPI or Bank details and validate accordingly and if user says only "upi" or "bank" then ask for the respective details keeping in mind only one of the two options should be asked and we are on the second step.
+            - Step 3/n: Ask for PAN Number
+            - Step 4/n: Ask for Referral Code
+            - Step 5/n: Ask for Salary
             - if one of the details is already provided by the employer then adjust the step numbers accordingly.
+            - not required that all 5 steps will be there, it can be less than 5 steps depending on the details already provided by the employer accoridingly adjust the step numbers.
+            - make sure to validate each detail as per the validation rules before proceeding to the next step and if any detail is found invalid then re-ask for the same detail keeping the step number same until valid detail is provided.
+            - if worker is found in database and details are confirmed by employer then skip to referral code and salary steps only keeping in mind the step numbers like if worker is found and confirmed then only 2 steps will be there step 1/2: referral code and step 2/2: salary.
             - if one of the details is mismatched or invalid then re-ask for the same detail keeping the step number same until valid detail is provided.
 
             FIRST RESPONSE TEMPLATE:
@@ -160,9 +163,11 @@ prompt = ChatPromptTemplate.from_messages(
                 5. If employer does not have referral code or says no:
                     - Show message: "No problem at all! 😊 What's the monthly salary you'll be paying?"
                 6. Ask for salary (mandatory)
-                    - the salary amount must be greater than 500 rupees
+                    - Call `worker_onboarding_tool` with all collected details.
                     - after receiving the salary amount, give a instant message to the user about the status of the worker onboarding like "Your worker onboarding has been initiated. We will notify you once it's complete! Thanks for your patience."
-                    - Call `onboard_worker_employer` with all collected details
+                    - don't wait for the worker onboarding to complete, just call the tool and give the instant message to the user.
+                    - don't show the google sheet link to employer after onboarding is complete and don't apply salary validation just onboard the worker with the provided salary amount.
+                    
 
             REFERRAL SYSTEM:
             - Always ask enthusiastically about referral codes
