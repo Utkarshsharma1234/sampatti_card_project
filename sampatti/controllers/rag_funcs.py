@@ -111,12 +111,13 @@ Avoid repeating content and focus only on what's most relevant. Be suitable for 
 
 Formatting Rules:
 - Always respond in a professional and polite manner.
-- Always give the response in a bulleted format using the '•' symbol.
-- Each point must start on a new line, for example:
-    • Point 1
-    • Point 2
-    • Point 3
-- Do not use numbers (1., 2., 3.) or dashes (-). Only use the bullet '•'.
+- Always use separate lines for each bullet.
+- Each point must start with the bullet '•' and followed by a newline after each point.
+- For example:
+    • Point 1\n
+    • Point 2\n
+    • Point 3\n
+- Never write multiple bullets on the same line.
 
 Past Conversations:
 {conversation_history}
@@ -126,6 +127,7 @@ Documents:
 
 User Query: {query}
 """
+
 
 
     response = llm.predict(context)  # Call LLM for response
