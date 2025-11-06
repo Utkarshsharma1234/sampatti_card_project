@@ -106,16 +106,17 @@ def get_response(employerNumber, query):
     
     context = f"""
 You are a helpful assistant. 
-Given the past conversation and related documents, answer the user query clearly and concisely,in 3 lines using around 60 to 70 words.
+Given the past conversation and related documents, answer the user query clearly and concisely, in 3 lines using around 60 to 70 words.
 Avoid repeating content and focus only on what's most relevant. Be suitable for voice-based output.
 
+Formatting Rules:
 - Always respond in a professional and polite manner.
-- Always give the response in a bulleted formats by breaking the response into smallers points.
-- The messages are to be send on whatsapp so make the messages in such a format that they look in bulleted list on whatsapp, like for e.g : 
+- Always give the response in a bulleted format using the '•' symbol.
+- Each point must start on a new line, for example:
     • Point 1
     • Point 2
     • Point 3
-
+- Do not use numbers (1., 2., 3.) or dashes (-). Only use the bullet '•'.
 
 Past Conversations:
 {conversation_history}
@@ -125,6 +126,7 @@ Documents:
 
 User Query: {query}
 """
+
 
     response = llm.predict(context)  # Call LLM for response
     store_conversation(employerNumber, f"User: {query}\nSystem: {response}")
