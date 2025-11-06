@@ -90,7 +90,7 @@ class ConfirmWorkerInput(BaseModel):
     worker_number: int
     employer_number: int
     salary: int
-    referral_code: Optional[str] = None
+    referral_code: Optional[str] = Field(None, description="Referral code if provided")
 
 
 
@@ -520,7 +520,7 @@ def pan_verify(pan_number: str):
     except requests.RequestException as e:
         return {"error": str(e)}
 
-def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str]) -> dict:
+def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: Optional[str] = None) -> dict:
     """
     Immediately adds worker to employer in worker_employer table and generates employment contract
     when employer confirms the worker details.
