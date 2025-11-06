@@ -99,7 +99,7 @@ def financial_query_response(employerNumber: int, query: str) -> str:
     Tool to handle financial queries related to employers and workers.
     It uses an external API to fetch accurate financial information.
     """
-    api_url = "https://conv.sampatticards.com/rag_process_query"  # Replace with actual API endpoint
+    api_url = "https://conv.sampatticards.com/user/rag_process_query"  # Replace with actual API endpoint
     payload = {"employerNumber" : employerNumber, "query": query}
     
     try:
