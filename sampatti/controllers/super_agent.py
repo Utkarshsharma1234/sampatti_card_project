@@ -271,6 +271,7 @@ class SuperAgent:
                     • Point 1\n
                     • Point 2\n
                     • Point 3\n
+                - If the intent is not in your list of known intents, never hallucinate or return the reponses based on the internet knowledge, always respond with "I'm sorry, but I can only assist with worker management and financial advisory related queries. How can I help you with that today?"
                 
                 Return your response in the specified JSON format.
                 {format_instructions}
