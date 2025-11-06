@@ -163,6 +163,18 @@ def previous_month_days():
     return last_day_of_previous_month.day
 
 
+def format_bullets_whatsapp(text: str) -> str:
+    # Remove leading/trailing spaces
+    text = text.strip()
+    
+    # Ensure every bullet starts on a new line
+    text = re.sub(r'\s*•\s*', r'\n• ', text)
+    
+    # Remove multiple newlines if they appear
+    text = re.sub(r'\n+', '\n', text)
+    
+    return text.strip()
+
 def determine_attendance_period(current_day):
     """
     Determine whether to use previous month or current month's days for attendance

@@ -10,7 +10,7 @@ import requests, os, tempfile, json
 import asyncio
 from pydub import AudioSegment
 from urllib.parse import urlparse
-from .utility_functions import call_sarvam_api
+from .utility_functions import call_sarvam_api, format_bullets_whatsapp
 from ..database import get_db
 from sqlalchemy.orm import Session
 from .. import models
@@ -107,9 +107,11 @@ def financial_query_response(employerNumber: int, query: str) -> str:
         response = requests.post(api_url, params=payload, headers=get_auth_headers())
         response.raise_for_status()
         data = response.json()
-        print("data : ", response)
-        print("data : ", data)
-        return data.get("response", "No answer found.")
+        answer_to_user_query = data.get("response", "")
+        formatted_answer_to_query = format_bullets_whatsapp(answer_to_user_query)
+        print("Formatted Answer to user query:", formatted_answer_to_query)
+        return formatted_answer_to_query
+    
     except requests.RequestException as e:
         return f"Error fetching financial data: {e}"
 
