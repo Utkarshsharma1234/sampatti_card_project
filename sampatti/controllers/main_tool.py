@@ -15,6 +15,7 @@ from ..database import get_db
 from sqlalchemy.orm import Session
 from .. import models
 from .utility_functions import generate_unique_id
+from ..routers.auth import get_auth_headers
 
 
 def add_employer(employer_number: int):
@@ -103,7 +104,7 @@ def financial_query_response(employerNumber: int, query: str) -> str:
     payload = {"employerNumber" : employerNumber, "query": query}
     
     try:
-        response = requests.post(api_url, params=payload)
+        response = requests.post(api_url, params=payload, headers=get_auth_headers())
         response.raise_for_status()
         data = response.json()
         print("data : ", response)
