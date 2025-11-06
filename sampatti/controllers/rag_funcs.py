@@ -11,9 +11,14 @@ openai_api_key = os.environ.get('OPENAI_API_KEY')
 
 chroma_client = chromadb.PersistentClient(path="../../chroma_db")
 
-llm = ChatOpenAI(name="gpt-4o-mini", api_key=openai_api_key)
+# llm = ChatOpenAI(name="gpt-4o-mini", api_key=openai_api_key)
+openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+llm = ChatOpenAI(
+        model="openai/gpt-4o", 
+        api_key=openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1"
+)
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-large")
-
 
 def get_doc_collection():
     doc_collection = chroma_client.get_or_create_collection(name="documents")
