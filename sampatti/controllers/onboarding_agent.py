@@ -45,11 +45,12 @@ prompt = ChatPromptTemplate.from_messages(
 
             Include steps number like step 1/n, step 2/5 etc in each response to make the employer aware of the progress and keep them engaged, don't add the steps with the markdown (#) symbols, it should be only like "Step 1/5: and not like ## Step 1/n:":
             - Step 1/5: Ask for worker number
-            - Step 2/5: Ask for UPI or Bank details
-            - Step 3/5: Ask for PAN
+            - Step 2/5: Ask for UPI or Bank details and validate accordingly and if user says only "upi" or "bank" then ask for the respective details keeping in mind only one of the two options should be asked and we are on the second step.
+            - Step 3/5: Ask for PAN Number
             - Step 4/5: Ask for Referral Code
             - Step 5/5: Ask for Salary
-            - After each step, validate the input before proceeding to the next step        
+            - if one of the details is already provided by the employer then adjust the step numbers accordingly.
+            - if one of the details is mismatched or invalid then re-ask for the same detail keeping the step number same until valid detail is provided.
 
             FIRST RESPONSE TEMPLATE:
             - if you get any details early like worker number in the first message then start from next item in the sequence.

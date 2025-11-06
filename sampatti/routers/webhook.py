@@ -84,6 +84,7 @@ def process_orai_webhook(data: dict):
         entry = data.get("entry", [])[0] if data.get("entry") else {}
         changes = entry.get("changes", [])[0] if entry.get("changes") else {}
         value = changes.get("value", {})
+        message_id = data["entry"][0]["changes"][0]["value"]["messages"][0]["id"]
 
         contacts = value.get("contacts", [])
         employerNumber = contacts[0].get("wa_id") if contacts else None
@@ -99,6 +100,25 @@ def process_orai_webhook(data: dict):
 
         print(f"Message type: {message_type}, EmployerNumber: {employerNumber}, Media Id: {media_id}")
         
+        url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+        headers = {
+            "API-KEY": orai_api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": message_id,
+            "typing_indicator": {
+                "type": "text"
+            }
+        }
+        
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        if resp.status_code == 200:
+            print("✅ Typing indicator sent successfully!")
+        else:
+            print(f"❌ Failed: {resp.status_code} → {resp.text}")
         
         # if employerNumber == "918197266977":
         #     ngrok_url = "https://delicate-cheaply-serval.ngrok-free.app/webhook"
