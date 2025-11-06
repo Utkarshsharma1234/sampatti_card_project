@@ -1,6 +1,6 @@
 import chromadb, os, argparse
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import textwrap
+import textwrap, re
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
@@ -99,6 +99,18 @@ def get_relevant_documents(query):
     return "\n".join(documents) if documents else "No relevant documents found."
 
 
+def format_bullets_whatsapp(text: str) -> str:
+    # Remove leading/trailing spaces
+    text = text.strip()
+    
+    # Ensure every bullet starts on a new line
+    text = re.sub(r'\s*•\s*', r'\n• ', text)
+    
+    # Remove multiple newlines if they appear
+    text = re.sub(r'\n+', '\n', text)
+    
+    return text.strip()
+
 
 def get_response(employerNumber, query):
     conversation_history = get_conversation_history(employerNumber)
@@ -131,6 +143,8 @@ User Query: {query}
 
 
     response = llm.predict(context)  # Call LLM for response
+    response = format_bullets_whatsapp(response)
+    print("Formatted Response:", response)
     store_conversation(employerNumber, f"User: {query}\nSystem: {response}")
 
     if response.startswith("System:"):
