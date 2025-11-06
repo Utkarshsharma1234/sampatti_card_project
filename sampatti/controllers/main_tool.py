@@ -108,7 +108,7 @@ def financial_query_response(employerNumber: int, query: str) -> str:
         data = response.json()
         print("data : ", response)
         print("data : ", data)
-        return data.get("answer", "No answer found.")
+        return data.get("response", "No answer found.")
     except requests.RequestException as e:
         return f"Error fetching financial data: {e}"
 

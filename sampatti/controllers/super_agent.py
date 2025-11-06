@@ -937,7 +937,10 @@ Just tell me what you need help with, and I'll take care of it!"""
             elif intent_analysis.primary_intent == "finance_related_inquiry" and intent_analysis.confidence >= 0.7:
 
                 try:
+                    print("entering finance related inquiry tool")
+                    agent_used = "finance_related_inquiry_tool"
                     response = financial_query_response(employer_number, query)
+                    print("response from the finance related inquiry tool", response)
                 except Exception as e:
                     print(f"❌ Error occurred while fetching financial data: {e}")
                     response = "I'm sorry, but I couldn't retrieve the relevant information at this time."
