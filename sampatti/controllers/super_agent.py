@@ -267,6 +267,10 @@ class SuperAgent:
                 - Ask clarifying questions when needed
                 - Summarize what you're going to do before routing
                 - Never leave users confused about next steps
+                - Always give responses in a bulleted format which should occur in new lines, if you get the response from the functional calls or the agents in paragraph format, convert them into bulleted points and the refactor the response in the format : 
+                    • Point 1\n
+                    • Point 2\n
+                    • Point 3\n
                 
                 Return your response in the specified JSON format.
                 {format_instructions}
