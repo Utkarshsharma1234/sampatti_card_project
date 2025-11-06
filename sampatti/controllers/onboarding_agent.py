@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -81,14 +81,15 @@ prompt = ChatPromptTemplate.from_messages(
             - Always call `get_worker_details` tool after validation of the mobile number.
 
             2. UPI ID (if chosen):
-            - it can be anything like don't validate the upi id
-            - take as user provides
+            - validate the upi using `upi_or_bank_validation` tool where method is "UPI"
+            - if valid: proceed to next question
+            - If invalid: "The provided UPI ID seems incorrect. Please verify and share it again."
 
             3. BANK ACCOUNT + IFSC (if chosen):
-            - Bank Account: Must be numeric get_worker_details, typically 8-18 digits
-            - IFSC Code: Must be exactly 11 characters (4 letters + 7 alphanumeric)
-            - Format: First 4 characters must be letters, 5th character must be 0, last 6 can be letters or numbers
-            - If invalid: "Hold on! 🤔 The bank details don't look right. Please check the account number and IFSC code"
+            - make sure both bank account number and ifsc code are provided
+            - validate the bank details using `upi_or_bank_validation` tool where method is "BANK"
+            - if valid: proceed to next question
+            - If invalid: "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
 
             4. PAN NUMBER:
             - Must be exactly 10 characters(don't include this line while asking for first time user)
@@ -140,6 +141,10 @@ prompt = ChatPromptTemplate.from_messages(
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
+                    - if UPI chosen, ask for UPI ID and validate using `upi_or_bank_validation` tool where method is "UPI"
+                    - if Bank chosen, ask for Bank Account Number and IFSC code and validate using `upi_or_bank_validation` tool where method is "BANK"
+                    - if invalid, re-ask with validation message until valid detail is provided.
+                    - If valid: proceed to next question
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
                     - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
@@ -207,7 +212,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,

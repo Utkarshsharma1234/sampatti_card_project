@@ -17,8 +17,12 @@ from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
 from . import userControllers
-from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers
+from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers, cashfree_api
 from ..routers.auth import get_auth_headers
+import re
+
+# Updated regex: bank name can include letters and numbers (a-z, 0-9)
+UPI_REGEX = re.compile(r"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9]{2,64}$")
 
 
 def save_to_txt(data: str, filename: str = "research_output.txt"):
@@ -479,6 +483,25 @@ def process_referral_code(employer_number: int, referral_code: Optional[str] = N
     finally:
         db.close()
 
+def upi_or_bank_validation(method: str, upi: Optional[str] = None, bank_account_number: Optional[str] = None, ifsc_code: Optional[str] = None) -> bool:
+    if method == "UPI":
+        if not upi:
+            return "invalid"
+
+        upi = upi.strip().lower()
+        if UPI_REGEX.fullmatch(upi):
+            return "valid"
+        return "invalid"
+    
+    if method == "BANK":
+        if not bank_account_number or not ifsc_code:
+            return "invalid"
+        # Basic validation: check non-empty and reasonable lengths
+        response = cashfree_api.bank_account_validation_status(bank_account_number, ifsc_code)
+        status = response.get("account_status")
+        if status == "VALID":
+            return "valid"
+        return "invalid"
 
 def pan_verify(pan_number: str):
     """
@@ -707,6 +730,12 @@ get_worker_by_name_and_employer_tool = StructuredTool.from_function(
     func=get_worker_by_name_and_employer,
     name="get_worker_by_name_and_employer",
     description="Find worker details by name and employer number from worker_employer table."
+)
+
+upi_or_bank_validation_tool = StructuredTool.from_function(
+    func=upi_or_bank_validation,
+    name="upi_or_bank_validation",
+    description="Validates UPI ID or Bank Account details."
 )
 
 pan_verification_tool = StructuredTool.from_function(
