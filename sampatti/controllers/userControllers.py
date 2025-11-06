@@ -1444,11 +1444,11 @@ def process_survey_input(user_name: str, worker_number: str, user_input: str, su
         "clarification_needed": clarification_needed
     }
 
-def upload_media_to_360dialog(file_path: str, api_key: str = None) -> str:
+def upload_media_to_360dialog(file_path: str, orai_api_key: str = None) -> str:
     """
     Uploads a local file (PDF) to 360dialog media endpoint and returns the media_id.
     """
-    if not api_key:
+    if not orai_api_key:
         raise RuntimeError("D360_API_KEY is not set.")
 
     if not os.path.isfile(file_path):
@@ -1461,7 +1461,7 @@ def upload_media_to_360dialog(file_path: str, api_key: str = None) -> str:
 
     url = "https://waba-v2.360dialog.io/media"
     headers = {
-        "D360-API-KEY": api_key
+        "D360-API-KEY": orai_api_key
     }
 
     # multipart/form-data: messaging_product + file
@@ -1517,7 +1517,7 @@ def generate_employment_contract(employerNumber: int, workerNumber : int, upi : 
     uploading_files_to_spaces.upload_file_to_spaces(filePath, object_name)
     print("uploaded the employment contract.")
     
-    media_id = upload_media_to_360dialog(filePath)
+    media_id = upload_media_to_360dialog(filePath, orai_api_key)
     print(f"360dialog media uploaded. media_id={media_id}")
 
     #whatsapp_message.send_whatsapp_message(employerNumber=employerNumber, worker_name=name, param3= workerNumber, link_param = employment_contract_name, template_name="successful_worker_onboarding")
