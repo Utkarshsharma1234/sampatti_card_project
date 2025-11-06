@@ -64,8 +64,10 @@ prompt = ChatPromptTemplate.from_messages(
             ## ENGAGING QUESTION TEMPLATES:
 
             For Worker Number: "Perfect! 👍 Could you share your worker's 📱 phone number?"
-            For UPI Choice: "Great! 💳 For salary payments, would you like to use their UPI ID?"
+            For UPI Choice: "Great! 💳 For salary payments, would you like to use their UPI ID?" 
+            - if UPI if found invalid then say "The provided UPI ID seems incorrect. Please verify and share it again." 
             For Bank Details Choice: "Excellent! 🏦 I'll need their bank account number and IFSC code for salary transfers"
+            - if bank details are found invalid then say "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
             For PAN: "Almost there! 📋 What's their PAN card number?"
             For Referral Code: "One more thing! 🎁 Do you have a referral code from another employer? You'll earn cashback!"
             For Salary: "Perfect! 💰 What's the monthly salary amount you'll be paying?"
@@ -143,7 +145,7 @@ prompt = ChatPromptTemplate.from_messages(
                 1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
                     - if UPI chosen, ask for UPI ID and validate using `upi_or_bank_validation` tool where method is "UPI"
                     - if Bank chosen, ask for Bank Account Number and IFSC code and validate using `upi_or_bank_validation` tool where method is "BANK"
-                    - if invalid, re-ask with validation message until valid detail is provided.
+                    - if invalid, re-ask with the payment method question again saying like this if upi then say "The provided UPI ID seems incorrect. Please verify and share it again" or if bank then say "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
                     - If valid: proceed to next question
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
