@@ -122,7 +122,7 @@ def process_orai_webhook(data: dict):
                 return
 
         # Forward to staging     
-        if employerNumber == "917738877765" or employerNumber == "918197266977":
+        if employerNumber == "917738877765":
             staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'

@@ -70,18 +70,18 @@ def store_documents(chunks):
     return {"response" : "The documents have been successfully stored."}
 
 
-def store_conversation(worker_id, message):
+def store_conversation(employerNumber, message):
     convo_collection = get_convo_collection()
     convo_collection.add(
-        ids=[f"conv_{worker_id}_{len(convo_collection.get()['ids'])}"],
+        ids=[f"conv_{employerNumber}_{len(convo_collection.get()['ids'])}"],
         documents=[message],
-        metadatas=[{"worker_id": worker_id}]
+        metadatas=[{"employerNumber": employerNumber}]
     )
 
 
-def get_conversation_history(worker_id):
+def get_conversation_history(employerNumber):
     convo_collection = get_convo_collection()
-    results = convo_collection.get(where={"worker_id": worker_id})
+    results = convo_collection.get(where={"employerNumber": employerNumber})
     return "\n".join(results["documents"]) if results["documents"] else ""
 
 
@@ -100,14 +100,17 @@ def get_relevant_documents(query):
 
 
 
-def get_response(worker_id, query):
-    conversation_history = get_conversation_history(worker_id)
+def get_response(employerNumber, query):
+    conversation_history = get_conversation_history(employerNumber)
     relevant_docs = get_relevant_documents(query)
     
     context = f"""
 You are a helpful assistant. 
 Given the past conversation and related documents, answer the user query clearly and concisely,in 3 lines using around 60 to 70 words. Don't include "\n" in the response. 
 Avoid repeating content and focus only on what's most relevant. Be suitable for voice-based output.
+
+- Always respond in a professional and polite manner.
+- Always give the response in a bulleted formats by breaking the response into smallers points.
 
 Past Conversations:
 {conversation_history}
@@ -119,7 +122,7 @@ User Query: {query}
 """
 
     response = llm.predict(context)  # Call LLM for response
-    store_conversation(worker_id, f"User: {query}\nSystem: {response}")
+    store_conversation(employerNumber, f"User: {query}\nSystem: {response}")
 
     if response.startswith("System:"):
         response = response[len("System:"):].lstrip()

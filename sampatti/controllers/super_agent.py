@@ -21,7 +21,7 @@ from .onboarding_agent import queryExecutor as onboarding_agent
 from .cash_advance_agent import queryE as cash_advance_agent
 from .onboarding_tools import transcribe_audio
 # Import the employer and worker tools
-from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists, check_worker_employer_exists
+from .main_tool import add_employer_tool, get_employer_workers_info_tool, check_employer_exists_tool, add_employer, get_employer_workers_info, check_employer_exists, check_worker_employer_exists, financial_query_tool, financial_query_response
 # Import attendance agent and tools
 from .attendance_agent import queryExecutor as attendance_agent
 from .attendance_tool import get_workers_for_employer_tool, manage_attendance_tool, get_attendance_summary_tool
@@ -103,7 +103,32 @@ class SuperAgent:
                 "hello", "hi", "how are you", "what can you do", "help", "thanks",
                 "good morning", "good evening", "bye", "goodbye", "thank you",
                 "hey", "capabilities", "what do you do"
-            ]
+            ],
+            "finance_related_inquiry": [
+                "money", "finance", "financial", "funds", "savings", "income", "expenses", "wealth",
+                "asset", "liability", "portfolio", "capital", "budget", "cash", "balance", "net worth",
+                "debt", "loan", "interest", "interest rate", "return", "roi", "inflation", "deflation",
+                "risk", "diversification", "invest", "investment", "investing", "mutual fund", "sip",
+                "stock", "equity", "share", "trading", "demat", "nse", "bse", "index", "market", "etf",
+                "bond", "fixed deposit", "fd", "recurring deposit", "rd", "gold", "real estate",
+                "property investment", "portfolio management", "capital gains", "yield", "bank", "account",
+                "savings account", "current account", "transfer", "credit card", "debit card", "upi",
+                "neft", "rtgs", "imps", "mortgage", "overdraft", "withdrawal", "deposit", "cheque",
+                "statement", "balance enquiry", "scheme", "government scheme", "yojana", "pm", "pmay",
+                "pmjjby", "pmsby", "ppf", "nps", "sukanya samriddhi", "atal pension", "lic", "insurance",
+                "subsidy", "pension", "epf", "pf", "esi", "gst", "tax", "income tax", "tds", "rebate",
+                "exemption", "80c", "filing", "return", "policy", "premium", "coverage", "claim",
+                "life insurance", "health insurance", "term plan", "ulip", "vehicle insurance", "accidental",
+                "beneficiary", "renewal", "surrender", "maturity", "financial plan", "goal planning",
+                "retirement plan", "children education plan", "wealth management", "risk profile", "advisor",
+                "consultant", "recommendation", "saving strategy", "credit score", "cibil", "loan eligibility",
+                "emi", "emi calculator", "debt repayment", "savings goal", "budgeting", "expense tracker",
+                "financial discipline", "income source", "stock market", "market trend", "nifty", "sensex",
+                "inflation rate", "repo rate", "rbi", "gdp", "economy", "fiscal", "monetary policy",
+                "economic growth", "investment query", "finance related", "tax doubt", "govt scheme",
+                "saving advice", "retirement planning", "stock question", "loan help", "financial issue",
+                "wealth growth", "insurance question", "money management"
+]
         }
         
         # Initialize tools
@@ -113,7 +138,8 @@ class SuperAgent:
             get_workers_for_employer_tool,
             manage_attendance_tool,
             get_attendance_summary_tool,
-            check_employer_exists_tool
+            check_employer_exists_tool,
+            financial_query_tool
         ]
         
         self.setup_intent_classifier()
@@ -136,16 +162,19 @@ class SuperAgent:
                 3. "worker_info" - Viewing worker lists, worker details, worker status, counts, salary inquiries, etc.
                 4. "general_conversation" - Greetings, help requests, general chat
                 5. "greeting" - Hello, hi, good morning, etc.
-                6. "help" - What can you do, how to use, etc.
+                6. "finance_related_inquiry" - Questions about money, finance, investments, loans, taxes, government schemes, etc.
+                7. "help" - What can you do, how to use, etc.
                 
                 Consider conversation history to understand context better.
+                Always respond in bulleted points.
                 
                 KEYWORDS FOR CLASSIFICATION:
                 Onboarding: {onboarding_keywords}
                 Cash Advance: {cash_advance_keywords}
                 Worker Info: {worker_info_keywords}
                 General: {general_keywords}
-                
+                Finance Related: {finance_related_keywords}
+
                 Return your analysis in the specified JSON format.
                 {format_instructions}
                 """,
@@ -157,7 +186,8 @@ class SuperAgent:
             onboarding_keywords=", ".join(self.intent_keywords["onboarding"]),
             cash_advance_keywords=", ".join(self.intent_keywords["cash_advance"]),
             worker_info_keywords=", ".join(self.intent_keywords["worker_info"]),
-            general_keywords=", ".join(self.intent_keywords["general_conversation"])
+            general_keywords=", ".join(self.intent_keywords["general_conversation"]),
+            finance_related_keywords=", ".join(self.intent_keywords["finance_related_inquiry"])
         )
         
         self.intent_classifier = self.intent_prompt | llm | intent_parser
@@ -187,10 +217,12 @@ class SuperAgent:
                 2. Route specialized requests to appropriate agents
                 3. Maintain conversation continuity and context
                 4. Provide helpful guidance and support
+                5. Handle finance-related inquiries with accurate information
                 
                 ROUTING DECISIONS:
                 - If intent is "onboarding": Route to onboarding specialist
                 - If intent is "cash_advance": Route to cash advance specialist
+                - If intent is "finance_related_inquiry": call financial_query_tool
                 - If intent is "worker_info": Use internal tools to fetch worker information
                 - If intent is "general_conversation", "greeting", "help": Handle yourself
                 
@@ -217,6 +249,7 @@ class SuperAgent:
                 ✅ Handle bonuses and salary deductions
                 ✅ Generate salary payment links
                 ✅ Track and update worker information
+                ✅ Handle financial inquiries and provide insights
                 
                 IMPORTANT FACTS:
                 - Sampatti currently operates entirely through WhatsApp. There is no separate mobile app (Android or iOS) or downloadable APK.
@@ -460,7 +493,19 @@ class SuperAgent:
                 conversation_context="worker_info_request",
                 user_emotional_state="neutral"
             )
-        
+
+        # Check for finance-related keywords
+        finance_related_matches = [kw for kw in self.intent_keywords["finance_related_inquiry"] if kw in message_lower]
+        if finance_related_matches:
+            return IntentClassification(
+                primary_intent="finance_related_inquiry",
+                confidence=0.9,
+                keywords_found=finance_related_matches,
+                requires_specialized_agent=True,
+                conversation_context="finance_related_request",
+                user_emotional_state="neutral"
+            )
+
         # Check for cash advance keywords with higher confidence for clear matches
         cash_advance_matches = [kw for kw in self.intent_keywords["cash_advance"] if kw in message_lower]
         if cash_advance_matches:
@@ -576,6 +621,11 @@ class SuperAgent:
    - Handle bonuses and salary deductions
    - Generate payment links
 
+🔹 **Financial Related Queries**
+   - Process financial inquiries
+   - Assist with budgeting and expense tracking
+   - Generate financial reports
+
 🔹 **General Support**
    - Answer questions about the system
    - Guide you through processes
@@ -647,7 +697,18 @@ Just tell me what you need help with, and I'll take care of it!"""
                 response = cash_advance_agent(employer_number, type_of_message, query, media_id)
                 print(f"📥 Cash Advance Agent Response: {response}")
                 return str(response) if response else "No response from cash advance agent."
-                
+            
+            elif intent == "finance_related_inquiry":
+                print(f"🔄 Routing to Finance Related Inquiry Tool for employer {employer_number}")
+                print(f"📤 Calling: financial_query_tool({employer_number}, '{type_of_message}', '{query}', '{media_id}')")
+
+                if financial_query_tool is None:
+                    return "Finance related inquiry service is currently unavailable. Please try again later."
+
+                response = financial_query_response(employer_number, query)
+                print(f"📥 Finance Related Inquiry Agent Response: {response}")
+                return str(response) if response else "No response from finance related inquiry agent."
+            
             elif intent in ["attendance", "attendance_management", "attendance_info"]:
                 print(f"🔄 Routing to Attendance Agent for employer {employer_number}")
                 print(f"📤 Calling: attendance_agent({employer_number}, '{type_of_message}', '{query}', '{media_id}')")
@@ -704,22 +765,6 @@ Just tell me what you need help with, and I'll take care of it!"""
             formatted_json = {}  # Use empty dict to prevent crash
     
         print(f"✅ formatted_json type: {type(formatted_json)}")
-        
-        # entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
-        # changes = entry.get("changes", [])[0] if entry.get("changes") else {}
-        # value = changes.get("value", {})
-
-        # contacts = value.get("contacts", [])
-        # employerNumber = contacts[0].get("wa_id") if contacts else None
-
-        # messages = value.get("messages", [])    
-        # message = messages[0] if messages else {}
-        # message_type = message.get("type")
-        # if message_type == "button":
-        #     messages = value.get("messages", [])
-        #     if messages:
-        #         button_text = messages[0].get("button", {}).get("text")
-        #         print(f"🔘 Button Text: {button_text}")
         
         try:
             entry = formatted_json.get("entry", [])[0] if formatted_json.get("entry") else {}
@@ -888,6 +933,14 @@ Just tell me what you need help with, and I'll take care of it!"""
                     )
                     response = super_response.response_text
                     agent_used = "super_agent_not_confirmed"
+
+            elif intent_analysis.primary_intent == "finance_related_inquiry" and intent_analysis.confidence >= 0.7:
+
+                try:
+                    response = financial_query_response(employer_number, query)
+                except Exception as e:
+                    print(f"❌ Error occurred while fetching financial data: {e}")
+                    response = "I'm sorry, but I couldn't retrieve the relevant information at this time."
 
             else:
                 # Handle with general conversation only if confidence is low or general intent

@@ -94,6 +94,25 @@ def check_worker_employer_exists(employer_number: int) -> bool:
     return False
 
 
+def financial_query_response(employerNumber: int, query: str) -> str:
+    """
+    Tool to handle financial queries related to employers and workers.
+    It uses an external API to fetch accurate financial information.
+    """
+    api_url = "https://conv.sampatticards.com/rag_process_query"  # Replace with actual API endpoint
+    payload = {"employerNumber" : employerNumber, "query": query}
+    
+    try:
+        response = requests.post(api_url, params=payload)
+        response.raise_for_status()
+        data = response.json()
+        print("data : ", response)
+        print("data : ", data)
+        return data.get("answer", "No answer found.")
+    except requests.RequestException as e:
+        return f"Error fetching financial data: {e}"
+
+
 add_employer_tool = StructuredTool.from_function(
     func=add_employer,
     name="Add Employer",
@@ -117,5 +136,10 @@ check_worker_employer_exists_tool = StructuredTool.from_function(
     name="Check Worker-Employer Mapping Exists",
     description="Check if any worker-employer mapping exists for a given employer number."
 )
-    
 
+financial_query_tool = StructuredTool.from_function(
+    func=financial_query_response,
+    name="Financial Query Tool",
+    description="Handle financial queries related to employers and workers."
+)
+    

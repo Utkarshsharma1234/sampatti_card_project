@@ -205,12 +205,12 @@ def send_introduction_video(employerNumber : int):
     return whatsapp_message.send_intro_video(employerNumber, "send_video_template")
 
 @router.post("/rag_process_query")
-def rag_process_query(workerId : str, query : str):
-    return rag_funcs.get_response(workerId, query)
+def rag_process_query(employerNumber : str, query : str):
+    return rag_funcs.get_response(employerNumber, query)
 
 @router.get("/rag_conversation_history")
-def get_conversation_history(workerId : str):
-    return rag_funcs.get_conversation_history(workerId)
+def get_conversation_history(employerNumber : str):
+    return rag_funcs.get_conversation_history(employerNumber)
 
 @router.get("/extract_pan_card")
 def extract_pan_card_details(image_url):
@@ -223,9 +223,6 @@ def extract_passbook_details(image_url):
 @router.post("/onboarding_worker_sheet/create")
 def create_worker_details_onboarding(worker_number: int, employer_number : int, UPI: str, bank_account_number: str, ifsc_code: str, pan_number: str, bank_passbook_image: str, pan_card_image: str, salary : int):
     return talk_to_agent_excel_file.create_worker_details_onboarding(worker_number, employer_number, UPI, bank_account_number, ifsc_code, pan_number, bank_passbook_image, pan_card_image, salary)
-
-
-
 
 @router.post("/upload_image_to_server")
 def upload_image_from_url(image_url: str, object_name: str):
