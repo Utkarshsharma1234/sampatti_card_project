@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_message_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -40,7 +40,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             FOR NEW WORKERS (not in database):
             1. Worker phone number
-            2. Payment method choice (UPI or Bank)
+            2. Payment method choice (UPI or Bank) --> we will use template message with buttons for this will be send using send_message_tool where we will provide employer number and message template whose name is upi_or_bank_details.
             3. Payment details (UPI ID OR Bank Account + IFSC - never both)
             4. PAN Number
             5. Referral Code (optional but always ask)
@@ -79,10 +79,9 @@ prompt = ChatPromptTemplate.from_messages(
             ## ENGAGING QUESTION TEMPLATES:
 
             For Worker Number: "Perfect! 👍 Could you share your worker's 📱 phone number?"
-            For UPI Choice: "Great! 💳 For salary payments, would you like to use their UPI ID?" 
-            - if UPI if found invalid then say "The provided UPI ID seems incorrect. Please verify and share it again." 
-            For Bank Details Choice: "Excellent! 🏦 I'll need their bank account number and IFSC code for salary transfers"
-            - if bank details are found invalid then say "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
+            For asking payment method we will be sending the message tempplate message like this: "Great! 💳 For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?" with buttons UPI and Bank.
+            - if we get upi id then say: "Awesome! 📲 could you please provide their UPI ID."
+            - if we get bank account then say: "Great! 🏦 Could you please share their Bank Account Number and IFSC code."
             For PAN: "Almost there! 📋 What's their PAN card number?"
             For Referral Code: "One more thing! 🎁 Do you have a referral code from another employer? You'll earn cashback!"
             For Salary: "Perfect! 💰 What's the monthly salary amount you'll be paying?"
@@ -157,11 +156,12 @@ prompt = ChatPromptTemplate.from_messages(
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
-                1. Ask: "For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?"
-                    - if UPI chosen, ask for UPI ID and validate using `upi_or_bank_validation` tool where method is "UPI"
-                    - if Bank chosen, ask for Bank Account Number and IFSC code and validate using `upi_or_bank_validation` tool where method is "BANK"
-                    - if invalid, re-ask with the payment method question again saying like this if upi then say "The provided UPI ID seems incorrect. Please verify and share it again" or if bank then say "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
-                    - If valid: proceed to next question
+                1. always call the send_message_tool to send the template message with buttons for payment method choice if worker is not found in database or details not confirmed by employer(here user employer number and message template whose name is upi_or_bank_details).
+                    - if we get upi id then say: "Awesome! 📲 could you please provide their UPI ID."
+                    - if we get bank account then say: "Great! 🏦 Could you please share their Bank Account Number and IFSC code."
+                    - after getting the payment details validate them using `upi_or_bank_validation` tool immediately.
+                    - if payment details are invalid then say: "The provided payment details seem incorrect. Please verify and share them again." and re-ask for payment details and validate again until valid payment details are provided.
+                    - we need to validate the payment details immediately after getting them and payment details validation is mandatory.
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
                     - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
@@ -211,6 +211,7 @@ prompt = ChatPromptTemplate.from_messages(
             IMPORTANT NOTES:
             - When showing worker details, display each field clearly
             - Never display vendorId to the employer
+            - for sending the message template with buttons for payment method choice use the `send_message_tool` where we will provide employer number should be the employer's number and message template whose name is upi_or_bank_details.
             - Always use numbers in amount, phone number fields
             - If employer provides same number for worker and employer: "Hey! 😄 You can't add yourself as a worker. Please share your worker's number"
             - Never show technical details - keep it simple and friendly
@@ -231,7 +232,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_message_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,

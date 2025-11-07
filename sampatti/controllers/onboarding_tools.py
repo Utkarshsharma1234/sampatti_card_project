@@ -17,7 +17,7 @@ from fastapi import Depends
 from .. import models
 from .main_tool import add_employer
 from . import userControllers
-from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers, cashfree_api
+from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers, cashfree_api, whatsapp_message
 from ..routers.auth import get_auth_headers
 import re
 
@@ -742,6 +742,12 @@ pan_verification_tool = StructuredTool.from_function(
     func=pan_verify,
     name="pan_verification",
     description="Verifies the validity of a PAN number using an external API."
+)
+
+send_message_tool = Tool(
+    name="send_message_to_employer",
+    func=whats,
+    description="Sends a text message to the employer using their employer number."
 )
 
 process_referral_code_tool = StructuredTool.from_function(
