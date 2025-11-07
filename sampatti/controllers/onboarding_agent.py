@@ -297,7 +297,7 @@ def queryExecutor(employer_number: int, typeofMessage : str, query : str, mediaI
     response = agent_executor.invoke(inputs)
 
     try:
-        assistant_response = response.get('output') or str(response)
+        assistant_response = response.get('output') or ""
         store_conversation(employer_number, f"User: {full_query}\nAssistant: {assistant_response}")
         return assistant_response
 
