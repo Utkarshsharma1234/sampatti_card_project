@@ -159,19 +159,17 @@ prompt = ChatPromptTemplate.from_messages(
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Always call 'send_whatsapp_message' tool which will send the message template, don't send any text message here just invoke the tool and don't generate any response.
-                    -Do not generate or show this text yourself — the tool handles it.
-                    -After the employer clicks one option:
-                    -If UPI is chosen → ask: “Awesome! 📲 Could you please share their UPI ID?”
-                    -If Bank is chosen → ask: “Great! 🏦 Could you please share their Bank Account Number and IFSC code?”
+                2. if upi or bank account is being choosen:
+                    -If UPI is chosen → ask: “Step 2/5: Awesome! 📲 Could you please share their UPI ID?”
+                    -If Bank is chosen → ask: “Step 2/5: Great! 🏦 Could you please share their Bank Account Number and IFSC code?”
                     -Then validate the response using `upi_or_bank_validation_tool` accordingly.
-
-                2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
+                3. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
                     - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
                     - we need to validate the pan immediately after getting it and pan verification is mandatory to onboard a new worker.
                     - if the pan is valid then proceed to next step.
-                3. Ask for referral code (mandatory): "Almost done! 🎁 Do you have a referral code? You'll get cashback!"
-                4. If referral code provided:
+                4. Ask for referral code (mandatory): "Almost done! 🎁 Do you have a referral code? You'll get cashback!"
+                    - If referral code provided:
                     - Call `process_referral_code` with ONLY employer_number and referral_code (no worker details)
                     - if valid: "Wonderful! 🎉 Your referral bonus is confirmed!"
                     - if invalid: "That code doesn't seem to work 😕 Any other code, or shall we proceed?"
