@@ -63,6 +63,7 @@ prompt = ChatPromptTemplate.from_messages(
             - if worker is **found but not confirmed**: remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
             - If worker is **new**: after a valid worker number, remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
             - While you are still collecting the **worker number**, remaining items = [worker number, …path that follows] → label is `Step 1/Y:`.
+            - it should be like this "Step 1/5: Perfect! 👍 Could you share your worker's 📱 phone number?". with no markdown headers.
             
             IMPORTANT RULES:
             - Ask for ONE thing at a time - never skip ahead
