@@ -60,8 +60,8 @@ prompt = ChatPromptTemplate.from_messages(
             - **X = position within those remaining steps**, starting at 1 for the current step.
             - Compute remaining steps based on user responses so far:
             - If worker is **found and confirmed**: remaining items = [referral, salary] → labels become `Step 1/2:` then `Step 2/2:`.
-            - if worker is **found but not confirmed**: remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
-            - If worker is **new**: after a valid worker number, remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
+            - if worker is **found but not confirmed**: remaining items = [payment, PAN, referral, salary] → labels become `Step 1/5:`, `Step 2/5:`, etc.
+            - If worker is **new**: after a valid worker number, remaining items = [payment, PAN, referral, salary] → labels become `Step 1/5:`, `Step 2/5:`, etc.
             - While you are still collecting the **worker number**, remaining items = [worker number, …path that follows] → label is `Step 1/Y:`.
             - it should be like this "Step 1/5: Perfect! 👍 Could you share your worker's 📱 phone number?". with no markdown headers.
             
@@ -90,41 +90,35 @@ prompt = ChatPromptTemplate.from_messages(
             VALIDATION RULES:
 
             1. WORKER NUMBER:
-            - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number"
+            - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number".
+            - if worker is not present with us then don't generate any response from agent just invoke the 'send_whatsapp_message'
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number.
             - if +91 is provided then also remove the +91 and call `get_worker_details` with the 10 digit worker number.
             - if worker number is same as employer number then ask: "Hey! You can't add yourself as a worker. Please share your worker's number"
             - after calling 'get_worker_details' ensure to call 'send_whatsapp_message' to send the next if worker is not already present
 
-            2. For Payment Method Choice:
-            - if the worker is not already present then this method will be called.
-            - Instead, always call the `send_whatsapp_message` tool to send the pre-defined WhatsApp template message to the employer.  
-            - The template will contain two buttons — one for UPI ID and one for Bank Account.
-            - Provide the employer number to the tool.  
-            - Do not send or print any text response yourself — only invoke the tool to send the message.
-
-            3. UPI ID (if chosen):
+            2. UPI ID (if chosen):
             - validate the upi using `upi_or_bank_validation` tool where method is "UPI"
             - if valid: proceed to next question
             - If invalid: "The provided UPI ID seems incorrect. Please verify and share it again."
 
-            3. BANK ACCOUNT + IFSC (if chosen):
+            2. BANK ACCOUNT + IFSC (if chosen):
             - make sure both bank account number and ifsc code are provided
             - validate the bank details using `upi_or_bank_validation` tool where method is "BANK"
             - if valid: proceed to next question
             - If invalid: "The provided bank details seem incorrect. Please verify the account number and IFSC code and share them again."
 
-            4. PAN NUMBER:
+            3. PAN NUMBER:
             - Must be exactly 10 characters(don't include this line while asking for first time user)
             - Format: 5 letters + 4 numbers + 1 letter (e.g., ABCDE1234F)
             - All letters must be uppercase
             - If invalid: "That doesn't look like a valid PAN! 📝 It should be like ABCDE1234F - could you check?"
 
-            5. REFERRAL CODE:
+            4. REFERRAL CODE:
             - Always ask for referral code from employer
             - If employer provides the referral code, use the `process_referral_code` tool
             
-            6. SALARY:
+            5. SALARY:
             - if salary is given like "ten thousand" then convert it to 10000 or "15k" to 15000 or 4,800 to 4800 like this
             - If less than 500: "The salary needs to be at least ₹500 💵 Could you share the correct amount?"
 
