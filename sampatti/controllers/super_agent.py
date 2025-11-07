@@ -768,6 +768,9 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Value received: {formatted_json[:200]}")
             print(f"❌ This indicates the webhook is passing formatted_json (string) instead of data (dict)")
             formatted_json = {}  # Use empty dict to prevent crash
+            
+        intent_analysis = self.classify_intent(query, chat_history)
+        print("Intent Classify 123")
     
         print(f"✅ formatted_json type: {type(formatted_json)}")
         
@@ -860,6 +863,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                         
             # Classify intent
             intent_analysis = self.classify_intent(query, chat_history)
+            print("Intent Classify 456")
             print(f"🎯 Intent Detected: {intent_analysis.primary_intent} (confidence: {intent_analysis.confidence:.2f})")
             print(f"🔍 Keywords Found: {intent_analysis.keywords_found}")
             print(f"🤖 Requires Specialized Agent: {intent_analysis.requires_specialized_agent}")
