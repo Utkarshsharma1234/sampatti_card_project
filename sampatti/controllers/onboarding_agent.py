@@ -55,7 +55,7 @@ prompt = ChatPromptTemplate.from_messages(
             Ask *one thing at a time*. Advance only after the current item validates. If invalid, *re-ask the SAME item* with the same step label.
 
             ### Dynamic step label (remaining-steps mode)
-            Show the label exactly as: **`Step X/Y:`** (no markdown headers).
+            Show the label exactly as: **`Step X/Y:`** (no markdown headers) and don't add the steps with the markdown (#) or (*) symbols, it should be only like "Step 1/n: and not like ## Step 1/n:":.
             - **Y = number of steps still required in this path, including the current one.**
             - **X = position within those remaining steps**, starting at 1 for the current step.
             - Compute remaining steps based on user responses so far:
