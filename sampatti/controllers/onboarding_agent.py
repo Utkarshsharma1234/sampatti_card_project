@@ -91,8 +91,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             1. WORKER NUMBER:
             - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number".
-            - if worker is not present with us then don't generate any response from agent just invoke the 'send_whatsapp_message'
-            - if worker is not present then show messgae "couldn't find any worker in our system, please choose worker's mode of payment from above"
+            - if worker is not present with us then just invoke the 'send_whatsapp_message' and then don't generate any response (response should be empty in this case and just return) from agent.
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number.
             - if +91 is provided then also remove the +91 and call `get_worker_details` with the 10 digit worker number.
             - if worker number is same as employer number then ask: "Hey! You can't add yourself as a worker. Please share your worker's number"
