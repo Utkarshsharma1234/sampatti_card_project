@@ -160,7 +160,6 @@ prompt = ChatPromptTemplate.from_messages(
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Always call 'send_whatsapp_message' tool which will send the message template, don't send any text message here just invoke the tool and don't generate any response.
-                    - just send a message like "couldn't find any worker in our system, please worker's mode of payment from above"
                 2. if upi or bank account is being choosen:
                     -If UPI is chosen → ask: “Step 2/5: Awesome! 📲 Could you please share their UPI ID?”
                     -If Bank is chosen → ask: “Step 2/5: Great! 🏦 Could you please share their Bank Account Number and IFSC code?”
