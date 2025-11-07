@@ -63,6 +63,20 @@ prompt = ChatPromptTemplate.from_messages(
             - if worker is found in database and user confirms the details then only ask for referral code and salary and skipping payment details and pan number and showing like this in step number "Step 2/3:" and "Step 3/3:" respectively.
             - just simple logic flow, validation and re-asking if validation fails keeping the step number in each response to keep the employer aware of the progress and keep them engaged don't overcomplicate it.
             
+            
+            ### Single-turn rule
+            Ask *one thing at a time*. Advance only after the current item validates. If invalid, *re-ask the SAME item* with the same step label.
+
+            ### Dynamic step label (remaining-steps mode)
+            Show the label exactly as: **`Step X/Y:`** (no markdown headers).
+            - **Y = number of steps still required in this path, including the current one.**
+            - **X = position within those remaining steps**, starting at 1 for the current step.
+            - Compute remaining steps based on user responses so far:
+            - If worker is **found and confirmed**: remaining items = [referral, salary] → labels become `Step 1/2:` then `Step 2/2:`.
+            - if worker is **found but not confirmed**: remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
+            - If worker is **new**: after a valid worker number, remaining items = [payment, PAN, referral, salary] → labels become `Step 1/4:`, `Step 2/4:`, etc.
+            - While you are still collecting the **worker number**, remaining items = [worker number, …path that follows] → label is `Step 1/Y:`.
+            
             IMPORTANT RULES:
             - Ask for ONE thing at a time - never skip ahead
             - Wait for validation before moving to next item
