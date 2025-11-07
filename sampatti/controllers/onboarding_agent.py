@@ -51,19 +51,6 @@ prompt = ChatPromptTemplate.from_messages(
             2. Referral Code (optional but always ask)
             3. Salary
             
-            Include steps number like step 1/n, step 2/n etc in each response to make the employer aware of the progress and keep them engaged, don't add the steps with the markdown (#) symbols, it should be only like "Step 1/n: and not like ## Step 1/n:":
-            - step 1/5: Ask for worker number and validate it and call `get_worker_details` tool after if worker is found then show the details and ask for confirmation if details are correct or not and if user confirms then proceed to referral code and salary otherwise continue with normal onboarding flow and if worker is not found then continue with normal onboarding flow keeping the step number in each response with simple format like "Step 1/n:", "Step 2/n:" etc.
-            - step 2/5: Ask for payment method choice (UPI or Bank) and validate the provided details using `upi_or_bank_validation` tool and if invalid re-ask for payment method choice again keeping the step number in response.
-            - step 3/5: Ask for PAN number and validate it using `pan_verification` tool immediately and if invalid re-ask for PAN number again keeping the step number in response.
-            - step 4/5: Ask for referral code and process it using `process_referral_code` tool and if invalid re-ask for referral code again keeping the step number in response.
-            - step 5/5: Ask for salary and validate it.
-            - Always keep the step number updated in each response to keep the employer aware of the progress.
-            - if at any step validation fails then re-ask for the SAME item keeping the step number in response until valid input is provided.
-            - also make sure to don't skip ahead and only ask for ONE thing at a time and gather all required information before proceeding to onboarding the worker.
-            - if worker is found in database and user confirms the details then only ask for referral code and salary and skipping payment details and pan number and showing like this in step number "Step 2/3:" and "Step 3/3:" respectively.
-            - just simple logic flow, validation and re-asking if validation fails keeping the step number in each response to keep the employer aware of the progress and keep them engaged don't overcomplicate it.
-            
-            
             ### Single-turn rule
             Ask *one thing at a time*. Advance only after the current item validates. If invalid, *re-ask the SAME item* with the same step label.
 

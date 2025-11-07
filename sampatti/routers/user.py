@@ -327,6 +327,14 @@ def clear_employer_cache_cash_advance_agent(employer_number: int) -> dict:
 def confirm_worker_and_add_to_employer(worker_number: int, employer_number: int, salary: int, referral_code: str = "") -> dict:
     return onboarding_tools.confirm_worker_and_add_to_employer(worker_number, employer_number, salary, referral_code)
 
+@router.post("/add_new_worker_to_sheet")
+def add_new_worker_to_sheet(worker_number: int, employer_number: int, salary: int, referral_code: str = "") -> dict:
+    return onboarding_tools.add_new_worker_to_sheet(worker_number, employer_number, salary, referral_code)
+
+@router.post("/onbord_worker_endpoint")
+def onboard_worker_employer( worker_number: int, employer_number: int, pan_number: str, salary : int, UPI: Optional[str] = "", bank_account_number: Optional[str]= "", ifsc_code: Optional[str] = "", referral_code: Optional[str] = "") -> str:
+    return onboarding_tools.onboard_worker_employer(worker_number, employer_number, pan_number, salary, UPI, bank_account_number, ifsc_code, referral_code)
+
 @router.post("/generate_salary_slip_for_worker")
 def generate_salary_slip_for_worker(workerNumber: int, month: str, year: int, db: Session = Depends(get_db)):
     return salary_slip_generation.generate_salary_slip(workerNumber, month, year, db)
