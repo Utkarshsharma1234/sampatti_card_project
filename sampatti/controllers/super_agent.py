@@ -1025,3 +1025,131 @@ def super_agent_query(employer_number: int, type_of_message: str, query: str, me
     if formatted_json is None:
         formatted_json = {}
     return super_agent_instance.process_query(employer_number, type_of_message, query, media_id, formatted_json)
+
+
+def delete_all_history(employer_number: int) -> dict:
+    """
+    Delete every conversation item for the given employer_number from ChromaDB,
+    including all associated metadata.
+
+    Returns a result dict like:
+    {
+        "ok": True,
+        "employer_number": "919999999999",
+        "collection_name": "SuperAgentConversations",
+        "persist_directory": "../../chroma_db",
+        "matched_count": 12,
+        "deleted_count": 12,
+        "remaining_after_delete": 0
+    }
+
+    Notes:
+    - This ONLY deletes what you currently store in Chroma (documents + metadatas).
+      If you later add other storage backends (e.g., SQL rows for logs),
+      extend this function to delete there as well.
+    """
+    from langchain_community.vectorstores import Chroma
+    from langchain_community.embeddings import OpenAIEmbeddings
+    import os
+
+    # Match your existing settings
+    PERSIST_DIR = "../../chroma_db"
+    COLLECTION_NAME = "SuperAgentConversations"
+
+    # Build a minimal, safe vectorstore handle (embeddings object is required by the wrapper)
+    # We won't add texts; we just use the underlying collection for deletion.
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        return {
+            "ok": False,
+            "error": "OPENAI_API_KEY not set in environment. Cannot initialize Chroma vectorstore.",
+        }
+
+    embedding = OpenAIEmbeddings(api_key=openai_api_key)
+
+    # Create a temporary Chroma wrapper pointing to the same persisted collection
+    vectordb = Chroma(
+        persist_directory=PERSIST_DIR,
+        collection_name=COLLECTION_NAME,
+        embedding_function=embedding,
+    )
+
+    # Work directly with the underlying Chroma collection for precise control
+    col = getattr(vectordb, "_collection", None)
+    if col is None:
+        return {
+            "ok": False,
+            "error": "Could not access underlying Chroma collection.",
+        }
+
+    employer_str = str(employer_number)
+
+    # 1) Get all IDs that match this employer (so we can report counts)
+    try:
+        existing = col.get(
+            where={"employerNumber": employer_str},
+            include=["ids"]
+        )
+        matched_ids = existing.get("ids", []) if isinstance(existing, dict) else []
+        matched_count = len(matched_ids)
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": f"Failed while scanning collection: {type(e).__name__}: {e}",
+        }
+
+    # 2) If nothing matched, we're done
+    if matched_count == 0:
+        return {
+            "ok": True,
+            "employer_number": employer_str,
+            "collection_name": COLLECTION_NAME,
+            "persist_directory": PERSIST_DIR,
+            "matched_count": 0,
+            "deleted_count": 0,
+            "remaining_after_delete": 0,
+            "message": "No history found for this employer."
+        }
+
+    # 3) Delete by filter (most robust across Chroma versions); fall back to IDs if needed
+    deleted_count = 0
+    try:
+        # Preferred: delete with a WHERE filter (removes all matches, even if there are more than the retrieved IDs)
+        col.delete(where={"employerNumber": employer_str})
+        deleted_count = matched_count
+    except Exception:
+        # Fallback: delete by explicit IDs if WHERE deletion isn't supported
+        try:
+            if matched_ids:
+                col.delete(ids=matched_ids)
+                deleted_count = matched_count
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": f"Deletion failed: {type(e).__name__}: {e}",
+                "employer_number": employer_str,
+                "collection_name": COLLECTION_NAME,
+                "persist_directory": PERSIST_DIR,
+                "matched_count": matched_count,
+                "deleted_count": 0,
+            }
+
+    # 4) Double-check nothing remains for this employer
+    try:
+        remaining = col.get(
+            where={"employerNumber": employer_str},
+            include=["ids"]
+        )
+        remaining_after = len(remaining.get("ids", [])) if isinstance(remaining, dict) else 0
+    except Exception:
+        remaining_after = None  # Non-fatal; deletion still likely succeeded
+
+    return {
+        "ok": True,
+        "employer_number": employer_str,
+        "collection_name": COLLECTION_NAME,
+        "persist_directory": PERSIST_DIR,
+        "matched_count": matched_count,
+        "deleted_count": deleted_count,
+        "remaining_after_delete": remaining_after if remaining_after is not None else "unknown",
+    }
