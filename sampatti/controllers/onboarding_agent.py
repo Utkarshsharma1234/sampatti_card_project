@@ -67,6 +67,8 @@ prompt = ChatPromptTemplate.from_messages(
             
             IMPORTANT RULES:
             - Ask for ONE thing at a time - never skip ahead
+            - if user provide the wrong worker number and he wants to change it later then allow him to change it and take the correct worker number and validate it again for correct worker number.
+            - if user provides any wrong information and wanted to change the previously provided information then allow him to change it and validate the changed information again and make sure ask for remaining steps accordingly and also make sure to update the previously provided information with the new information.
             - Wait for validation before moving to next item
             - If validation fails, re-ask for the SAME item
             - Never ask for both UPI and Bank details together
