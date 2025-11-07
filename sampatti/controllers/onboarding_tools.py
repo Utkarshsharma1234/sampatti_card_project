@@ -20,6 +20,12 @@ from . import userControllers
 from ..controllers import onboarding_tasks, talk_to_agent_excel_file, userControllers, cashfree_api, whatsapp_message
 from ..routers.auth import get_auth_headers
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
+orai_api_key = os.environ.get('ORAI_API_KEY')
+orai_namespace = os.environ.get('ORAI_NAMESPACE')
+authorization_message = os.environ.get('ORAI_AUTHORIZATION_MESSAGE')
 
 # Updated regex: bank name can include letters and numbers (a-z, 0-9)
 UPI_REGEX = re.compile(r"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9]{2,64}$")
@@ -503,6 +509,35 @@ def upi_or_bank_validation(method: str, upi: Optional[str] = None, bank_account_
             return "valid"
         return "invalid"
 
+def send_whatsapp_message(employerNumber: int):
+    url = "https://orailap.azurewebsites.net/api/cloud/Dialog"
+
+    headers = {
+        "API-KEY": orai_api_key,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "template": {
+            "namespace": orai_namespace,
+            "name": "upi_or_bank_details",
+            "language": {
+                "code": "en_US",
+                "policy": "deterministic"
+            }
+        },
+        "messaging_product": "whatsapp",
+        "to": employerNumber,
+        "type": "template"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print(f"Message sent successfully, Employer name : {employerNumber}")
+    else:
+        print(f"Failed to send message. Status code: {response.status_code}, Response: {response.text}")
+
 def pan_verify(pan_number: str):
     """
     Verifies the validity of a PAN number using an external API.
@@ -745,13 +780,13 @@ pan_verification_tool = StructuredTool.from_function(
 )
 
 class SendMessageInput(BaseModel):
-    employer_number: str = Field(..., description="Employer's WhatsApp number including country code.")
-    template_name: str = Field(..., description="The name of the WhatsApp message template to send.")
+    employer_number: str = Field(..., description="Employer's WhatsApp number with country code, e.g., '918208804525'.")
 
-send_message_tool = Tool(
+# 2) Wrap your function with StructuredTool
+send_message_tool = StructuredTool.from_function(
+    func=send_whatsapp_message,   # def send_template_message(employer_number, template_name): ...
     name="send_message_to_employer",
-    func=whatsapp_message.send_template_message,
-    description="Sends a text message to the employer using their employer number.",
+    description="Send a WhatsApp template to the employer for asking upi or bank account.",
     args_schema=SendMessageInput
 )
 
