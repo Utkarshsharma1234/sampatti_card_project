@@ -768,9 +768,6 @@ Just tell me what you need help with, and I'll take care of it!"""
             print(f"❌ Value received: {formatted_json[:200]}")
             print(f"❌ This indicates the webhook is passing formatted_json (string) instead of data (dict)")
             formatted_json = {}  # Use empty dict to prevent crash
-            
-        intent_analysis = self.classify_intent(query, chat_history)
-        print("Intent Classify 123")
     
         print(f"✅ formatted_json type: {type(formatted_json)}")
         
@@ -816,7 +813,11 @@ Just tell me what you need help with, and I'll take care of it!"""
                 resp = extract_document_details(media_id)
                 query = resp
                 print("Image Resp from the gemini")
-                print(f"🖼️ Extracted text from image: {query}")                
+                print(f"🖼️ Extracted text from image: {query}")
+                
+            # Initial intent classification
+            intent_analysis = self.classify_intent(query, chat_history)
+            print("Intent Classify 123")           
             
             if employer_number == "918208804525" or employer_number == "917742422603" or employer_number == "917015645195":
                 print("Test number detected, skipping processing.")
