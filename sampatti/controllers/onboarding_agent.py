@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_message_tool
+from .onboarding_tools import worker_onboarding_tool, transcribe_audio_tool, send_audio_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_whatsapp_message_tool
 from .userControllers import send_audio_message
 from .whatsapp_message import send_v2v_message
 from langchain.memory import VectorStoreRetrieverMemory
@@ -40,7 +40,7 @@ prompt = ChatPromptTemplate.from_messages(
 
             FOR NEW WORKERS (not in database):
             1. Worker phone number
-            2. Payment method choice (UPI or Bank) --> we will use template message with buttons for this will be send using send_message_tool where we will provide employer number.
+            2. Payment method choice (UPI or Bank) --> we will use template message with buttons for this will be send using send_whatsapp_message_tool where we will provide employer number.
             3. Payment details (UPI ID OR Bank Account + IFSC - never both)
             4. PAN Number
             5. Referral Code (optional but always ask)
@@ -156,7 +156,7 @@ prompt = ChatPromptTemplate.from_messages(
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
-                1. always call the send_message_tool to send the template message with buttons for payment method choice if worker is not found in database or details not confirmed by employer.
+                1. always call the send_whatsapp_message_tool to send the template message with buttons for payment method choice if worker is not found in database or details not confirmed by employer.
                     - if we get upi id then say: "Awesome! 📲 could you please provide their UPI ID."
                     - if we get bank account then say: "Great! 🏦 Could you please share their Bank Account Number and IFSC code."
                     - after getting the payment details validate them using `upi_or_bank_validation` tool immediately.
@@ -211,7 +211,7 @@ prompt = ChatPromptTemplate.from_messages(
             IMPORTANT NOTES:
             - When showing worker details, display each field clearly
             - Never display vendorId to the employer
-            - for sending the message template with buttons for payment method choice use the `send_message_tool` using employer number.
+            - for sending the message template with buttons for payment method choice use the `send_whatsapp_message_tool` using employer number.
             - Always use numbers in amount, phone number fields
             - If employer provides same number for worker and employer: "Hey! 😄 You can't add yourself as a worker. Please share your worker's number"
             - Never show technical details - keep it simple and friendly
@@ -232,7 +232,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_message_tool]
+tools = [worker_onboarding_tool, get_worker_details_tool, process_referral_code_tool, confirm_worker_and_add_to_employer_tool, employer_details_tool, pan_verification_tool, upi_or_bank_validation_tool, send_whatsapp_message_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
