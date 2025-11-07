@@ -976,6 +976,9 @@ Just tell me what you need help with, and I'll take care of it!"""
                 {"agent_used": agent_used, "message_type": type_of_message}
             )
             
+            if response == "couldn't find any worker in our system, please choose worker's mode of payment from above":
+                return 
+            
             print(f"💾 Stored conversation with agent: {agent_used}")
             display_user_message_on_xbotic(employer_number, response)
             # Send the response based on message type
