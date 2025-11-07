@@ -79,7 +79,7 @@ prompt = ChatPromptTemplate.from_messages(
             ## ENGAGING QUESTION TEMPLATES:
 
             For Worker Number: "Perfect! 👍 Could you share your worker's 📱 phone number?"
-            For asking payment method we will be sending the message tempplate message like this: "Great! 💳 For payments, would you prefer using their UPI ID 📱 or Bank Account 🏦?" with buttons UPI and Bank.
+            we will send template messge to employer, employer will choose mode of payment from there, don't give any message just call the 'send_whatsapp_message' tool always
             - if we get upi id then say: "Awesome! 📲 could you please provide their UPI ID."
             - if we get bank account then say: "Great! 🏦 Could you please share their Bank Account Number and IFSC code."
             For PAN: "Almost there! 📋 What's their PAN card number?"
@@ -94,9 +94,16 @@ prompt = ChatPromptTemplate.from_messages(
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number.
             - if +91 is provided then also remove the +91 and call `get_worker_details` with the 10 digit worker number.
             - if worker number is same as employer number then ask: "Hey! You can't add yourself as a worker. Please share your worker's number"
-            - Always call `get_worker_details` tool after validation of the mobile number.
+            - after calling 'get_worker_details' ensure to call 'send_whatsapp_message' to send the next if worker is not already present
 
-            2. UPI ID (if chosen):
+            2. For Payment Method Choice:
+            - if the worker is not already present then this method will be called.
+            - Instead, always call the `send_whatsapp_message` tool to send the pre-defined WhatsApp template message to the employer.  
+            - The template will contain two buttons — one for UPI ID and one for Bank Account.
+            - Provide the employer number to the tool.  
+            - Do not send or print any text response yourself — only invoke the tool to send the message.
+
+            3. UPI ID (if chosen):
             - validate the upi using `upi_or_bank_validation` tool where method is "UPI"
             - if valid: proceed to next question
             - If invalid: "The provided UPI ID seems incorrect. Please verify and share it again."
@@ -113,13 +120,14 @@ prompt = ChatPromptTemplate.from_messages(
             - All letters must be uppercase
             - If invalid: "That doesn't look like a valid PAN! 📝 It should be like ABCDE1234F - could you check?"
 
-            5. SALARY:
+            5. REFERRAL CODE:
+            - Always ask for referral code from employer
+            - If employer provides the referral code, use the `process_referral_code` tool
+            
+            6. SALARY:
             - if salary is given like "ten thousand" then convert it to 10000 or "15k" to 15000 or 4,800 to 4800 like this
             - If less than 500: "The salary needs to be at least ₹500 💵 Could you share the correct amount?"
 
-            6. REFERRAL CODE:
-            - Always ask for referral code from employer
-            - If employer provides the referral code, use the `process_referral_code` tool
 
             PROCESS FLOW:
             - Validate each input before proceeding to the next question
@@ -156,12 +164,13 @@ prompt = ChatPromptTemplate.from_messages(
                 4. If not confirmed, continue with normal onboarding process (B)
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
-                1. always call the send_whatsapp_message_tool to send the template message with buttons for payment method choice if worker is not found in database or details not confirmed by employer.
-                    - if we get upi id then say: "Awesome! 📲 could you please provide their UPI ID."
-                    - if we get bank account then say: "Great! 🏦 Could you please share their Bank Account Number and IFSC code."
-                    - after getting the payment details validate them using `upi_or_bank_validation` tool immediately.
-                    - if payment details are invalid then say: "The provided payment details seem incorrect. Please verify and share them again." and re-ask for payment details and validate again until valid payment details are provided.
-                    - we need to validate the payment details immediately after getting them and payment details validation is mandatory.
+                1. Always call 'send_whatsapp_message' tool which will send the message template, don't send any text message here just invoke the tool and don't generate any response.
+                    -Do not generate or show this text yourself — the tool handles it.
+                    -After the employer clicks one option:
+                    -If UPI is chosen → ask: “Awesome! 📲 Could you please share their UPI ID?”
+                    -If Bank is chosen → ask: “Great! 🏦 Could you please share their Bank Account Number and IFSC code?”
+                    -Then validate the response using `upi_or_bank_validation_tool` accordingly.
+
                 2. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
                     - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
