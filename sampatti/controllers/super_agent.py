@@ -981,7 +981,12 @@ Just tell me what you need help with, and I'll take care of it!"""
                 return
             
             print(f"💾 Stored conversation with agent: {agent_used}")
-            display_user_message_on_xbotic(employer_number, response)
+            if response != "":
+                print("Display response is : ", response)
+                display_user_message_on_xbotic(employer_number, response)
+            elif response == "":
+                print("Response is Null")
+                return
             # Send the response based on message type
             if type_of_message=="text":
                 
