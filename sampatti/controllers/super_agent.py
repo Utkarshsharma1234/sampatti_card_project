@@ -79,7 +79,7 @@ class SuperAgent:
                 "upi", "bank account", "pan number", "salary", "ifsc", "worker number",
                 "add worker", "register worker", "setup worker", "worker information",
                 "new employee", "employee setup", "worker registration", "referral code", 
-                "cashback amount", "number of referrals", "referral code status"
+                "cashback amount", "number of referrals", "referral code status", "onboard new worker"
             ],
             "cash_advance": [
                 "cash advance", "advance", "bonus", "deduction", "salary deduction",
@@ -853,7 +853,7 @@ Just tell me what you need help with, and I'll take care of it!"""
                         twilio_send_text_message("+917665292549", f"Employer wants to talk to support. Please reach out to them.--> Employer Number: {employer_number}")
                         return
                     elif button_text == "Proceed":
-                        query = "i want to onboard a worker for domestic help to digitise their salary payments"
+                        query = "onboard new worker"
                         print(f"Button 'Proceed' clicked. Updated query: {query}")
                     elif button_text == "Salary Slip":
                         query = "onboard new worker"
