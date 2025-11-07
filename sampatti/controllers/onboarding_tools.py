@@ -746,7 +746,7 @@ pan_verification_tool = StructuredTool.from_function(
 
 send_message_tool = Tool(
     name="send_message_to_employer",
-    func=whats,
+    func=whatsapp_message.send_template_message,
     description="Sends a text message to the employer using their employer number."
 )
 
