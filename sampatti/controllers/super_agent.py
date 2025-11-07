@@ -815,19 +815,6 @@ Just tell me what you need help with, and I'll take care of it!"""
                 print("Image Resp from the gemini")
                 print(f"🖼️ Extracted text from image: {query}")                
             
-            # Classify intent
-            intent_analysis = self.classify_intent(query, chat_history)
-            print(f"🎯 Intent Detected: {intent_analysis.primary_intent} (confidence: {intent_analysis.confidence:.2f})")
-            print(f"🔍 Keywords Found: {intent_analysis.keywords_found}")
-            print(f"🤖 Requires Specialized Agent: {intent_analysis.requires_specialized_agent}")
-            
-            # Store the user query
-            self.store_conversation(
-                employer_number, 
-                f"User: {query}",
-                {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
-            )
-            
             if employer_number == "918208804525" or employer_number == "917742422603" or employer_number == "917015645195":
                 print("Test number detected, skipping processing.")
                 
@@ -871,7 +858,20 @@ Just tell me what you need help with, and I'll take care of it!"""
                 print(f"⚠️ No workers mapped to employer {employer_number}. Prompted user to onboard workers.")
                 return
                         
-                        
+            # Classify intent
+            intent_analysis = self.classify_intent(query, chat_history)
+            print(f"🎯 Intent Detected: {intent_analysis.primary_intent} (confidence: {intent_analysis.confidence:.2f})")
+            print(f"🔍 Keywords Found: {intent_analysis.keywords_found}")
+            print(f"🤖 Requires Specialized Agent: {intent_analysis.requires_specialized_agent}")
+            
+            # Store the user query
+            self.store_conversation(
+                employer_number, 
+                f"User: {query}",
+                {"intent": intent_analysis.primary_intent, "message_type": type_of_message}
+            )
+            
+                    
             # Handle worker info requests with internal tools
             if intent_analysis.primary_intent == "worker_info" and intent_analysis.confidence >= 0.7:
                 print(f"📊 WORKER INFO REQUEST DETECTED")
@@ -1030,99 +1030,49 @@ def super_agent_query(employer_number: int, type_of_message: str, query: str, me
 def delete_all_history(employer_number: int) -> dict:
     """
     Delete every conversation item for the given employer_number from ChromaDB,
-    including all associated metadata.
+    including their metadata. Compatible with latest chromadb (0.4.x+).
 
-    Returns a result dict like:
-    {
-        "ok": True,
-        "employer_number": "919999999999",
-        "collection_name": "SuperAgentConversations",
-        "persist_directory": "../../chroma_db",
-        "matched_count": 12,
-        "deleted_count": 12,
-        "remaining_after_delete": 0
-    }
-
-    Notes:
-    - This ONLY deletes what you currently store in Chroma (documents + metadatas).
-      If you later add other storage backends (e.g., SQL rows for logs),
-      extend this function to delete there as well.
+    Returns a structured summary dict.
     """
-    from langchain_community.vectorstores import Chroma
-    from langchain_community.embeddings import OpenAIEmbeddings
-    import os
+    import chromadb
 
-    # Match your existing settings
     PERSIST_DIR = "../../chroma_db"
     COLLECTION_NAME = "SuperAgentConversations"
-
-    # Build a minimal, safe vectorstore handle (embeddings object is required by the wrapper)
-    # We won't add texts; we just use the underlying collection for deletion.
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if not openai_api_key:
-        return {
-            "ok": False,
-            "error": "OPENAI_API_KEY not set in environment. Cannot initialize Chroma vectorstore.",
-        }
-
-    embedding = OpenAIEmbeddings(api_key=openai_api_key)
-
-    # Create a temporary Chroma wrapper pointing to the same persisted collection
-    vectordb = Chroma(
-        persist_directory=PERSIST_DIR,
-        collection_name=COLLECTION_NAME,
-        embedding_function=embedding,
-    )
-
-    # Work directly with the underlying Chroma collection for precise control
-    col = getattr(vectordb, "_collection", None)
-    if col is None:
-        return {
-            "ok": False,
-            "error": "Could not access underlying Chroma collection.",
-        }
-
     employer_str = str(employer_number)
 
-    # 1) Get all IDs that match this employer (so we can report counts)
     try:
-        existing = col.get(
-            where={"employerNumber": employer_str},
-            include=["ids"]
-        )
-        matched_ids = existing.get("ids", []) if isinstance(existing, dict) else []
-        matched_count = len(matched_ids)
-    except Exception as e:
-        return {
-            "ok": False,
-            "error": f"Failed while scanning collection: {type(e).__name__}: {e}",
-        }
+        # Connect to persistent Chroma client
+        client = chromadb.PersistentClient(path=PERSIST_DIR)
 
-    # 2) If nothing matched, we're done
-    if matched_count == 0:
-        return {
-            "ok": True,
-            "employer_number": employer_str,
-            "collection_name": COLLECTION_NAME,
-            "persist_directory": PERSIST_DIR,
-            "matched_count": 0,
-            "deleted_count": 0,
-            "remaining_after_delete": 0,
-            "message": "No history found for this employer."
-        }
+        # Get or create the same collection your SuperAgent uses
+        col = client.get_or_create_collection(COLLECTION_NAME)
 
-    # 3) Delete by filter (most robust across Chroma versions); fall back to IDs if needed
-    deleted_count = 0
-    try:
-        # Preferred: delete with a WHERE filter (removes all matches, even if there are more than the retrieved IDs)
-        col.delete(where={"employerNumber": employer_str})
-        deleted_count = matched_count
-    except Exception:
-        # Fallback: delete by explicit IDs if WHERE deletion isn't supported
+        # 1) Get all items belonging to this employer
         try:
-            if matched_ids:
-                col.delete(ids=matched_ids)
-                deleted_count = matched_count
+            existing = col.get(where={"employerNumber": employer_str})
+            matched_ids = existing.get("ids", []) if existing and "ids" in existing else []
+            matched_count = len(matched_ids)
+        except Exception as e:
+            print(f"⚠️ Could not fetch existing items: {e}")
+            matched_ids = []
+            matched_count = 0
+
+        if matched_count == 0:
+            return {
+                "ok": True,
+                "employer_number": employer_str,
+                "collection_name": COLLECTION_NAME,
+                "persist_directory": PERSIST_DIR,
+                "matched_count": 0,
+                "deleted_count": 0,
+                "remaining_after_delete": 0,
+                "message": "No history found for this employer.",
+            }
+
+        # 2) Delete all records with matching employerNumber
+        try:
+            col.delete(where={"employerNumber": employer_str})
+            deleted_count = matched_count
         except Exception as e:
             return {
                 "ok": False,
@@ -1131,25 +1081,31 @@ def delete_all_history(employer_number: int) -> dict:
                 "collection_name": COLLECTION_NAME,
                 "persist_directory": PERSIST_DIR,
                 "matched_count": matched_count,
-                "deleted_count": 0,
             }
 
-    # 4) Double-check nothing remains for this employer
-    try:
-        remaining = col.get(
-            where={"employerNumber": employer_str},
-            include=["ids"]
-        )
-        remaining_after = len(remaining.get("ids", [])) if isinstance(remaining, dict) else 0
-    except Exception:
-        remaining_after = None  # Non-fatal; deletion still likely succeeded
+        # 3) Verify deletion
+        try:
+            verify = col.get(where={"employerNumber": employer_str})
+            remaining_after = len(verify.get("ids", []) if verify else [])
+        except Exception:
+            remaining_after = 0  # assume deleted if get fails
 
-    return {
-        "ok": True,
-        "employer_number": employer_str,
-        "collection_name": COLLECTION_NAME,
-        "persist_directory": PERSIST_DIR,
-        "matched_count": matched_count,
-        "deleted_count": deleted_count,
-        "remaining_after_delete": remaining_after if remaining_after is not None else "unknown",
-    }
+        return {
+            "ok": True,
+            "employer_number": employer_str,
+            "collection_name": COLLECTION_NAME,
+            "persist_directory": PERSIST_DIR,
+            "matched_count": matched_count,
+            "deleted_count": deleted_count,
+            "remaining_after_delete": remaining_after,
+            "message": "All conversation history deleted successfully.",
+        }
+
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": f"{type(e).__name__}: {e}",
+            "employer_number": str(employer_number),
+            "collection_name": COLLECTION_NAME,
+            "persist_directory": PERSIST_DIR,
+        }
