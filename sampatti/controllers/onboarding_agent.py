@@ -92,10 +92,12 @@ prompt = ChatPromptTemplate.from_messages(
             1. WORKER NUMBER:
             - Must be exactly 10 digits. If not then ask: "Oops! 😊 Please share a valid 10-digit mobile number".
             - if worker is not present with us then don't generate any response from agent just invoke the 'send_whatsapp_message'
+            - if worker is not present then show messgae "couldn't find any worker in our system, please choose worker's mode of payment from above"
             - If user provides the 12 digit worker number then check if the prefix is 91, if yes then remove the prefix and call `get_worker_details` with the 10 digit worker number.
             - if +91 is provided then also remove the +91 and call `get_worker_details` with the 10 digit worker number.
             - if worker number is same as employer number then ask: "Hey! You can't add yourself as a worker. Please share your worker's number"
             - after calling 'get_worker_details' ensure to call 'send_whatsapp_message' to send the next if worker is not already present
+            
 
             2. UPI ID (if chosen):
             - validate the upi using `upi_or_bank_validation` tool where method is "UPI"
@@ -159,11 +161,12 @@ prompt = ChatPromptTemplate.from_messages(
 
             B. IF WORKER NOT IN DATABASE OR DETAILS NOT CONFIRMED:
                 1. Always call 'send_whatsapp_message' tool which will send the message template, don't send any text message here just invoke the tool and don't generate any response.
+                    - just send a message like "couldn't find any worker in our system, please worker's mode of payment from above"
                 2. if upi or bank account is being choosen:
                     -If UPI is chosen → ask: “Step 2/5: Awesome! 📲 Could you please share their UPI ID?”
                     -If Bank is chosen → ask: “Step 2/5: Great! 🏦 Could you please share their Bank Account Number and IFSC code?”
                     -Then validate the response using `upi_or_bank_validation_tool` accordingly.
-                3. Ask: "Great choice! 📋 Now I'll need PAN number of your worker."
+                3. Ask: "Step 3/5: Great choice! 📋 Now I'll need PAN number of your worker."
                     - after we get the pan number, validate it using `pan_verification` tool immediately.
                     - if the pan is invalid then say "The PAN number provided for the worker seems to be invalid. Please verify and provide a valid PAN to proceed with the onboarding process." and re-ask for PAN number and validate again until valid pan is provided.
                     - we need to validate the pan immediately after getting it and pan verification is mandatory to onboard a new worker.
