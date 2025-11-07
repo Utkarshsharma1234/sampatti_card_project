@@ -744,10 +744,15 @@ pan_verification_tool = StructuredTool.from_function(
     description="Verifies the validity of a PAN number using an external API."
 )
 
+class SendMessageInput(BaseModel):
+    employer_number: str = Field(..., description="Employer's WhatsApp number including country code.")
+    template_name: str = Field(..., description="The name of the WhatsApp message template to send.")
+
 send_message_tool = Tool(
     name="send_message_to_employer",
     func=whatsapp_message.send_template_message,
-    description="Sends a text message to the employer using their employer number."
+    description="Sends a text message to the employer using their employer number.",
+    args_schema=SendMessageInput
 )
 
 process_referral_code_tool = StructuredTool.from_function(
