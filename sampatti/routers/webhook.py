@@ -250,6 +250,8 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         if updated_status == "ACTIVE":
             onboarding_tasks.run_tasks_after_vendor_addition()
             text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},The vendor has been added successfully."
+        elif updated_status == "BANK_VALIDATION_FAILED":
+            whatsapp_message.display_user_message_on_xbotic(phone, "Bank validation failed. Please check the details and try again.")
         else:
             print(f"Vendor status is {updated_status}, skipping post-addition tasks.")
             text_message = f"Hello {name} {phone} {vpa} {account_number} {ifsc} {pan_status},There is an issue with vendor addition. Status: {updated_status}"
