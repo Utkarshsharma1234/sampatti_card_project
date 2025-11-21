@@ -261,6 +261,15 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         print(f"PAN Status: {pan_status}")
         print(f"Event Type: {event_type}")
         
+        if phone == "6378639230" or phone == "9080682466":
+            print("Entered if statement for 6378639230 or 9080682466 for vendor status webhook")
+            #https://gcvdr8fw-8000.inc1.devtunnels.ms/
+            staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/cashfree/webhook"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            return
+        
         number = 6378639230
         text_message = ""
         if updated_status == "ACTIVE":
