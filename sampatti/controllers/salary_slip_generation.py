@@ -114,6 +114,9 @@ def generate_salary_slip(workerNumber, month, year, db:Session) :
         if order_id is None or order_id == "":
             continue
         order_info = check_order_status(order_id=order_id)
+        print("Order info :", order_info)
+        print("Order status :", order_info["order_status"])
+        print("Order amount :", order_info["order_amount"])
         status = order_info["order_status"]
         order_amount = order_info["order_amount"]
         salary = transaction.salary

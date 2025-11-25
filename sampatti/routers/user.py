@@ -338,3 +338,7 @@ def generate_salary_slip_for_worker(workerNumber: int, month: str, year: int, db
 @router.post("/delete_chromadata_from_super_agent")
 def delete_all_history(employer_number: int) -> dict:
     return super_agent.delete_all_history(employer_number)
+
+@router.post("/generate_SS_slip_for_worker")
+def generate_salary_slip(workerNumber: str, month: str, year: int, db: Session = Depends(get_db)):
+    return salary_slip_generation.generate_salary_slip(workerNumber, month, year, db)
