@@ -97,6 +97,13 @@ def generate_salary_slip(workerNumber, month, year, db:Session) :
     total_transactions = db.query(models.SalaryDetails).filter(models.SalaryDetails.worker_id == worker.id, models.SalaryDetails.month == month, models.SalaryDetails.year == year).all()
     total_amount = 0
     
+    print("Total Transactions :", total_transactions)
+    print("Month :", month)
+    print("worker number :", worker.workerNumber)
+    print("worker id :", worker.id)
+    print("worker salary details count :", len(total_transactions))
+    print("toatl salary details :", total_transactions.salary)
+    
     ct = 1
     for transaction in total_transactions:
         order_id = transaction.order_id
