@@ -102,10 +102,14 @@ def generate_salary_slip(workerNumber, month, year, db:Session) :
     print("worker number :", worker.workerNumber)
     print("worker id :", worker.id)
     print("worker salary details count :", len(total_transactions))
-    print("toatl salary details :", total_transactions.salary)
     
     ct = 1
     for transaction in total_transactions:
+        
+        print("Processing transaction id :", transaction.id)
+        print("Order id :", transaction.order_id)
+        print("Salary :", transaction.salary)
+        
         order_id = transaction.order_id
         if order_id is None or order_id == "":
             continue
