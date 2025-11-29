@@ -178,7 +178,7 @@ def process_orai_webhook(data: dict):
             }
             
             try:
-                staging_response = requests.post(staging_url, headers=headers, data=formatted_json)
+                staging_response = requests.post(staging_url, json=formatted_json)
                 print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
                 print(f"Response: {staging_response.text}")
             except Exception as e:
