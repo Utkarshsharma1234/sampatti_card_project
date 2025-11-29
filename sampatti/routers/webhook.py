@@ -172,7 +172,7 @@ def process_orai_webhook(data: dict):
             return
         elif employerNumber == "917665292549" or employerNumber == "918208804525":
             #https://gcvdr8fw-8000.inc1.devtunnels.ms/
-            staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
+            staging_url = "http://135.13.34.97:8000/login"
             headers = {
                 'Content-Type': 'application/json'
             }
@@ -187,7 +187,7 @@ def process_orai_webhook(data: dict):
         
         elif employerNumber == "916378639230" :
             #https://gcvdr8fw-8000.inc1.devtunnels.ms/
-            staging_url = "https://7rshr4vz-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
+            staging_url = "http://135.13.34.97:8000/login"
             headers = {
                 'Content-Type': 'application/json'
             }
