@@ -1,4 +1,5 @@
 import json, os
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 import requests
 from ..database import get_db
@@ -262,6 +263,18 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         print(f"VPA: {vpa}")
         print(f"PAN Status: {pan_status}")
         print(f"Event Type: {event_type}")
+        
+        staging_url = "https://staging.sampatticard.in/api/cashfree/webhook"
+        headers = {"Content-Type": "application/json"}
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(staging_url, json=payload, headers=headers)
+            print(f"Forwarded to staging. Status={resp.status_code}, Body={resp.text}")
+        except Exception as forward_err:
+            # Don’t fail your main webhook if staging is down;
+            # just log it.
+            print(f"Failed to forward webhook to staging: {forward_err}")
         
         if phone == "6378639230" or phone == "9080682466":
             print("Entered if statement for 6378639230 or 9080682466 for vendor status webhook")
