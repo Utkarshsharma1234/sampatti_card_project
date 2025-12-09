@@ -170,17 +170,19 @@ def process_orai_webhook(data: dict):
             except Exception as e:
                 print(f"Error forwarding to staging: {e}")
             return
-        elif employerNumber == "917665292549" or employerNumber == "918208804525":
-            #https://gcvdr8fw-8000.inc1.devtunnels.ms/
+        
+        elif employerNumber == "917665292549":
+            #https://b93x4t5q-8000.inc1.devtunnels.ms/
             staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
             }
             
             try:
-                staging_response = requests.post(staging_url, json=formatted_json)
-                print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
-                print(f"Response: {staging_response.text}")
+                staging_response = requests.post(staging_url, headers=headers, data=formatted_json)
+                print(f"Forwarded to staging server. Status: {staging_response.status_code}")
+                print("response: ", staging_response.text)
+                print(f"Response: {staging_response}")
             except Exception as e:
                 print(f"Error forwarding to staging: {e}")
             return
