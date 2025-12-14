@@ -174,6 +174,7 @@ def process_orai_webhook(data: dict):
         
         elif employerNumber == "917665292549" or employerNumber == "918208804525":
             #https://b93x4t5q-8000.inc1.devtunnels.ms/
+            #https://gcvdr8fw-8000.inc1.devtunnels.ms/
             staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
@@ -263,6 +264,20 @@ async def cashfree_vendor_status(request: Request, db: Session = Depends(get_db)
         print(f"VPA: {vpa}")
         print(f"PAN Status: {pan_status}")
         print(f"Event Type: {event_type}")
+        
+        if phone == "9080682466":
+            staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/cashfree/webhook"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            
+            try:
+                staging_response = requests.post(staging_url, headers=headers, data=payload)
+                print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
+                print(f"Response: {staging_response.text}")
+            except Exception as e:
+                print(f"Error forwarding to staging: {e}")
+            return
         
         staging_url = "https://staging.sampatticard.in/api/cashfree/webhook"
         headers = {"Content-Type": "application/json"}
