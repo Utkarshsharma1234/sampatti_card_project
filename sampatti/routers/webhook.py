@@ -172,7 +172,7 @@ def process_orai_webhook(data: dict):
                 print(f"Error forwarding to staging: {e}")
             return
         
-        elif employerNumber == "917665292549" or employerNumber == "918208804525" or employerNumber == "919922724713":
+        elif employerNumber == "917665292549" or employerNumber == "919922724713":
             #https://b93x4t5q-8000.inc1.devtunnels.ms/
             staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
             headers = {
