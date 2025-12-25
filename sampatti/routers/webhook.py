@@ -158,8 +158,8 @@ def process_orai_webhook(data: dict):
             return
         
         elif employerNumber == "916378639230":
-            #https://gcvdr8fw-8000.inc1.devtunnels.ms/
-            staging_url = "https://staging.sampatticard.in/api/whatsapp/webhook"
+            #https://7rshr4vz-8000.inc1.devtunnels.ms/
+            staging_url = "https://7rshr4vz-8000.inc1.devtunnels.ms/whatsapp/webhook"
             headers = {
                 'Content-Type': 'application/json'
             }
