@@ -222,20 +222,20 @@ def process_orai_webhook(data: dict):
                 print(f"Error forwarding to staging: {e}")
             return
         
-        elif employerNumber == "918208804525" :
-            #https://gcvdr8fw-8000.inc1.devtunnels.ms/
-            staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
-            headers = {
-                'Content-Type': 'application/json'
-            }
+        # elif employerNumber == "918208804525" :
+        #     #https://gcvdr8fw-8000.inc1.devtunnels.ms/
+        #     staging_url = "https://gcvdr8fw-8000.inc1.devtunnels.ms/api/whatsapp/webhook"
+        #     headers = {
+        #         'Content-Type': 'application/json'
+        #     }
             
-            try:
-                staging_response = requests.post(staging_url, headers=headers, data=formatted_json)
-                print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
-                print(f"Response: {staging_response.text}")
-            except Exception as e:
-                print(f"Error forwarding to staging: {e}")
-            return
+        #     try:
+        #         staging_response = requests.post(staging_url, headers=headers, data=formatted_json)
+        #         print(f"Forwarded to staging server. Status: {staging_response.status_code}")   
+        #         print(f"Response: {staging_response.text}")
+        #     except Exception as e:
+        #         print(f"Error forwarding to staging: {e}")
+        #     return
         
         if not message_type:
             print("None message type")
