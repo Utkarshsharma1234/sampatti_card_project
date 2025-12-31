@@ -130,6 +130,13 @@ def process_orai_webhook(data: dict):
         #         print(f"Error forwarding to ngrok: {e}")
         #     # Return early to skip super_agent processing
         #     return
+        
+        if message_type == "text":
+            url = "https://xbotic.cbots.live/provider016/webhooks/a0/732e12160d6e4598"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            response = requests.post(url, headers=headers, data=formatted_json)
                 
 
         if employerNumber == "919731011117":
