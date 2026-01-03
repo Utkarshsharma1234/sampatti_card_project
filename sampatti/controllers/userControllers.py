@@ -1800,8 +1800,9 @@ def update_settlement_status_to_worker(payload, db : Session):
     elif settlement_type == "VENDOR_SETTLEMENT_SUCCESS":
         text_message = f"Vendor settlement successful for vendor: {vendor_id}, vpa: {vpa}, account_number: {account_number}, ifsc: {ifsc}. Amount settled: Rs {amount_settled}."
 
-    message = whatsapp_message.twilio_send_text_message(f"+91{contactNumber}", text_message)
-    return message
+    #message = whatsapp_message.twilio_send_text_message(f"+91{contactNumber}", text_message)
+    print("Settlement Status Message: ", text_message)
+    return text_message
 
 def send_referral_code_message(employer_number: int, referral_code: str):
     try:
